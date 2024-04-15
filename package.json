@@ -1,0 +1,59 @@
+{
+  "name": "@stable-canvas/comfyui-client",
+  "version": "1.0.1",
+  "description": "",
+  "source": "src/main.ts",
+  "main": "dist/main.umd.js",
+  "module": "dist/main.module.mjs",
+  "unpkg": "dist/main.umd.js",
+  "types": "./dist/main.d.ts",
+  "exports": {
+    "types": "./dist/main.d.ts",
+    "require": "./dist/main.js",
+    "default": "./dist/main.modern.mjs"
+  },
+  "keywords": [
+    "civitai"
+  ],
+  "files": [
+    "dist/**.js*",
+    "dist/**.mjs*",
+    "dist/**/*.ts"
+  ],
+  "scripts": {
+    "build-dts": "rollup -c rollup.dts.config.js",
+    "build-js": "microbundle --define process.env.NODE_ENV=production,PKG_VERSION=$npm_package_version",
+    "build": "pnpm build-js && pnpm build-dts",
+    "watch": "microbundle watch --define process.env.NODE_ENV=development,PKG_VERSION=$npm_package_version --compress false",
+    "dev": "pnpm watch",
+    "start": "pnpm build",
+    "prepack": "rm -rf dist && pnpm run build",
+    "test": "jest"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StableCanvas/comfyui-client.git"
+  },
+  "author": "zhzluke96",
+  "bugs": {
+    "url": "https://github.com/StableCanvas/comfyui-client/issues"
+  },
+  "homepage": "https://github.com/StableCanvas/comfyui-client#readme",
+  "dependencies": {
+    "eventemitter3": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "microbundle": "^0.15.1",
+    "rollup": "^4.14.3",
+    "rollup-plugin-dts": "^6.1.0",
+    "ts-node": "^10.9.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.4.5"
+  }
+}
