@@ -13,7 +13,8 @@
     "default": "./dist/main.modern.mjs"
   },
   "keywords": [
-    "civitai"
+    "comfyui",
+    "stablediffusion"
   ],
   "files": [
     "dist/**.js*",
