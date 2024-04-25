@@ -164,7 +164,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
 
   /**
    * Gets system & device stats
-   * @returns System stats such as python version, OS, per device info
+   * @returns {ComfyUIClientResponseTypes.SystemStatsRoot} System stats such as python version, OS, per device info
    */
 
   async getSystemStats(): Promise<ComfyUIClientResponseTypes.SystemStatsRoot> {
