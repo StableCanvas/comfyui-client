@@ -216,6 +216,13 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   }
 
   /**
+   * Free up memory by unloading models and freeing memory
+   */
+  async free(params?: { unload_models?: boolean; free_memory?: boolean }) {
+    await this.postItem("free", params);
+  }
+
+  /**
    * Gets user configuration data and where data should be stored
    * @returns { Promise<{ storage: "server" | "browser", users?: Promise<string, unknown>, migrated?: boolean }> }
    */

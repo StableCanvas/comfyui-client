@@ -253,6 +253,24 @@ Saves a user data file for the current user.
 | params | file: string - The name of the userdata file to save.<br/>data: any - The data to store in the file.<br/>options: RequestInit & { stringify?: boolean; throwOnError?: boolean; } (optional) - Additional options for the request. |
 | return | A promise that resolves to void. A throw will occur if an error is encountered. |
 
+### interrupt
+Interrupts the execution of the running prompt
+
+|| |
+|--|--|
+| usage | `client.interrupt()` |
+| params | None |
+| return | A promise that resolves to void. |
+
+### free
+Free up memory by unloading models and freeing memory
+
+|| |
+|--|--|
+| usage | `client.free({ unload_models: true, free_memory: true })` |
+| params | params.unload_models: boolean (optional) - unload models <br/>params.free_memory: boolean (optional)  - free memory |
+| return | A promise that resolves to void. |
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a pull request.
