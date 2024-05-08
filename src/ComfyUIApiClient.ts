@@ -375,7 +375,9 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     });
     const images_url = images.map((image) => {
       const { filename, subfolder, type } = image;
-      return `http://${this.api_host}/view?${new URLSearchParams({
+      return `http${this.ssl ? "s" : ""}://${
+        this.api_host
+      }/view?${new URLSearchParams({
         filename,
         subfolder,
         type,
@@ -391,12 +393,13 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    * Asynchronously waits for the prompt with the provided ID to be done.
    *
    * @param {string} prompt_id - The ID of the prompt to wait for.
+   * @param {number} [ms=500] - The number of milliseconds to wait between checks.
    * @return {void}
    */
-  async waitForPrompt(prompt_id: string) {
+  async waitForPrompt(prompt_id: string, ms = 500) {
     let prompt_status = await this.getPromptStatus(prompt_id);
     while (!prompt_status.done) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, ms));
       prompt_status = await this.getPromptStatus(prompt_id);
     }
   }
@@ -423,6 +426,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    * @param {Object} options - The options for running the prompt.
    * @param {Record<string, unknown>} options.workflow - The workflow for the prompt.
    * @param {boolean} [options.disable_random_seed] - Flag to disable random seed generation.
+   * @param {number} [options.wait_ms=500] - The number of milliseconds to wait between checks.
    * @return {Promise<any>} A promise that resolves with the prompt result.
    */
   async runPrompt(
@@ -430,6 +434,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     options?: {
       workflow?: Record<string, unknown>;
       disable_random_seed?: boolean;
+      wait_ms?: number;
     }
   ) {
     if (!options?.disable_random_seed) {
@@ -444,7 +449,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
       throw new Error(resp.error);
     }
     const prompt_id = resp.prompt_id;
-    await this.waitForPrompt(prompt_id);
+    await this.waitForPrompt(prompt_id, options?.wait_ms);
     return await this.getPromptResult(prompt_id);
   }
 }

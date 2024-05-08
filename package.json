@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/comfyui-client",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "",
   "source": "src/main.ts",
   "main": "dist/main.umd.js",
@@ -14,7 +14,16 @@
   },
   "keywords": [
     "comfyui",
-    "stablediffusion"
+    "stablediffusion",
+    "comfy-ui",
+    "stable-diffusion",
+    "comfy-ui-sdk",
+    "comfy-ui-api",
+    "comfy ui node",
+    "comfy ui web",
+    "comfy ui browser",
+    "sdxl",
+    "sd1.5"
   ],
   "files": [
     "dist/**.js*",
