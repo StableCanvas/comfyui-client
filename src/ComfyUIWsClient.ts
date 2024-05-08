@@ -21,7 +21,7 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
   static DEFAULT_API_HOST = "127.0.0.1:8188";
   static DEFAULT_API_BASE = "";
   static DEFAULT_SESSION_NAME = "";
-  static DEFAULT_USER = "sc-comfy-ui-client";
+  static DEFAULT_USER = "";
 
   api_host: string;
   api_base: string;
@@ -64,7 +64,13 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
       throw new Error("Client is closed");
     }
     const headers: HeadersInit = {
-      "Comfy-User": this.user,
+      // NOTE: CORS policy: Request header field comfy-user is not allowed by Access-Control-Allow-Headers in preflight response.
+      // 因为 ComfyUI 没有配置 Access-Control-Allow-Headers 包含这个 comfy-user 所以在浏览器中请使用空白
+      ...(this.user
+        ? {
+            "Comfy-User": this.user,
+          }
+        : {}),
       // "User-Agent": `ComfyUIClient/${version}`,
       Accept: "*/*",
       ...(options?.headers ?? {}),

@@ -25,7 +25,7 @@ export interface IComfyApiConfig {
 
   /**
    * The username for authentication, default is 'sc-comfy-ui-client'.
-   * @type {string} [user="sc-comfy-ui-client"]
+   * @type {string} [user="""]
    */
   user?: string;
 
