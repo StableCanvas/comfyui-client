@@ -1,8 +1,6 @@
 # @stable-canvas/comfyui-client
 
-The `@stable-canvas/comfyui-client` library is a dedicated API client designed to provide developers with an efficient means of interacting with ComfyUI—a visual programming tool for Stable Diffusion models. 
-
-Discover more about ComfyUI on GitHub: [ComfyUI](https://github.com/comfyanonymous/ComfyUI).
+This is a client for (ComfyUI)[https://github.com/comfyanonymous/ComfyUI] that supports both NodeJS and Browser environments. It provides full support for all RESTful APIs as well as WebSocket connections.
 
 ## Features
 
@@ -29,7 +27,7 @@ import { ComfyUIApiClient } from "@stable-canvas/comfyui-client";
 Client instance, in Browser
 ```js
 const client = new ComfyUIApiClient({
-    //...
+    api_host: "127.0.0.1:8188",
 })
 client.init(); // init ws client
 ```
@@ -54,6 +52,55 @@ let workflow = { /* workflow details */ };
 // Execute the prompt
 const result = await client.runPrompt(prompt, { workflow });
 console.log(result); // { images: [...] }
+```
+
+### ClientConfig
+```ts
+interface IComfyApiConfig {
+  /**
+   * The host address of the API server, defaults to '127.0.0.1:8188'.
+   * @type {string} [api_host="127.0.0.1:8188"]
+   */
+  api_host?: string;
+  
+  /**
+   * The base path for the API endpoints, default is an empty string.
+   * @type {string} [api_base=""]
+   */
+  api_base?: string;
+  
+  /**
+   * The client identification string, default is an empty string.
+   * @type {string} [clientId=""]
+   */
+  clientId?: string;
+  
+  /**
+   * The name of the session, used for identifying the session instance, default is an empty string.
+   * @type {string} [sessionName=""]
+   */
+  sessionName?: string;
+  
+  /**
+   * The username for authentication, default is 'sc-comfy-ui-client'.
+   * @type {string} [user="sc-comfy-ui-client"]
+   */
+  user?: string;
+
+  /**
+   * Whether to use SSL for the connections, defaults to false.
+   * @type {boolean} [ssl=false]
+   */
+  ssl?: boolean;
+
+  /**
+   * These settings are for compatibility with Node.js environments.
+   * @type {typeof WebSocket} [WebSocket] - The WebSocket class to use.
+   * @type {typeof fetch} [fetch] - The fetch function to use.
+   */
+  WebSocket?: typeof WebSocket;
+  fetch?: typeof fetch;
+}
 ```
 
 ## APIs

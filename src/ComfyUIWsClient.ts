@@ -1,6 +1,5 @@
 import { IComfyApiConfig } from "./types";
 import { EventEmitter } from "eventemitter3";
-import { version } from "../package.json";
 
 type ComfyUIClientEvents = {
   // TODO: Add types for these events
@@ -22,7 +21,7 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
   static DEFAULT_API_HOST = "127.0.0.1:8188";
   static DEFAULT_API_BASE = "";
   static DEFAULT_SESSION_NAME = "";
-  static DEFAULT_USER = "comfy-client";
+  static DEFAULT_USER = "sc-comfy-ui-client";
 
   api_host: string;
   api_base: string;
