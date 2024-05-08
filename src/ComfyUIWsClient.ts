@@ -47,7 +47,10 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
     this.WebSocket = config.WebSocket ?? WebSocket;
     this.ssl = config.ssl ?? false;
     this.user = config.user ?? ComfyUIWsClient.DEFAULT_USER;
-    this.fetch = config.fetch ?? fetch;
+    if (!globalThis.fetch) {
+      throw new Error("fetch is not defined");
+    }
+    this.fetch = config.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
   apiURL(route: string): string {
