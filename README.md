@@ -151,7 +151,7 @@ Executes a prompt with optional workflow information and automated monitoring un
 || |
 |--|--|
 | usage | `await client.runPrompt(prompt, options)` |
-| params | prompt: Record<string, unknown> - The prompt object to run<br/>options?: { workflow?: Record<string, unknown>, disable_random_seed?: boolean } - Options including workflow details and a flag to disable random seed generation |
+| params | prompt: Record<string, unknown> - The prompt object to run<br/>options?: { workflow?: Record<string, unknown>, disable_random_seed?: boolean, wait_ms?: number; } - Options including workflow details and a flag to disable random seed generation |
 | return | Promise<any> - A promise that resolves with the result of the prompt, typically image URLs |
 
 ## Internal Apis

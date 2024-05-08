@@ -393,13 +393,13 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    * Asynchronously waits for the prompt with the provided ID to be done.
    *
    * @param {string} prompt_id - The ID of the prompt to wait for.
-   * @param {number} [ms=500] - The number of milliseconds to wait between checks.
+   * @param {number} [polling_ms=1000] - The number of milliseconds to wait between checks.
    * @return {void}
    */
-  async waitForPrompt(prompt_id: string, ms = 500) {
+  async waitForPrompt(prompt_id: string, polling_ms = 1000) {
     let prompt_status = await this.getPromptStatus(prompt_id);
     while (!prompt_status.done) {
-      await new Promise((resolve) => setTimeout(resolve, ms));
+      await new Promise((resolve) => setTimeout(resolve, polling_ms));
       prompt_status = await this.getPromptStatus(prompt_id);
     }
   }
@@ -426,7 +426,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    * @param {Object} options - The options for running the prompt.
    * @param {Record<string, unknown>} options.workflow - The workflow for the prompt.
    * @param {boolean} [options.disable_random_seed] - Flag to disable random seed generation.
-   * @param {number} [options.wait_ms=500] - The number of milliseconds to wait between checks.
+   * @param {number} [options.polling_ms=1000] - The number of milliseconds to polling query prompt result.
    * @return {Promise<any>} A promise that resolves with the prompt result.
    */
   async runPrompt(
@@ -434,7 +434,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     options?: {
       workflow?: Record<string, unknown>;
       disable_random_seed?: boolean;
-      wait_ms?: number;
+      polling_ms?: number;
     }
   ) {
     if (!options?.disable_random_seed) {
@@ -449,7 +449,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
       throw new Error(resp.error);
     }
     const prompt_id = resp.prompt_id;
-    await this.waitForPrompt(prompt_id, options?.wait_ms);
+    await this.waitForPrompt(prompt_id, options?.polling_ms);
     return await this.getPromptResult(prompt_id);
   }
 }
