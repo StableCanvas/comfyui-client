@@ -57,7 +57,7 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
   }
 
   async fetchApi(route: string, options?: RequestInit): Promise<Response> {
-    if (!this.closed) {
+    if (this.closed) {
       throw new Error("Client is closed");
     }
     const headers: HeadersInit = {
