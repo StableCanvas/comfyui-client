@@ -1,6 +1,6 @@
 # @stable-canvas/comfyui-client
 
-This is a client for (ComfyUI)[https://github.com/comfyanonymous/ComfyUI] that supports both NodeJS and Browser environments. It provides full support for all RESTful APIs as well as WebSocket connections.
+Javascript api Client for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that supports both NodeJS and Browser environments. It provides full support for all RESTful / WebSocket APIs.
 
 ## Features
 
