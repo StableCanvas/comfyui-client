@@ -38,8 +38,11 @@ export interface IComfyApiConfig {
   /**
    * These settings are for compatibility with Node.js environments.
    * @type {typeof WebSocket} [WebSocket] - The WebSocket class to use.
-   * @type {typeof fetch} [fetch] - The fetch function to use.
    */
   WebSocket?: typeof WebSocket;
+  /**
+   * These settings are for compatibility with Node.js environments.
+   * @type {typeof fetch} [fetch] - The fetch function to use.
+   */
   fetch?: typeof fetch;
 }

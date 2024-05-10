@@ -424,7 +424,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    *
    * @param {Record<string, unknown>} prompt - The prompt to run.
    * @param {Object} options - The options for running the prompt.
-   * @param {Record<string, unknown>} options.workflow - The workflow for the prompt.
+   * @param {Record<string, unknown>} options.workflow - The workflow for the prompt, It will be added to the png info of the generated image.
    * @param {boolean} [options.disable_random_seed] - Flag to disable random seed generation.
    * @param {number} [options.polling_ms=1000] - The number of milliseconds to polling query prompt result.
    * @return {Promise<any>} A promise that resolves with the prompt result.

@@ -53,12 +53,25 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
     this.fetch = config.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
+  /**
+   * Generates the URL for the API endpoint based on the provided route.
+   *
+   * @param {string} route - The route for the API endpoint.
+   * @return {string} The generated URL for the API endpoint.
+   */
   apiURL(route: string): string {
     return `http${this.ssl ? "s" : ""}://${this.api_host}${
       this.api_base
     }${route}`;
   }
 
+  /**
+   * Fetches API data based on the provided route and options.
+   *
+   * @param {string} route - The route for the API request.
+   * @param {RequestInit} [options] - (Optional) Additional options for the request.
+   * @return {Promise<Response>} A promise that resolves to the API response.
+   */
   async fetchApi(route: string, options?: RequestInit): Promise<Response> {
     if (this.closed) {
       throw new Error("Client is closed");
@@ -83,6 +96,13 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
     });
   }
 
+  /**
+   * Adds an event listener for the specified event type.
+   *
+   * @param {keyof ComfyUIClientEvents | (string & {})} type - The type of event to listen for.
+   * @param {(...args: any) => void} callback - The callback function to be executed when the event is triggered.
+   * @param {any} options - (Optional) Additional options for the event listener.
+   */
   addEventListener(
     type: keyof ComfyUIClientEvents | (string & {}),
     callback: (...args: any) => void,
