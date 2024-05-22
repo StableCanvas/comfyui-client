@@ -1,0 +1,44 @@
+name: Publish Docs
+on:
+  push:
+    branches:
+      - masin
+    paths:
+      [
+        "src/**/*.js",
+        "src/**/*.css",
+        "src/**/*.html",
+        "src/**/*.svg",
+        "src/**/*.json",
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.sh",
+      ]
+  workflow_dispatch:
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ">=18.18"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build docs
+        run: pnpm build:docs
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        with:
+          branch: gh-pages
+          folder: ./docs
+          single-commit: true
