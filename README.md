@@ -1,8 +1,8 @@
 # @stable-canvas/comfyui-client
 
-![npm](https://img.shields.io/npm/v/@stable-canvas/comfyui-client)
-![npm](https://img.shields.io/npm/dw/@stable-canvas/comfyui-client)
-![GitHub Repo stars](https://img.shields.io/github/stars/StableCanvas/comfyui-client)
+[![npm](https://img.shields.io/npm/v/@stable-canvas/comfyui-client)](https://www.npmjs.com/package/@stable-canvas/comfyui-client)
+[![npm](https://img.shields.io/npm/dw/@stable-canvas/comfyui-client)](https://www.npmjs.com/package/@stable-canvas/comfyui-client)
+[![GitHub Repo stars](https://img.shields.io/github/stars/StableCanvas/comfyui-client)](https://github.com/StableCanvas/comfyui-client)
 
 Javascript api Client for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that supports both NodeJS and Browser environments. It provides full support for all RESTful / WebSocket APIs.
 
