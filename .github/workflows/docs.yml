@@ -5,6 +5,7 @@ on:
       - masin
     paths:
       [
+        "README.md",
         "src/**/*.js",
         "src/**/*.css",
         "src/**/*.html",

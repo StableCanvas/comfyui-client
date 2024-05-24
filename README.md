@@ -6,6 +6,10 @@
 
 Javascript api Client for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that supports both NodeJS and Browser environments. It provides full support for all RESTful / WebSocket APIs.
 
+documentations:
+- [Rest API](https://stablecanvas.github.io/comfyui-client/classes/ComfyUIApiClient.html)
+- [WebSocket API](https://stablecanvas.github.io/comfyui-client/classes/ComfyUIWsClient.html)
+
 ## Features
 
 - **Environment Compatibility**: Seamlessly functions in both `nodejs` and `browser` environments.
