@@ -123,6 +123,7 @@
       const useStore = create((set, get) => ({
         samplers: [],
         schedulers: [],
+        sd_models: [],
         payload: {
           prompt: "best quality, RAW, 1girl",
           negative_prompt:
@@ -228,7 +229,8 @@
       (async () => {
         const samplers = await client.getSamplers();
         const schedulers = await client.getSchedulers();
-        useStore.set({ samplers, schedulers });
+        const sd_models = await client.getSDModels();
+        useStore.set({ samplers, schedulers, sd_models });
       })();
 
       function App() {
@@ -245,6 +247,7 @@
           setPayload,
           samplers,
           schedulers,
+          sd_models,
         } = useStore();
 
         const handleStart = async () => {
@@ -401,16 +404,17 @@
                 </label>
                 <label>
                   Checkpoint Name
-                  <input
-                    type="text"
+                  <select
                     value=${payload.ckpt_name}
-                    onInput=${(e) => {
-                      setPayload({
-                        ...payload,
-                        ckpt_name: e.target.value,
-                      });
+                    onChange=${(e) => {
+                      setPayload({ ...payload, ckpt_name: e.target.value });
                     }}
-                  />
+                  >
+                    ${sd_models.map(
+                      (ckpt_name) =>
+                        html`<option value=${ckpt_name}>${ckpt_name}</option>`
+                    )}
+                  </select>
               </div>
             </fieldset>
             ${
