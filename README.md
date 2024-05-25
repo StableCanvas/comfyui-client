@@ -4,21 +4,30 @@
 [![npm](https://img.shields.io/npm/dw/@stable-canvas/comfyui-client)](https://www.npmjs.com/package/@stable-canvas/comfyui-client)
 [![GitHub Repo stars](https://img.shields.io/github/stars/StableCanvas/comfyui-client)](https://github.com/StableCanvas/comfyui-client)
 
-Javascript api Client for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that supports both NodeJS and Browser environments. It provides full support for all RESTful / WebSocket APIs.
+Javascript api Client for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that supports both NodeJS and Browser environments.
+
+This client provides comprehensive support for all available RESTful and WebSocket APIs, with built-in TypeScript typings for enhanced development experience. Additionally, it introduces a programmable workflow interface, making it easy to create and manage workflows in a human-readable format.
 
 documentations:
 - [Rest API](https://stablecanvas.github.io/comfyui-client/classes/ComfyUIApiClient.html)
 - [WebSocket API](https://stablecanvas.github.io/comfyui-client/classes/ComfyUIWsClient.html)
+- [Workflow API](https://stablecanvas.github.io/comfyui-client/classes/ComfyUIWorkflow.html)
 
 examples:
-- [NodeJS](examples\nodejs\src\main.ts)
-- [Web](examples\web\index.html)
+- nodejs
+  - [from client](examples\nodejs\src\main.ts)
+  - [from workflow factory](examples\nodejs\src\main-wf.ts)
+- [Web🚧](examples\web\index.html)
 
 ## Features
 
-- **Environment Compatibility**: Seamlessly functions in both `nodejs` and `browser` environments.
-- **Comprehensive API Support**: Provides full support for all available APIs.
-- **TypeScript Typings**: Comes with TypeScript support.
+- **Environment Compatibility**: Seamlessly functions in both NodeJS and Browser environments.
+- **Comprehensive API Support**: Provides full support for all available RESTful and WebSocket APIs.
+- **TypeScript Typings**: Comes with built-in TypeScript support for type safety and better development experience.
+- **Programmable Workflows**: Introduces a human-readable and highly customizable workflow interface inspired by [this issue](https://github.com/comfyanonymous/ComfyUI/issues/612) and [this library](https://github.com/Chaoses-Ib/ComfyScript).
+- **Ease of Use**: Both implementation and usage are designed to be intuitive and user-friendly.
+
+By incorporating these features, `@stable-canvas/comfyui-client` provides a robust and versatile solution for integrating ComfyUI capabilities into your projects effortlessly.
 
 ## Installation
 
@@ -68,60 +77,79 @@ const result = await client.runPrompt(prompt, { workflow });
 console.log(result); // { images: [...] }
 ```
 
-## APIs
+## Programmable calls
+Inspired by [this issue](https://github.com/comfyanonymous/ComfyUI/issues/612) and [this library](https://github.com/Chaoses-Ib/ComfyScript), this library provides a programmable workflow interface.
 
-### Checking Prompt Status
-Obtains the execution status of a specific prompt using its unique prompt ID.
+Both implementation and usage are extremely simple and human-readable. Below is a simple example of creating a workflow:
 
-|| |
-|--|--|
-| usage | `await client.getPromptStatus(prompt_id)` |
-| params | prompt_id: string - Identifier of the prompt |
-| return | Object detailing the status with fields: `running`, `pending`, `done` |
+```ts
+const createWorkflow = () => {
+  const workflow = new ComfyUIWorkflow();
+  const {
+    KSampler,
+    CheckpointLoaderSimple,
+    EmptyLatentImage,
+    CLIPTextEncode,
+    VAEDecode,
+    SaveImage,
+  } = workflow.classes;
 
-### Retrieving Prompt Results
-Fetches the result of a completed prompt, typically an array of URLs pointing to generated images.
+  const [model, clip, vae] = CheckpointLoaderSimple({
+    ckpt_name: "lofi_v5.baked.fp16.safetensors",
+  });
+  const [latent_image] = EmptyLatentImage({
+    width: 512,
+    height: 768,
+    batch_size: 1,
+  });
+  const [positive_conditioning] = CLIPTextEncode({
+    text: "best quality, 1girl",
+    clip,
+  });
+  const [negative_conditioning] = CLIPTextEncode({
+    text: "text,error,username,fake,drawing,painting,worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
+    clip,
+  });
 
-|| |
-|--|--|
-| usage | `await client.getPromptResult(prompt_id)` |
-| params | prompt_id: string - Identifier of the prompt |
-| return | Object containing an array of image URLs (`images`) and the original `prompt_id` |
+  const [samples] = KSampler({
+    seed: Math.floor(Math.random() * 2 ** 32),
+    steps: 35,
+    cfg: 4,
+    sampler_name: "dpmpp_2m_sde_gpu",
+    scheduler: "karras",
+    denoise: 1,
+    model,
+    positive: positive_conditioning,
+    negative: negative_conditioning,
+    latent_image,
+  });
 
-### Waiting for a Prompt to Complete
-Asynchronously waits for a prompt to transition to a complete (done) status before proceeding.
+  const [image] = VAEDecode({
+    samples,
+    vae,
+  });
 
-|| |
-|--|--|
-| usage | `await client.waitForPrompt(prompt_id)` |
-| params | prompt_id: string - Identifier of the prompt |
-| return | void |
+  SaveImage({
+    filename_prefix: "from-sc-comfy-ui-client",
+    images: image,
+  });
 
-### Randomizing Prompt Seed
+  return workflow;
+};
 
-### randomizePrompt
-Randomizes the seed value for specific nodes within a prompt, facilitating the generation of unique images.
+const wf1 = createWorkflow();
+// { prompt: {...}, workflow: {...} }
+```
 
-|| |
-|--|--|
-| usage | `client.randomizePrompt(prompt)` |
-| params | prompt: Record<string, unknown> - The prompt object to modify |
-| return | void |
+And it comes with type hints
 
-### Running a Prompt with Automated Monitoring
+![types hint](./assets/wk_types.png)
 
-### runPrompt
-Executes a prompt with optional workflow information and automated monitoring until completion, returning generated images.
-
-|| |
-|--|--|
-| usage | `await client.runPrompt(prompt, options)` |
-| params | prompt: Record<string, unknown> - The prompt object to run<br/>options?: { workflow?: Record<string, unknown>, disable_random_seed?: boolean, wait_ms?: number; } - Options including workflow details and a flag to disable random seed generation |
-| return | Promise<any> - A promise that resolves with the result of the prompt, typically image URLs |
-
-## Other internal Apis
-
-document: https://StableCanvas.github.io/comfyui-client
+### Invoke workflow
+```ts
+const wf1 = createWorkflow();
+const result = await wf1.invoke(client);
+```
 
 ## Contributing
 
