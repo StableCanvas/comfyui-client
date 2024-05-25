@@ -225,11 +225,11 @@
         });
       });
 
-      client.getNodeDefs().then(async () => {
+      (async () => {
         const samplers = await client.getSamplers();
         const schedulers = await client.getSchedulers();
         useStore.set({ samplers, schedulers });
-      });
+      })();
 
       function App() {
         const {

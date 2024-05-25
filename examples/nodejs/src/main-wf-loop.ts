@@ -105,7 +105,7 @@ const main = async () => {
   const wk1 = createWorkflow();
   fs.writeFileSync(
     path.join(__dirname, "../outputs/workflow-wf-loop.json"),
-    JSON.stringify(wk1.end(), null, 2)
+    JSON.stringify(wk1.workflow(), null, 2)
   );
   const resp = await wk1.invoke(client);
   client.close();
