@@ -15,9 +15,9 @@ documentations:
 
 examples:
 - nodejs
-  - [client api](examples\nodejs\src\main.ts)
-  - [workflow factory api](examples\nodejs\src\main-wf.ts)
-- [Web🚧](examples\web\index.html)
+  - [client api](examples/nodejs/src/main.ts)
+  - [workflow factory api](examples/nodejs/src/main-wf.ts)
+- [Web🚧](examples/web/index.html)
 
 ## Features
 
