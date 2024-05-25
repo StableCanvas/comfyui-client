@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/comfyui-client",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "api Client for ComfyUI that supports both NodeJS and Browser environments. It provides full support for all RESTful / WebSocket APIs.",
   "source": "src/main.ts",
   "main": "dist/main.umd.js",
@@ -55,10 +55,9 @@
     "url": "https://github.com/StableCanvas/comfyui-client/issues"
   },
   "homepage": "https://github.com/StableCanvas/comfyui-client#readme",
-  "dependencies": {
-    "eventemitter3": "^5.0.1"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "eventemitter3": "^5.0.1",
     "@types/node": "^20.12.7",
     "microbundle": "^0.15.1",
     "rollup": "^4.14.3",

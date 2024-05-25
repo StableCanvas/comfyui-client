@@ -350,7 +350,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     const node_config = await this.getNodeDefs();
     // find KSampler node
     const node = node_config["KSampler"];
-    const sampler_name = node?.input?.required?.["sample_name"].flat() || [];
+    const sampler_name = node?.input?.required?.["sampler_name"].flat() || [];
     return sampler_name as string[];
   }
 
