@@ -59,50 +59,81 @@ type BuiltinNodeClasses = {
  * 
  * @example
  * ```typescript
-  const workflow1 = new ComfyUIWorkflow();
+  const workflow = new ComfyUIWorkflow();
   const {
-    CLIPTextEncode,
+    KSampler,
     CheckpointLoaderSimple,
     EmptyLatentImage,
-    KSampler,
-    SaveImage,
+    CLIPTextEncode,
     VAEDecode,
-  } = workflow1.classes;
+    SaveImage,
+    NODE1,
+  } = workflow.classes;
 
-  const [model, clip, vae] = CheckpointLoaderSimple({
-    ckpt_name: "v1-5-pruned-emaonly.ckpt",
-  });
-  const [conditioning] = CLIPTextEncode({
-    text: "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
-    clip,
-  });
-  const [conditioning2] = CLIPTextEncode({
-    text: "text, watermark",
-    clip,
-  });
-  let [latent] = EmptyLatentImage({
-    width: 512,
-    height: 512,
-    batch_size: 1,
-  });
-  [latent] = KSampler({
-    model,
-    seed: 156680208700286,
-    steps: 20,
-    cfg: 8,
-    sampler_name: "euler",
-    scheduler: "normal",
-    positive: conditioning,
-    negative: conditioning2,
-    latent,
+  const seed = Math.floor(Math.random() * 2 ** 32);
+  const pos = "best quality, 1girl";
+  const neg = "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T";
+  const model1_name = "lofi_v5.baked.fp16.safetensors";
+  const model2_name = "case-h-beta.baked.fp16.safetensors";
+  const sampler_settings = {
+    seed,
+    steps: 35,
+    cfg: 4,
+    sampler_name: "dpmpp_2m_sde_gpu",
+    scheduler: "karras",
     denoise: 1,
+  };
+
+  const [model1, clip1, vae1] = CheckpointLoaderSimple({
+    ckpt_name: model1_name,
   });
-  const [image] = VAEDecode({ latent, vae });
-  SaveImage({
-    images: image,
-    filename_prefix: "ComfyUI",
+  const [model2, clip2, vae2] = CheckpointLoaderSimple({
+    ckpt_name: model2_name,
   });
-  const workflow = workflow1.end();
+
+  const dress_case = [
+    "white yoga",
+    "black office",
+    "pink sportswear",
+    "cosplay",
+  ];
+
+  const generate_pipeline = (model, clip, vae, pos, neg) => {
+    const [latent_image] = EmptyLatentImage({
+      width: 640,
+      height: 960,
+      batch_size: 1,
+    });
+    const [positive] = CLIPTextEncode({ text: pos, clip });
+    const [negative] = CLIPTextEncode({ text: neg, clip });
+    const [samples] = KSampler({
+      ...sampler_settings,
+      model,
+      positive,
+      negative,
+      latent_image,
+    });
+    const [image] = VAEDecode({ samples, vae });
+    return image;
+  };
+
+  for (const cloth of dress_case) {
+    const input_pos = `${pos}, ${cloth} dress`;
+    const image = generate_pipeline(model1, clip1, vae1, input_pos, neg);
+    SaveImage({
+      images: image,
+      filename_prefix: `${cloth}-lofi-v5`,
+    });
+
+    const input_pos2 = `${pos}, ${cloth} dress`;
+    const image2 = generate_pipeline(model2, clip2, vae2, input_pos2, neg);
+    SaveImage({
+      images: image2,
+      filename_prefix: `${cloth}-case-h-beta`,
+    });
+  }
+
+  return workflow;
  * ```
  */
 export class ComfyUIWorkflow {
@@ -241,57 +272,3 @@ export class InvokedWorkflow {
     });
   }
 }
-
-// #usage case:
-// const main = () => {
-//   const workflow1 = new ComfyUIWorkflow();
-//   const {
-//     CLIPTextEncode,
-//     CheckpointLoaderSimple,
-//     EmptyLatentImage,
-//     KSampler,
-//     SaveImage,
-//     VAEDecode,
-//     AnythingNode,
-//   } = workflow1.classes;
-
-//   // const [output1] = AnythingNode({
-//   //   hello: "x",
-//   // });
-//   const [model, clip, vae] = CheckpointLoaderSimple({
-//     ckpt_name: "v1-5-pruned-emaonly.ckpt",
-//   });
-//   const [conditioning] = CLIPTextEncode({
-//     text: "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
-//     clip,
-//   });
-//   const [conditioning2] = CLIPTextEncode({
-//     text: "text, watermark",
-//     clip,
-//   });
-//   let [latent_image] = EmptyLatentImage({
-//     width: 512,
-//     height: 512,
-//     batch_size: 1,
-//   });
-//   let [samples] = KSampler({
-//     model,
-//     seed: 156680208700286,
-//     steps: 20,
-//     cfg: 8,
-//     sampler_name: "euler",
-//     scheduler: "normal",
-//     positive: conditioning,
-//     negative: conditioning2,
-//     latent_image,
-//     denoise: 1,
-//   });
-//   const [image] = VAEDecode({ samples, vae });
-//   SaveImage({
-//     images: image,
-//     filename_prefix: "ComfyUI",
-//   });
-
-//   const workflow = workflow1.end();
-//   console.log(workflow);
-// };

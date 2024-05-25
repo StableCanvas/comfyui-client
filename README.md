@@ -170,15 +170,15 @@ const wf1 = createWorkflow();
 
 - builtin node types
  
-![node types](./assets/type_hints.png)
+![node types](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/type_hints.png)
 
 - builtin node params
 
-![node params](./assets/params.png)
+![node params](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/params.png)
 
 - any other node
 
-![other node](./assets/anynode.png)
+![other node](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/anynode.png)
 
 ### Invoke workflow
 ```ts
