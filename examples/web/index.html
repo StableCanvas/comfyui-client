@@ -15,6 +15,79 @@
         }
       }
     </script>
+    <style>
+      * {
+        box-sizing: border-box;
+        padding: 0;
+        margin: 0;
+      }
+
+      html {
+        background-color: #1f1f1f;
+        color: white;
+      }
+
+      body {
+        font-family: sans-serif;
+        padding: 1rem;
+      }
+
+      .payload-panel {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      .payload-panel label {
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .images-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+      }
+
+      textarea {
+        min-height: 100px;
+      }
+
+      .start-button {
+        padding: 0.5rem 1rem;
+        border: none;
+        cursor: pointer;
+        background-color: rgb(0, 122, 255, 0.5);
+        color: white;
+        margin: 1rem 0;
+      }
+      .start-button:disabled {
+        background-color: #333;
+        color: #666;
+      }
+
+      input[type="number"] {
+        padding: 0.5rem;
+      }
+
+      input,
+      textarea {
+        background-color: #333;
+        color: white;
+      }
+
+      progress {
+        flex: 1;
+      }
+      .progress-container {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        padding: 1rem;
+      }
+    </style>
   </head>
   <body>
     <h1>@StableCanvas/comfyui-client</h1>
@@ -44,6 +117,9 @@
           sampler_name: "dpmpp_2m_sde_gpu",
           scheduler: "karras",
           denoise: 1,
+          width: 512,
+          height: 512,
+          batch_size: 1,
         },
         loading: false,
         progress: {
@@ -67,7 +143,7 @@
         },
         appendImage: (image) => {
           set((state) => {
-            return { images: [...state.images, image] };
+            return { ...state, images: [...state.images, image] };
           });
         },
         setPayload: (payload) => {
@@ -85,6 +161,9 @@
             sampler_name,
             scheduler,
             denoise,
+            width,
+            height,
+            batch_size,
           },
         } = useStore.get();
         const workflow = new ComfyUIWorkflow();
@@ -104,9 +183,9 @@
           positive: enc(prompt),
           negative: enc(negative_prompt),
           latent_image: cls.EmptyLatentImage({
-            width: 512,
-            height: 512,
-            batch_size: 1,
+            width,
+            height,
+            batch_size,
           })[0],
         });
         cls.SaveImage({
@@ -140,6 +219,7 @@
           startLoading,
           stopLoading,
           appendImage,
+          setPayload,
         } = useStore();
 
         const handleStart = async () => {
@@ -150,7 +230,7 @@
           for (const image of images) {
             switch (image.type) {
               case "url": {
-                const response = await fetch(image.url);
+                const response = await fetch(image.data);
                 const blob = await response.blob();
                 const reader = new FileReader();
                 reader.onload = () => {
@@ -180,96 +260,138 @@
           <div>
             <fieldset>
               <legend>Settings</legend>
-              <label>
-                Prompt
-                <input
-                  type="text"
-                  value=${payload.prompt}
-                  onInput=${(e) => {
-                    setPayload({ ...payload, prompt: e.target.value });
-                  }}
-                />
-              </label>
-              <label>
-                Negative Prompt
-                <input
-                  type="text"
-                  value=${payload.negative_prompt}
-                  onInput=${(e) => {
-                    setPayload({ ...payload, negative_prompt: e.target.value });
-                  }}
-                />
-              </label>
-              <label>
-                Steps
-                <input
-                  type="number"
-                  value=${payload.steps}
-                  onInput=${(e) => {
-                    setPayload({ ...payload, steps: parseInt(e.target.value) });
-                  }}
-                />
-              </label>
-              <label>
-                CFG
-                <input
-                  type="number"
-                  value=${payload.cfg}
-                  onInput=${(e) => {
-                    setPayload({ ...payload, cfg: parseInt(e.target.value) });
-                  }}
-                />
-              </label>
-              <label>
-                Sampler Name
-                <input
-                  type="text"
-                  value=${payload.sampler_name}
-                  onInput=${(e) => {
-                    setPayload({ ...payload, sampler_name: e.target.value });
-                  }}
-                />
-              </label>
-              <label>
-                Scheduler
-                <input
-                  type="text"
-                  value=${payload.scheduler}
-                  onInput=${(e) => {
-                    setPayload({ ...payload, scheduler: e.target.value });
-                  }}
-                />
-              </label>
-              <label>
-                Denoise
-                <input
-                  type="number"
-                  value=${payload.denoise}
-                  onInput=${(e) => {
-                    setPayload({
-                      ...payload,
-                      denoise: parseInt(e.target.value),
-                    });
-                  }}
-                />
-              </label>
+              <div class="payload-panel">
+                <label>
+                  Prompt
+                  <textarea
+                    type="text"
+                    value=${payload.prompt}
+                    onInput=${(e) => {
+                      setPayload({ ...payload, prompt: e.target.value });
+                    }}
+                  />
+                </label>
+                <label>
+                  Negative Prompt
+                  <textarea
+                    type="text"
+                    value=${payload.negative_prompt}
+                    onInput=${(e) => {
+                      setPayload({
+                        ...payload,
+                        negative_prompt: e.target.value,
+                      });
+                    }}
+                  />
+                </label>
+                <label>
+                  Steps
+                  <input
+                    type="number"
+                    value=${payload.steps}
+                    onInput=${(e) => {
+                      setPayload({
+                        ...payload,
+                        steps: parseInt(e.target.value),
+                      });
+                    }}
+                  />
+                </label>
+                <label>
+                  CFG
+                  <input
+                    type="number"
+                    value=${payload.cfg}
+                    onInput=${(e) => {
+                      setPayload({ ...payload, cfg: parseInt(e.target.value) });
+                    }}
+                  />
+                </label>
+                <label>
+                  Sampler Name
+                  <input
+                    type="text"
+                    value=${payload.sampler_name}
+                    onInput=${(e) => {
+                      setPayload({ ...payload, sampler_name: e.target.value });
+                    }}
+                  />
+                </label>
+                <label>
+                  Scheduler
+                  <input
+                    type="text"
+                    value=${payload.scheduler}
+                    onInput=${(e) => {
+                      setPayload({ ...payload, scheduler: e.target.value });
+                    }}
+                  />
+                </label>
+                <label>
+                  Width
+                  <input
+                    type="number"
+                    value=${payload.width}
+                    onInput=${(e) => {
+                      setPayload({
+                        ...payload,
+                        width: parseInt(e.target.value),
+                      });
+                    }}
+                  />
+                </label>
+                <label>
+                  Height
+                  <input
+                    type="number"
+                    value=${payload.height}
+                    onInput=${(e) => {
+                      setPayload({
+                        ...payload,
+                        height: parseInt(e.target.value),
+                      });
+                    }}
+                  />
+                </label>
+                <label>
+                  Batch Size
+                  <input
+                    type="number"
+                    value=${payload.batch_size}
+                    onInput=${(e) => {
+                      setPayload({
+                        ...payload,
+                        batch_size: parseInt(e.target.value),
+                      });
+                    }}
+                  />
+                </label>
+              </div>
             </fieldset>
-            <button onClick=${handleStart}>Start</button>
+            ${loading
+              ? html`<button class="start-button" disabled>
+                  Generating...
+                </button>`
+              : html`<button class="start-button" onClick=${handleStart}>
+                  Start
+                </button>`}
           </div>
           <div>
             <fieldset>
               <legend>Progress</legend>
-              <progress
-                value=${progress.current}
-                max=${progress.total}
-              ></progress>
-              <span> ${progress.current} / ${progress.total} </span>
+              <div class="progress-container">
+                <progress
+                  value=${progress.current}
+                  max=${progress.total}
+                ></progress>
+                <span> ${progress.current} / ${progress.total} </span>
+              </div>
             </fieldset>
             <fieldset>
               <legend>Images</legend>
-              ${loading
-                ? html`<p>Loading...</p>`
-                : html`<div>
+              ${images.length === 0
+                ? html`<p>no images.</p>`
+                : html`<div class="images-container">
                     ${images.map(
                       (image) =>
                         html`<img
