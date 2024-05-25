@@ -32,6 +32,8 @@ type ComfyUIClientEvents = {
 /**
  * A client for interacting with the ComfyUI API server using WebSockets.
  *
+ * NOTE: CORS policy: Request header field comfy-user is not allowed by Access-Control-Allow-Headers in preflight response. Please config.use empty string in browser.
+ *
  * @example
  * ```typescript
  * const client = new ComfyUIWsClient({
@@ -143,6 +145,8 @@ export class ComfyUIWsClient {
   /**
    * Fetches API data based on the provided route and options.
    *
+   * NOTE: CORS policy: Request header field comfy-user is not allowed by Access-Control-Allow-Headers in preflight response. Please use empty string in browser.
+   *
    * @param {string} route - The route for the API request.
    * @param {RequestInit} [options] - (Optional) Additional options for the request.
    * @return {Promise<Response>} A promise that resolves to the API response.
@@ -152,8 +156,6 @@ export class ComfyUIWsClient {
       throw new Error("Client is closed");
     }
     const headers: HeadersInit = {
-      // NOTE: CORS policy: Request header field comfy-user is not allowed by Access-Control-Allow-Headers in preflight response.
-      // 因为 ComfyUI 没有配置 Access-Control-Allow-Headers 包含这个 comfy-user 所以在浏览器中请使用空白
       ...(this.user
         ? {
             "Comfy-User": this.user,
