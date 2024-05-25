@@ -1,0 +1,2226 @@
+{
+  "title": "Node Types",
+  "type": "object",
+  "properties": {
+    "CLIPLoader": {
+      "title": "CLIPLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: clip_name",
+          "properties": {
+            "clip_name": {
+              "type": "string"
+            }
+          },
+          "required": ["clip_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CLIP",
+          "items": [
+            {
+              "type": "CLIP"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "advanced/loaders"
+    },
+    "CLIPSetLastLayer": {
+      "title": "CLIPSetLastLayer",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: clip, stop_at_clip_layer",
+          "properties": {
+            "clip": {
+              "type": "CLIP"
+            },
+            "stop_at_clip_layer": {
+              "type": "number"
+            }
+          },
+          "required": ["clip", "stop_at_clip_layer"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CLIP",
+          "items": [
+            {
+              "type": "CLIP"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "CLIPTextEncode": {
+      "title": "CLIPTextEncode",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: text, clip",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "clip": {
+              "type": "CLIP"
+            }
+          },
+          "required": ["text", "clip"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "CLIPVisionEncode": {
+      "title": "CLIPVisionEncode",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: clip_vision, image",
+          "properties": {
+            "clip_vision": {
+              "type": "CLIP_VISION"
+            },
+            "image": {
+              "type": "IMAGE"
+            }
+          },
+          "required": ["clip_vision", "image"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CLIP_VISION_OUTPUT",
+          "items": [
+            {
+              "type": "CLIP_VISION_OUTPUT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "CLIPVisionLoader": {
+      "title": "CLIPVisionLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: clip_name",
+          "properties": {
+            "clip_name": {
+              "type": "string"
+            }
+          },
+          "required": ["clip_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CLIP_VISION",
+          "items": [
+            {
+              "type": "CLIP_VISION"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "loaders"
+    },
+    "CheckpointLoader": {
+      "title": "CheckpointLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: config_name, ckpt_name",
+          "properties": {
+            "config_name": {
+              "type": "string"
+            },
+            "ckpt_name": {
+              "type": "string"
+            }
+          },
+          "required": ["config_name", "ckpt_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: MODEL, CLIP, VAE",
+          "items": [
+            {
+              "type": "MODEL"
+            },
+            {
+              "type": "CLIP"
+            },
+            {
+              "type": "VAE"
+            }
+          ],
+          "maxItems": 3,
+          "minItems": 3
+        }
+      },
+      "$category": "advanced/loaders"
+    },
+    "CheckpointLoaderSimple": {
+      "title": "CheckpointLoaderSimple",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: ckpt_name",
+          "properties": {
+            "ckpt_name": {
+              "type": "string"
+            }
+          },
+          "required": ["ckpt_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: MODEL, CLIP, VAE",
+          "items": [
+            {
+              "type": "MODEL"
+            },
+            {
+              "type": "CLIP"
+            },
+            {
+              "type": "VAE"
+            }
+          ],
+          "maxItems": 3,
+          "minItems": 3
+        }
+      },
+      "$category": "loaders"
+    },
+    "ConditioningAverage": {
+      "title": "ConditioningAverage",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning_to, conditioning_from, conditioning_to_strength",
+          "properties": {
+            "conditioning_to": {
+              "type": "CONDITIONING"
+            },
+            "conditioning_from": {
+              "type": "CONDITIONING"
+            },
+            "conditioning_to_strength": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "conditioning_to",
+            "conditioning_from",
+            "conditioning_to_strength"
+          ]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "ConditioningCombine": {
+      "title": "ConditioningCombine",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning_1, conditioning_2",
+          "properties": {
+            "conditioning_1": {
+              "type": "CONDITIONING"
+            },
+            "conditioning_2": {
+              "type": "CONDITIONING"
+            }
+          },
+          "required": ["conditioning_1", "conditioning_2"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "ConditioningConcat": {
+      "title": "ConditioningConcat",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning_to, conditioning_from",
+          "properties": {
+            "conditioning_to": {
+              "type": "CONDITIONING"
+            },
+            "conditioning_from": {
+              "type": "CONDITIONING"
+            }
+          },
+          "required": ["conditioning_to", "conditioning_from"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "ConditioningSetArea": {
+      "title": "ConditioningSetArea",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning, width, height, x, y, strength",
+          "properties": {
+            "conditioning": {
+              "type": "CONDITIONING"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "strength": {
+              "type": "number"
+            }
+          },
+          "required": ["conditioning", "width", "height", "x", "y", "strength"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "ConditioningSetAreaPercentage": {
+      "title": "ConditioningSetAreaPercentage",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning, width, height, x, y, strength",
+          "properties": {
+            "conditioning": {
+              "type": "CONDITIONING"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "strength": {
+              "type": "number"
+            }
+          },
+          "required": ["conditioning", "width", "height", "x", "y", "strength"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "ConditioningSetAreaStrength": {
+      "title": "ConditioningSetAreaStrength",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning, strength",
+          "properties": {
+            "conditioning": {
+              "type": "CONDITIONING"
+            },
+            "strength": {
+              "type": "number"
+            }
+          },
+          "required": ["conditioning", "strength"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "ConditioningSetMask": {
+      "title": "ConditioningSetMask",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning, mask, strength, set_cond_area",
+          "properties": {
+            "conditioning": {
+              "type": "CONDITIONING"
+            },
+            "mask": {
+              "type": "MASK"
+            },
+            "strength": {
+              "type": "number"
+            },
+            "set_cond_area": {
+              "type": "string"
+            }
+          },
+          "required": ["conditioning", "mask", "strength", "set_cond_area"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "ConditioningSetTimestepRange": {
+      "title": "ConditioningSetTimestepRange",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning, start, end",
+          "properties": {
+            "conditioning": {
+              "type": "CONDITIONING"
+            },
+            "start": {
+              "type": "number"
+            },
+            "end": {
+              "type": "number"
+            }
+          },
+          "required": ["conditioning", "start", "end"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "advanced/conditioning"
+    },
+    "ConditioningZeroOut": {
+      "title": "ConditioningZeroOut",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning",
+          "properties": {
+            "conditioning": {
+              "type": "CONDITIONING"
+            }
+          },
+          "required": ["conditioning"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "advanced/conditioning"
+    },
+    "ControlNetApply": {
+      "title": "ControlNetApply",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning, control_net, image, strength",
+          "properties": {
+            "conditioning": {
+              "type": "CONDITIONING"
+            },
+            "control_net": {
+              "type": "CONTROL_NET"
+            },
+            "image": {
+              "type": "IMAGE"
+            },
+            "strength": {
+              "type": "number"
+            }
+          },
+          "required": ["conditioning", "control_net", "image", "strength"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    },
+    "ControlNetApplyAdvanced": {
+      "title": "ControlNetApplyAdvanced",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: positive, negative, control_net, image, strength, start_percent, end_percent",
+          "properties": {
+            "positive": {
+              "type": "CONDITIONING"
+            },
+            "negative": {
+              "type": "CONDITIONING"
+            },
+            "control_net": {
+              "type": "CONTROL_NET"
+            },
+            "image": {
+              "type": "IMAGE"
+            },
+            "strength": {
+              "type": "number"
+            },
+            "start_percent": {
+              "type": "number"
+            },
+            "end_percent": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "positive",
+            "negative",
+            "control_net",
+            "image",
+            "strength",
+            "start_percent",
+            "end_percent"
+          ]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING, CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            },
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2
+        }
+      },
+      "$category": "conditioning"
+    },
+    "ControlNetLoader": {
+      "title": "ControlNetLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: control_net_name",
+          "properties": {
+            "control_net_name": {
+              "type": "string"
+            }
+          },
+          "required": ["control_net_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONTROL_NET",
+          "items": [
+            {
+              "type": "CONTROL_NET"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "loaders"
+    },
+    "DiffControlNetLoader": {
+      "title": "DiffControlNetLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: model, control_net_name",
+          "properties": {
+            "model": {
+              "type": "MODEL"
+            },
+            "control_net_name": {
+              "type": "string"
+            }
+          },
+          "required": ["model", "control_net_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONTROL_NET",
+          "items": [
+            {
+              "type": "CONTROL_NET"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "loaders"
+    },
+    "DiffusersLoader": {
+      "title": "DiffusersLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: model_path",
+          "properties": {
+            "model_path": {
+              "type": "string"
+            }
+          },
+          "required": ["model_path"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: MODEL, CLIP, VAE",
+          "items": [
+            {
+              "type": "MODEL"
+            },
+            {
+              "type": "CLIP"
+            },
+            {
+              "type": "VAE"
+            }
+          ],
+          "maxItems": 3,
+          "minItems": 3
+        }
+      },
+      "$category": "advanced/loaders/deprecated"
+    },
+    "DualCLIPLoader": {
+      "title": "DualCLIPLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: clip_name1, clip_name2",
+          "properties": {
+            "clip_name1": {
+              "type": "string"
+            },
+            "clip_name2": {
+              "type": "string"
+            }
+          },
+          "required": ["clip_name1", "clip_name2"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CLIP",
+          "items": [
+            {
+              "type": "CLIP"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "advanced/loaders"
+    },
+    "EmptyImage": {
+      "title": "EmptyImage",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: width, height, batch_size, color",
+          "properties": {
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            },
+            "batch_size": {
+              "type": "number"
+            },
+            "color": {
+              "type": "number"
+            }
+          },
+          "required": ["width", "height", "batch_size", "color"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: IMAGE",
+          "items": [
+            {
+              "type": "IMAGE"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "image"
+    },
+    "EmptyLatentImage": {
+      "title": "EmptyLatentImage",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: width, height, batch_size",
+          "properties": {
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            },
+            "batch_size": {
+              "type": "number"
+            }
+          },
+          "required": ["width", "height", "batch_size"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent"
+    },
+    "GLIGENLoader": {
+      "title": "GLIGENLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: gligen_name",
+          "properties": {
+            "gligen_name": {
+              "type": "string"
+            }
+          },
+          "required": ["gligen_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: GLIGEN",
+          "items": [
+            {
+              "type": "GLIGEN"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "loaders"
+    },
+    "GLIGENTextBoxApply": {
+      "title": "GLIGENTextBoxApply",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning_to, clip, gligen_textbox_model, text, width, height, x, y",
+          "properties": {
+            "conditioning_to": {
+              "type": "CONDITIONING"
+            },
+            "clip": {
+              "type": "CLIP"
+            },
+            "gligen_textbox_model": {
+              "type": "GLIGEN"
+            },
+            "text": {
+              "type": "string"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "conditioning_to",
+            "clip",
+            "gligen_textbox_model",
+            "text",
+            "width",
+            "height",
+            "x",
+            "y"
+          ]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning/gligen"
+    },
+    "ImageBatch": {
+      "title": "ImageBatch",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: image1, image2",
+          "properties": {
+            "image1": {
+              "type": "IMAGE"
+            },
+            "image2": {
+              "type": "IMAGE"
+            }
+          },
+          "required": ["image1", "image2"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: IMAGE",
+          "items": [
+            {
+              "type": "IMAGE"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "image"
+    },
+    "ImageInvert": {
+      "title": "ImageInvert",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: image",
+          "properties": {
+            "image": {
+              "type": "IMAGE"
+            }
+          },
+          "required": ["image"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: IMAGE",
+          "items": [
+            {
+              "type": "IMAGE"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "image"
+    },
+    "ImagePadForOutpaint": {
+      "title": "ImagePadForOutpaint",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: image, left, top, right, bottom, feathering",
+          "properties": {
+            "image": {
+              "type": "IMAGE"
+            },
+            "left": {
+              "type": "number"
+            },
+            "top": {
+              "type": "number"
+            },
+            "right": {
+              "type": "number"
+            },
+            "bottom": {
+              "type": "number"
+            },
+            "feathering": {
+              "type": "number"
+            }
+          },
+          "required": ["image", "left", "top", "right", "bottom", "feathering"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: IMAGE, MASK",
+          "items": [
+            {
+              "type": "IMAGE"
+            },
+            {
+              "type": "MASK"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2
+        }
+      },
+      "$category": "image"
+    },
+    "ImageScale": {
+      "title": "ImageScale",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: image, upscale_method, width, height, crop",
+          "properties": {
+            "image": {
+              "type": "IMAGE"
+            },
+            "upscale_method": {
+              "type": "string"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            },
+            "crop": {
+              "type": "string"
+            }
+          },
+          "required": ["image", "upscale_method", "width", "height", "crop"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: IMAGE",
+          "items": [
+            {
+              "type": "IMAGE"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "image/upscaling"
+    },
+    "ImageScaleBy": {
+      "title": "ImageScaleBy",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: image, upscale_method, scale_by",
+          "properties": {
+            "image": {
+              "type": "IMAGE"
+            },
+            "upscale_method": {
+              "type": "string"
+            },
+            "scale_by": {
+              "type": "number"
+            }
+          },
+          "required": ["image", "upscale_method", "scale_by"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: IMAGE",
+          "items": [
+            {
+              "type": "IMAGE"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "image/upscaling"
+    },
+    "InpaintModelConditioning": {
+      "title": "InpaintModelConditioning",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: positive, negative, vae, pixels, mask",
+          "properties": {
+            "positive": {
+              "type": "CONDITIONING"
+            },
+            "negative": {
+              "type": "CONDITIONING"
+            },
+            "vae": {
+              "type": "VAE"
+            },
+            "pixels": {
+              "type": "IMAGE"
+            },
+            "mask": {
+              "type": "MASK"
+            }
+          },
+          "required": ["positive", "negative", "vae", "pixels", "mask"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING, CONDITIONING, LATENT",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            },
+            {
+              "type": "CONDITIONING"
+            },
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 3,
+          "minItems": 3
+        }
+      },
+      "$category": "conditioning/inpaint"
+    },
+    "KSampler": {
+      "title": "KSampler",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, denoise",
+          "properties": {
+            "model": {
+              "type": "MODEL"
+            },
+            "seed": {
+              "type": "number"
+            },
+            "steps": {
+              "type": "number"
+            },
+            "cfg": {
+              "type": "number"
+            },
+            "sampler_name": {
+              "type": "string"
+            },
+            "scheduler": {
+              "type": "string"
+            },
+            "positive": {
+              "type": "CONDITIONING"
+            },
+            "negative": {
+              "type": "CONDITIONING"
+            },
+            "latent_image": {
+              "type": "LATENT"
+            },
+            "denoise": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "model",
+            "seed",
+            "steps",
+            "cfg",
+            "sampler_name",
+            "scheduler",
+            "positive",
+            "negative",
+            "latent_image",
+            "denoise"
+          ]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "sampling"
+    },
+    "KSamplerAdvanced": {
+      "title": "KSamplerAdvanced",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: model, add_noise, noise_seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, start_at_step, end_at_step, return_with_leftover_noise",
+          "properties": {
+            "model": {
+              "type": "MODEL"
+            },
+            "add_noise": {
+              "type": "string"
+            },
+            "noise_seed": {
+              "type": "number"
+            },
+            "steps": {
+              "type": "number"
+            },
+            "cfg": {
+              "type": "number"
+            },
+            "sampler_name": {
+              "type": "string"
+            },
+            "scheduler": {
+              "type": "string"
+            },
+            "positive": {
+              "type": "CONDITIONING"
+            },
+            "negative": {
+              "type": "CONDITIONING"
+            },
+            "latent_image": {
+              "type": "LATENT"
+            },
+            "start_at_step": {
+              "type": "number"
+            },
+            "end_at_step": {
+              "type": "number"
+            },
+            "return_with_leftover_noise": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "model",
+            "add_noise",
+            "noise_seed",
+            "steps",
+            "cfg",
+            "sampler_name",
+            "scheduler",
+            "positive",
+            "negative",
+            "latent_image",
+            "start_at_step",
+            "end_at_step",
+            "return_with_leftover_noise"
+          ]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "sampling"
+    },
+    "LatentBlend": {
+      "title": "LatentBlend",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples1, samples2, blend_factor",
+          "properties": {
+            "samples1": {
+              "type": "LATENT"
+            },
+            "samples2": {
+              "type": "LATENT"
+            },
+            "blend_factor": {
+              "type": "number"
+            }
+          },
+          "required": ["samples1", "samples2", "blend_factor"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "_for_testing"
+    },
+    "LatentComposite": {
+      "title": "LatentComposite",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples_to, samples_from, x, y, feather",
+          "properties": {
+            "samples_to": {
+              "type": "LATENT"
+            },
+            "samples_from": {
+              "type": "LATENT"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "feather": {
+              "type": "number"
+            }
+          },
+          "required": ["samples_to", "samples_from", "x", "y", "feather"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent"
+    },
+    "LatentCrop": {
+      "title": "LatentCrop",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, width, height, x, y",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": ["samples", "width", "height", "x", "y"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent/transform"
+    },
+    "LatentFlip": {
+      "title": "LatentFlip",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, flip_method",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "flip_method": {
+              "type": "string"
+            }
+          },
+          "required": ["samples", "flip_method"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent/transform"
+    },
+    "LatentFromBatch": {
+      "title": "LatentFromBatch",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, batch_index, length",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "batch_index": {
+              "type": "number"
+            },
+            "length": {
+              "type": "number"
+            }
+          },
+          "required": ["samples", "batch_index", "length"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent/batch"
+    },
+    "LatentRotate": {
+      "title": "LatentRotate",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, rotation",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "rotation": {
+              "type": "string"
+            }
+          },
+          "required": ["samples", "rotation"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent/transform"
+    },
+    "LatentUpscale": {
+      "title": "LatentUpscale",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, upscale_method, width, height, crop",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "upscale_method": {
+              "type": "string"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            },
+            "crop": {
+              "type": "string"
+            }
+          },
+          "required": ["samples", "upscale_method", "width", "height", "crop"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent"
+    },
+    "LatentUpscaleBy": {
+      "title": "LatentUpscaleBy",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, upscale_method, scale_by",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "upscale_method": {
+              "type": "string"
+            },
+            "scale_by": {
+              "type": "number"
+            }
+          },
+          "required": ["samples", "upscale_method", "scale_by"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent"
+    },
+    "LoadImage": {
+      "title": "LoadImage",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: image",
+          "properties": {
+            "image": {
+              "type": "string"
+            }
+          },
+          "required": ["image"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: IMAGE, MASK",
+          "items": [
+            {
+              "type": "IMAGE"
+            },
+            {
+              "type": "MASK"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2
+        }
+      },
+      "$category": "image"
+    },
+    "LoadImageMask": {
+      "title": "LoadImageMask",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: image, channel",
+          "properties": {
+            "image": {
+              "type": "string"
+            },
+            "channel": {
+              "type": "string"
+            }
+          },
+          "required": ["image", "channel"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: MASK",
+          "items": [
+            {
+              "type": "MASK"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "mask"
+    },
+    "LoadLatent": {
+      "title": "LoadLatent",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: latent",
+          "properties": {
+            "latent": {
+              "type": "string"
+            }
+          },
+          "required": ["latent"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "_for_testing"
+    },
+    "LoraLoader": {
+      "title": "LoraLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: model, clip, lora_name, strength_model, strength_clip",
+          "properties": {
+            "model": {
+              "type": "MODEL"
+            },
+            "clip": {
+              "type": "CLIP"
+            },
+            "lora_name": {
+              "type": "string"
+            },
+            "strength_model": {
+              "type": "number"
+            },
+            "strength_clip": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "model",
+            "clip",
+            "lora_name",
+            "strength_model",
+            "strength_clip"
+          ]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: MODEL, CLIP",
+          "items": [
+            {
+              "type": "MODEL"
+            },
+            {
+              "type": "CLIP"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2
+        }
+      },
+      "$category": "loaders"
+    },
+    "LoraLoaderModelOnly": {
+      "title": "LoraLoaderModelOnly",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: model, lora_name, strength_model",
+          "properties": {
+            "model": {
+              "type": "MODEL"
+            },
+            "lora_name": {
+              "type": "string"
+            },
+            "strength_model": {
+              "type": "number"
+            }
+          },
+          "required": ["model", "lora_name", "strength_model"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: MODEL",
+          "items": [
+            {
+              "type": "MODEL"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "loaders"
+    },
+    "PreviewImage": {
+      "title": "PreviewImage",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: images",
+          "properties": {
+            "images": {
+              "type": "IMAGE"
+            }
+          },
+          "required": ["images"]
+        }
+      },
+      "$category": "image"
+    },
+    "RepeatLatentBatch": {
+      "title": "RepeatLatentBatch",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, amount",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "amount": {
+              "type": "number"
+            }
+          },
+          "required": ["samples", "amount"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent/batch"
+    },
+    "SaveImage": {
+      "title": "SaveImage",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: images, filename_prefix",
+          "properties": {
+            "images": {
+              "type": "IMAGE"
+            },
+            "filename_prefix": {
+              "type": "string"
+            }
+          },
+          "required": ["images", "filename_prefix"]
+        }
+      },
+      "$category": "image"
+    },
+    "SaveLatent": {
+      "title": "SaveLatent",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, filename_prefix",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "filename_prefix": {
+              "type": "string"
+            }
+          },
+          "required": ["samples", "filename_prefix"]
+        }
+      },
+      "$category": "_for_testing"
+    },
+    "SetLatentNoiseMask": {
+      "title": "SetLatentNoiseMask",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, mask",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "mask": {
+              "type": "MASK"
+            }
+          },
+          "required": ["samples", "mask"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent/inpaint"
+    },
+    "StyleModelApply": {
+      "title": "StyleModelApply",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning, style_model, clip_vision_output",
+          "properties": {
+            "conditioning": {
+              "type": "CONDITIONING"
+            },
+            "style_model": {
+              "type": "STYLE_MODEL"
+            },
+            "clip_vision_output": {
+              "type": "CLIP_VISION_OUTPUT"
+            }
+          },
+          "required": ["conditioning", "style_model", "clip_vision_output"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning/style_model"
+    },
+    "StyleModelLoader": {
+      "title": "StyleModelLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: style_model_name",
+          "properties": {
+            "style_model_name": {
+              "type": "string"
+            }
+          },
+          "required": ["style_model_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: STYLE_MODEL",
+          "items": [
+            {
+              "type": "STYLE_MODEL"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "loaders"
+    },
+    "UNETLoader": {
+      "title": "UNETLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: unet_name",
+          "properties": {
+            "unet_name": {
+              "type": "string"
+            }
+          },
+          "required": ["unet_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: MODEL",
+          "items": [
+            {
+              "type": "MODEL"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "advanced/loaders"
+    },
+    "VAEDecode": {
+      "title": "VAEDecode",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, vae",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "vae": {
+              "type": "VAE"
+            }
+          },
+          "required": ["samples", "vae"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: IMAGE",
+          "items": [
+            {
+              "type": "IMAGE"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent"
+    },
+    "VAEDecodeTiled": {
+      "title": "VAEDecodeTiled",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: samples, vae, tile_size",
+          "properties": {
+            "samples": {
+              "type": "LATENT"
+            },
+            "vae": {
+              "type": "VAE"
+            },
+            "tile_size": {
+              "type": "number"
+            }
+          },
+          "required": ["samples", "vae", "tile_size"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: IMAGE",
+          "items": [
+            {
+              "type": "IMAGE"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "_for_testing"
+    },
+    "VAEEncode": {
+      "title": "VAEEncode",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: pixels, vae",
+          "properties": {
+            "pixels": {
+              "type": "IMAGE"
+            },
+            "vae": {
+              "type": "VAE"
+            }
+          },
+          "required": ["pixels", "vae"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent"
+    },
+    "VAEEncodeForInpaint": {
+      "title": "VAEEncodeForInpaint",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: pixels, vae, mask, grow_mask_by",
+          "properties": {
+            "pixels": {
+              "type": "IMAGE"
+            },
+            "vae": {
+              "type": "VAE"
+            },
+            "mask": {
+              "type": "MASK"
+            },
+            "grow_mask_by": {
+              "type": "number"
+            }
+          },
+          "required": ["pixels", "vae", "mask", "grow_mask_by"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "latent/inpaint"
+    },
+    "VAEEncodeTiled": {
+      "title": "VAEEncodeTiled",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: pixels, vae, tile_size",
+          "properties": {
+            "pixels": {
+              "type": "IMAGE"
+            },
+            "vae": {
+              "type": "VAE"
+            },
+            "tile_size": {
+              "type": "number"
+            }
+          },
+          "required": ["pixels", "vae", "tile_size"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: LATENT",
+          "items": [
+            {
+              "type": "LATENT"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "_for_testing"
+    },
+    "VAELoader": {
+      "title": "VAELoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: vae_name",
+          "properties": {
+            "vae_name": {
+              "type": "string"
+            }
+          },
+          "required": ["vae_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: VAE",
+          "items": [
+            {
+              "type": "VAE"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "loaders"
+    },
+    "unCLIPCheckpointLoader": {
+      "title": "unCLIPCheckpointLoader",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: ckpt_name",
+          "properties": {
+            "ckpt_name": {
+              "type": "string"
+            }
+          },
+          "required": ["ckpt_name"]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: MODEL, CLIP, VAE, CLIP_VISION",
+          "items": [
+            {
+              "type": "MODEL"
+            },
+            {
+              "type": "CLIP"
+            },
+            {
+              "type": "VAE"
+            },
+            {
+              "type": "CLIP_VISION"
+            }
+          ],
+          "maxItems": 4,
+          "minItems": 4
+        }
+      },
+      "$category": "loaders"
+    },
+    "unCLIPConditioning": {
+      "title": "unCLIPConditioning",
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "INPUT_TYPES: conditioning, clip_vision_output, strength, noise_augmentation",
+          "properties": {
+            "conditioning": {
+              "type": "CONDITIONING"
+            },
+            "clip_vision_output": {
+              "type": "CLIP_VISION_OUTPUT"
+            },
+            "strength": {
+              "type": "number"
+            },
+            "noise_augmentation": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "conditioning",
+            "clip_vision_output",
+            "strength",
+            "noise_augmentation"
+          ]
+        },
+        "outputs": {
+          "type": "array",
+          "description": "RETURN_TYPES: CONDITIONING",
+          "items": [
+            {
+              "type": "CONDITIONING"
+            }
+          ],
+          "maxItems": 1,
+          "minItems": 1
+        }
+      },
+      "$category": "conditioning"
+    }
+  }
+}

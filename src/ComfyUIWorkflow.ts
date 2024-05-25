@@ -1,3 +1,6 @@
+import { ComfyUIApiClient } from "./ComfyUIApiClient";
+import { ComfyUINodeTypes } from "./schema/comfyui.node.typs";
+
 const deepClone: <T>(obj: T) => T = globalThis.structuredClone
   ? globalThis.structuredClone
   : (x) => JSON.parse(JSON.stringify(x));
@@ -29,9 +32,16 @@ type NodeClassInputs = Record<
   string | boolean | number | null | undefined | NodeOutput
 >;
 
-interface ComfyUINodeClass {
-  (inputs: NodeClassInputs): NodeOutput[];
+interface ComfyUINodeClass<INP extends NodeClassInputs = NodeClassInputs> {
+  (inputs: INP): NodeOutput[];
 }
+
+// TODO type => class
+// type BuiltinNodeClasses = {
+//   [K in keyof ComfyUINodeTypes.NodeTypes]: ComfyUINodeClass<
+//     NonNullable<NonNullable<ComfyUINodeTypes.NodeTypes[K]>["inputs"]>
+//   >;
+// };
 
 /**
  * A class for creating a workflow using a fluent API.
@@ -93,7 +103,9 @@ export class ComfyUIWorkflow {
   public classes = this._createClassesProxy();
 
   protected _createClassesProxy() {
-    const source = {} as Record<string, ComfyUINodeClass>;
+    const source = {} as
+      | Record<keyof ComfyUINodeTypes.NodeTypes, ComfyUINodeClass> &
+          Record<string, ComfyUINodeClass>;
     return new Proxy(source, {
       get: (target, p, receiver) => {
         if (p in target) {
@@ -130,6 +142,17 @@ export class ComfyUIWorkflow {
    */
   public end() {
     return deepClone(this._workflow);
+  }
+
+  /**
+   * Invoke this workflow using the provided client.
+   *
+   * @param {ComfyUIApiClient} client - The client used to run the prompt.
+   * @return {Promise<any>} A promise that resolves with the result of the prompt.
+   */
+  public invoke(client: ComfyUIApiClient) {
+    const { prompt, workflow } = this.end();
+    return client.runPrompt(prompt, { workflow });
   }
 }
 
