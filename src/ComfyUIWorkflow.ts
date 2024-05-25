@@ -4,13 +4,14 @@ const deepClone: <T>(obj: T) => T = globalThis.structuredClone
 
 type NodeOutput = [string, number];
 
-type WorkFlowPromptNode = {
+type WorkflowPromptNode = {
   class_type: string;
   inputs: Record<string, any>;
 };
 
-type Workflow = {
-  prompt: WorkFlowPromptNode[];
+interface IWorkflow {
+  // id => node
+  prompt: Record<string, WorkflowPromptNode>;
 
   // TODO
   workflow?: {
@@ -21,31 +22,92 @@ type Workflow = {
     extra: {};
     version: 0.4;
   };
-};
+}
 
+type NodeClassInputs = Record<
+  string,
+  string | boolean | number | null | undefined | NodeOutput
+>;
+
+interface ComfyUINodeClass {
+  (inputs: NodeClassInputs): NodeOutput[];
+}
+
+/**
+ * A class for creating a workflow using a fluent API.
+ * 
+ * @example
+ * ```typescript
+  const workflow1 = new ComfyUIWorkflow();
+  const {
+    CLIPTextEncode,
+    CheckpointLoaderSimple,
+    EmptyLatentImage,
+    KSampler,
+    SaveImage,
+    VAEDecode,
+  } = workflow1.classes;
+
+  const [model, clip, vae] = CheckpointLoaderSimple({
+    ckpt_name: "v1-5-pruned-emaonly.ckpt",
+  });
+  const [conditioning] = CLIPTextEncode({
+    text: "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
+    clip,
+  });
+  const [conditioning2] = CLIPTextEncode({
+    text: "text, watermark",
+    clip,
+  });
+  let [latent] = EmptyLatentImage({
+    width: 512,
+    height: 512,
+    batch_size: 1,
+  });
+  [latent] = KSampler({
+    model,
+    seed: 156680208700286,
+    steps: 20,
+    cfg: 8,
+    sampler_name: "euler",
+    scheduler: "normal",
+    positive: conditioning,
+    negative: conditioning2,
+    latent,
+    denoise: 1,
+  });
+  const [image] = VAEDecode({ latent, vae });
+  SaveImage({
+    images: image,
+    filename_prefix: "ComfyUI",
+  });
+  const workflow = workflow1.end();
+ * ```
+ */
 export class ComfyUIWorkflow {
-  private _workflow: Workflow = {
-    prompt: [],
+  protected _workflow: IWorkflow = {
+    prompt: {},
   };
+  protected _last_node_id = 0;
 
   public classes = this._createClassesProxy();
 
-  private _createClassesProxy() {
-    const source = {} as Record<
-      string,
-      (inputs: Record<string, any>) => NodeOutput[]
-    >;
+  protected _createClassesProxy() {
+    const source = {} as Record<string, ComfyUINodeClass>;
     return new Proxy(source, {
       get: (target, p, receiver) => {
+        if (p in target) {
+          return (target as any)[p];
+        }
         return (inputs: Record<string, any>) => {
-          const node: WorkFlowPromptNode = {
+          const node: WorkflowPromptNode = {
             class_type: p.toString(),
             inputs,
           };
-          this._workflow.prompt.push(node);
-          const id = this._workflow.prompt.length - 1;
+          const id = (++this._last_node_id).toString();
+          this._workflow.prompt[id] = node;
           return Array.from({ length: 10 }, (_, i) => {
-            return [id.toString(), i];
+            return [id, i];
           });
         };
       },
@@ -56,14 +118,15 @@ export class ComfyUIWorkflow {
    * Resets the workflow by clearing the prompt and setting the workflow to undefined.
    */
   public reset() {
-    this._workflow.prompt = [];
+    this._workflow.prompt = {};
     this._workflow.workflow = undefined;
+    this._last_node_id = 0;
   }
 
   /**
    * Returns the current workflow object.
    *
-   * @return {Workflow} The current workflow object.
+   * @return {IWorkflow} The current workflow object.
    */
   public end() {
     return deepClone(this._workflow);
