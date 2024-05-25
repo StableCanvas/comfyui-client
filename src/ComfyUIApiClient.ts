@@ -2,6 +2,22 @@ import { ComfyUIWsClient } from "./ComfyUIWsClient";
 import { ComfyUIClientResponseTypes } from "./response.types";
 import { IComfyApiConfig } from "./types";
 
+/**
+ * The ComfyUIApiClient class provides a high-level interface for interacting with the ComfyUI API.
+ *
+ * @extends ComfyUIWsClient
+ *
+ * @example
+ * ```typescript
+ * const client = new ComfyUIApiClient({
+ *  api_host: "YOUR_API_HOST",
+ *  clientId: "YOUR_CLIENT_ID",
+ * });
+ *
+ * const extensions = await client.getEmbeddings();
+ * console.log(extensions);
+ * ```
+ */
 export class ComfyUIApiClient extends ComfyUIWsClient {
   constructor(config: IComfyApiConfig) {
     super(config);
