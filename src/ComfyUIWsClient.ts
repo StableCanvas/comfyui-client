@@ -1,19 +1,26 @@
 import { IComfyApiConfig } from "./types";
 import { EventEmitter } from "eventemitter3";
+import { ComfyUiWsTypes } from "./ws.typs";
 
 type ComfyUIClientEvents = {
-  // TODO: Add types for these events
-  status: any;
-  progress: any;
-  executing: any;
-  executed: any;
+  status: [ComfyUiWsTypes.Messages.Status["status"] | null];
+  progress: [ComfyUiWsTypes.Messages.Progress];
+  executing: [ComfyUiWsTypes.Messages.Executing];
+  executed: [ComfyUiWsTypes.Messages.Executed];
+
+  // this group events
   execution_start: any;
   execution_error: any;
   execution_cached: any;
+
+  // this web client events
   reconnected: any;
   reconnecting: any;
   b_preview: any;
 
+  /**
+   * get all messages
+   */
   message: any;
 };
 
@@ -127,10 +134,10 @@ export class ComfyUIWsClient {
    * @param {any} options - (Optional) Additional options for the event listener.
    * @return {() => void} A function that removes the event listener when called.
    */
-  addEventListener(
-    type: keyof ComfyUIClientEvents | (string & {}),
-    callback: (...args: any) => void,
-    options: any
+  addEventListener<T extends EventEmitter.EventNames<ComfyUIClientEvents>>(
+    type: T,
+    callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
+    options?: any
   ) {
     this.events.on(type as any, callback, options);
     this.registered.add(type);
@@ -149,19 +156,24 @@ export class ComfyUIWsClient {
    * @param {any} options - (Optional) Additional options for the event listener.
    * @return {() => void} A function that removes the event listener when called.
    */
-  on(
-    type: keyof ComfyUIClientEvents | (string & {}),
-    callback: (...args: any) => void,
-    options: any
+  on<T extends EventEmitter.EventNames<ComfyUIClientEvents>>(
+    type: T,
+    callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
+    options?: any
   ) {
     return this.addEventListener(type, callback, options);
   }
 
+  protected _polling_timer: any = null;
+  protected _polling_interval = 1000;
   /**
-   * Poll status  for colab and other things that don't support websockets.
+   * Poll status for colab and other things that don't support websockets.
    */
-  private pollQueue() {
-    setInterval(async () => {
+  private startPollingQueue() {
+    if (this._polling_timer) {
+      return;
+    }
+    this._polling_timer = setInterval(async () => {
       try {
         const resp = await this.fetchApi("/prompt");
         const status = await resp.json();
@@ -169,7 +181,7 @@ export class ComfyUIWsClient {
       } catch (error) {
         this.events.emit("status", null);
       }
-    }, 1000);
+    }, this._polling_interval);
   }
 
   protected addSocketCallback<K extends keyof WebSocketEventMap>(
@@ -226,7 +238,7 @@ export class ComfyUIWsClient {
     this.addSocketCallback(this.socket, "error", () => {
       if (this.socket) this.socket.close();
       if (!isReconnect && !opened) {
-        this.pollQueue();
+        this.startPollingQueue();
       }
     });
 
@@ -348,9 +360,38 @@ export class ComfyUIWsClient {
 
   /**
    * Connects to the WebSocket server by creating a new socket connection.
+   *
+   * @param {Object} options - The options for connecting to the server.
+   * @param {Object} options.polling - The options for polling.
+   * @param {boolean} options.polling.enabled - Whether polling is enabled.
+   * @param {number} [options.polling.interval] - The interval for polling.
+   * @param {Object} options.websocket - The options for the WebSocket connection.
+   * @param {boolean} options.websocket.enabled - Whether the WebSocket connection is enabled.
+   * @return {this} - The instance of the class.
    */
-  connect() {
-    this.createSocket();
+  connect({
+    polling = {
+      enabled: false,
+    },
+    websocket = {
+      enabled: true,
+    },
+  }: {
+    polling?: {
+      enabled: boolean;
+      interval?: number;
+    };
+    websocket?: {
+      enabled: boolean;
+    };
+  } = {}) {
+    if (polling?.enabled) {
+      this._polling_interval = polling.interval ?? this._polling_interval;
+      this.startPollingQueue();
+    }
+    if (websocket?.enabled) {
+      this.createSocket();
+    }
     return this;
   }
 
@@ -358,6 +399,16 @@ export class ComfyUIWsClient {
    * Disconnects the WebSocket connection and cleans up event listeners.
    */
   disconnect() {
+    this._disconnectSocket();
+    this._disconnectPolling();
+  }
+
+  /**
+   * Disconnects the WebSocket connection and cleans up event listeners.
+   *
+   * @return {void} This function does not return anything.
+   */
+  _disconnectSocket() {
     const { socket } = this;
     if (!socket) return;
     this.socket = null;
@@ -367,6 +418,18 @@ export class ComfyUIWsClient {
     this.removeSocketCallbacks();
     if ("removeAllListeners" in socket) {
       (socket.removeAllListeners as any)?.();
+    }
+  }
+
+  /**
+   * Disconnects the polling timer and sets it to null.
+   *
+   * @return {void}
+   */
+  _disconnectPolling() {
+    if (this._polling_timer !== null) {
+      clearInterval(this._polling_timer);
+      this._polling_timer = null;
     }
   }
 }

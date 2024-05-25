@@ -1,6 +1,7 @@
 import { ComfyUIWsClient } from "./ComfyUIWsClient";
 import { ComfyUIClientResponseTypes } from "./response.types";
 import { IComfyApiConfig } from "./types";
+import { ComfyUiWsTypes } from "./ws.typs";
 
 /**
  * The ComfyUIApiClient class provides a high-level interface for interacting with the ComfyUI API.
@@ -421,6 +422,24 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   }
 
   /**
+   * Asynchronously waits for the prompt with the provided ID to be done.
+   *
+   * @param {string} prompt_id - The ID of the prompt to wait for.
+   * @param {number} [polling_ms=1000] - The number of milliseconds to wait between checks.
+   */
+  async waitForPromptWebSocket(prompt_id: string, last_node_id: string) {
+    return new Promise((resolve, reject) => {
+      const offEvent = this.on("executed", (data) => {
+        const { node, prompt_id: current_prompt_id, output } = data;
+        if (node === last_node_id && current_prompt_id === prompt_id) {
+          resolve(output);
+          offEvent();
+        }
+      });
+    });
+  }
+
+  /**
    * Randomizes the seed value of nodes with class type "KSampler" in the prompt.
    *
    * @param {Record<string, unknown>} prompt - The prompt object to randomize.
@@ -464,6 +483,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
       // TODO new Error class
       throw new Error(resp.error);
     }
+    // TODO use websocket to wait for prompt result
     const prompt_id = resp.prompt_id;
     await this.waitForPrompt(prompt_id, options?.polling_ms);
     return await this.getPromptResult(prompt_id);
