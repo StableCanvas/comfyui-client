@@ -4,10 +4,286 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ComfyUI Client playground</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "preact": "https://cdn.jsdelivr.net/npm/preact@10.22.0/+esm",
+          "htm": "https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm",
+          "preact/hooks": "https://cdn.jsdelivr.net/npm/preact@10.22.0/hooks/dist/hooks.module.js",
+          "@quik-fe/stand": "https://cdn.jsdelivr.net/npm/@quik-fe/stand@1.1.2/+esm",
+          "@stable-canvas/comfyui-client": "https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@1.2.4/+esm"
+        }
+      }
+    </script>
   </head>
   <body>
     <h1>@StableCanvas/comfyui-client</h1>
 
-    <h3>TODO</h3>
+    <div id="app"></div>
+
+    <script type="module">
+      import { h, Component, render } from "preact";
+      import * as React from "preact/hooks";
+      import htm from "htm";
+      import { bindReact } from "@quik-fe/stand";
+      import {
+        ComfyUIApiClient,
+        ComfyUIWorkflow,
+      } from "@stable-canvas/comfyui-client";
+
+      const html = htm.bind(h);
+      const create = bindReact(React);
+      console.log(React);
+
+      const useStore = create((set, get) => ({
+        payload: {
+          prompt: "best quality,1girl",
+          negative_prompt: "worst quality, bad anatomy",
+          steps: 35,
+          cfg: 4,
+          sampler_name: "dpmpp_2m_sde_gpu",
+          scheduler: "karras",
+          denoise: 1,
+        },
+        loading: false,
+        progress: {
+          current: 0,
+          total: 0,
+        },
+        // base64[]
+        images: [],
+
+        setProgress: (progress) => {
+          set({ progress });
+        },
+        setImages: (images) => {
+          set({ images });
+        },
+        startLoading: () => {
+          set({ loading: true });
+        },
+        stopLoading: () => {
+          set({ loading: false });
+        },
+        appendImage: (image) => {
+          set((state) => {
+            return { images: [...state.images, image] };
+          });
+        },
+        setPayload: (payload) => {
+          set({ payload });
+        },
+      }));
+
+      const build_workflow = () => {
+        const {
+          payload: {
+            prompt,
+            negative_prompt,
+            steps,
+            cfg,
+            sampler_name,
+            scheduler,
+            denoise,
+          },
+        } = useStore.get();
+        const workflow = new ComfyUIWorkflow();
+        const cls = workflow.classes;
+        const [model, clip, vae] = cls.CheckpointLoaderSimple({
+          ckpt_name: "lofi_v5.baked.fp16.safetensors",
+        });
+        const enc = (text) => cls.CLIPTextEncode({ text, clip })[0];
+        const [samples] = cls.KSampler({
+          seed: Math.floor(Math.random() * 2 ** 32),
+          model,
+          steps,
+          cfg,
+          sampler_name,
+          scheduler,
+          denoise,
+          positive: enc(prompt),
+          negative: enc(negative_prompt),
+          latent_image: cls.EmptyLatentImage({
+            width: 512,
+            height: 512,
+            batch_size: 1,
+          })[0],
+        });
+        cls.SaveImage({
+          filename_prefix: "from-sc-comfy-ui-client",
+          images: cls.VAEDecode({ samples, vae })[0],
+        });
+        return workflow;
+      };
+
+      const client = new ComfyUIApiClient({
+        api_host: "localhost:8188",
+      });
+      client.connect();
+
+      client.on("progress", (progress) => {
+        const { value, max } = progress;
+        useStore.get().setProgress({
+          current: value,
+          total: max,
+        });
+      });
+
+      function App() {
+        const {
+          payload,
+          loading,
+          progress,
+          images,
+          setProgress,
+          setImages,
+          startLoading,
+          stopLoading,
+          appendImage,
+        } = useStore();
+
+        const handleStart = async () => {
+          startLoading();
+          const workflow = build_workflow();
+          const { images } = await workflow.invoke(client);
+          console.log(images);
+          for (const image of images) {
+            switch (image.type) {
+              case "url": {
+                const response = await fetch(image.url);
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onload = () => {
+                  appendImage(reader.result);
+                };
+                reader.readAsDataURL(blob);
+                break;
+              }
+              // arraybuffer
+              case "buff": {
+                const reader = new FileReader();
+                reader.onload = () => {
+                  appendImage(reader.result);
+                };
+                reader.readAsDataURL(new Blob([image.buff]));
+                break;
+              }
+            }
+          }
+          stopLoading();
+          setTimeout(() => {
+            setProgress({ current: 0, total: 0 });
+          });
+        };
+
+        return html`
+          <div>
+            <fieldset>
+              <legend>Settings</legend>
+              <label>
+                Prompt
+                <input
+                  type="text"
+                  value=${payload.prompt}
+                  onInput=${(e) => {
+                    setPayload({ ...payload, prompt: e.target.value });
+                  }}
+                />
+              </label>
+              <label>
+                Negative Prompt
+                <input
+                  type="text"
+                  value=${payload.negative_prompt}
+                  onInput=${(e) => {
+                    setPayload({ ...payload, negative_prompt: e.target.value });
+                  }}
+                />
+              </label>
+              <label>
+                Steps
+                <input
+                  type="number"
+                  value=${payload.steps}
+                  onInput=${(e) => {
+                    setPayload({ ...payload, steps: parseInt(e.target.value) });
+                  }}
+                />
+              </label>
+              <label>
+                CFG
+                <input
+                  type="number"
+                  value=${payload.cfg}
+                  onInput=${(e) => {
+                    setPayload({ ...payload, cfg: parseInt(e.target.value) });
+                  }}
+                />
+              </label>
+              <label>
+                Sampler Name
+                <input
+                  type="text"
+                  value=${payload.sampler_name}
+                  onInput=${(e) => {
+                    setPayload({ ...payload, sampler_name: e.target.value });
+                  }}
+                />
+              </label>
+              <label>
+                Scheduler
+                <input
+                  type="text"
+                  value=${payload.scheduler}
+                  onInput=${(e) => {
+                    setPayload({ ...payload, scheduler: e.target.value });
+                  }}
+                />
+              </label>
+              <label>
+                Denoise
+                <input
+                  type="number"
+                  value=${payload.denoise}
+                  onInput=${(e) => {
+                    setPayload({
+                      ...payload,
+                      denoise: parseInt(e.target.value),
+                    });
+                  }}
+                />
+              </label>
+            </fieldset>
+            <button onClick=${handleStart}>Start</button>
+          </div>
+          <div>
+            <fieldset>
+              <legend>Progress</legend>
+              <progress
+                value=${progress.current}
+                max=${progress.total}
+              ></progress>
+              <span> ${progress.current} / ${progress.total} </span>
+            </fieldset>
+            <fieldset>
+              <legend>Images</legend>
+              ${loading
+                ? html`<p>Loading...</p>`
+                : html`<div>
+                    ${images.map(
+                      (image) =>
+                        html`<img
+                          src=${image}
+                          style="max-width: 100%; max-height: 100%"
+                        />`
+                    )}
+                  </div>`}
+            </fieldset>
+          </div>
+        `;
+      }
+
+      render(html`<${App} />`, document.querySelector("#app"));
+    </script>
   </body>
 </html>
