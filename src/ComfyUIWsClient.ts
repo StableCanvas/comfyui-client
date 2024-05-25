@@ -253,6 +253,8 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
 
   /**
    * Initializes sockets and realtime updates
+   *
+   * @deprecated move to client.connect()
    */
   init() {
     this.createSocket();
@@ -267,6 +269,23 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
       return;
     }
     this.closed = true;
+
+    this.disconnect();
+    this.removeAllListeners();
+  }
+
+  /**
+   * Connects to the WebSocket server by creating a new socket connection.
+   */
+  connect() {
+    this.createSocket();
+    return this;
+  }
+
+  /**
+   * Disconnects the WebSocket connection and cleans up event listeners.
+   */
+  disconnect() {
     if (this.socket) {
       if (this.socket.readyState === this.WebSocket.OPEN) {
         this.socket.close(1000, "Client closed");
@@ -276,6 +295,5 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
       }
       this.socket = null;
     }
-    this.removeAllListeners();
   }
 }
