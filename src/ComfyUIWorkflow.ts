@@ -32,16 +32,24 @@ type NodeClassInputs = Record<
   string | boolean | number | null | undefined | NodeOutput
 >;
 
+// { k: { [k:string]: unknown } } => { k: any }
+type InputsFormat<T> = {
+  [K in keyof T]: T[K] extends { [k: string]: unknown } ? any : T[K];
+};
+
 interface ComfyUINodeClass<INP extends NodeClassInputs = NodeClassInputs> {
   (inputs: INP): NodeOutput[];
 }
 
-// TODO type => class
-// type BuiltinNodeClasses = {
-//   [K in keyof ComfyUINodeTypes.NodeTypes]: ComfyUINodeClass<
-//     NonNullable<NonNullable<ComfyUINodeTypes.NodeTypes[K]>["inputs"]>
-//   >;
-// };
+type BuiltinNodeClasses = {
+  [K in keyof Required<ComfyUINodeTypes.NodeTypes>]: Required<
+    Required<ComfyUINodeTypes.NodeTypes>[K]
+  > extends {
+    inputs: infer INP;
+  }
+    ? ComfyUINodeClass<InputsFormat<INP> & NodeClassInputs>
+    : ComfyUINodeClass<NodeClassInputs>;
+};
 
 /**
  * A class for creating a workflow using a fluent API.
@@ -103,9 +111,7 @@ export class ComfyUIWorkflow {
   public classes = this._createClassesProxy();
 
   protected _createClassesProxy() {
-    const source = {} as
-      | Record<keyof ComfyUINodeTypes.NodeTypes, ComfyUINodeClass> &
-          Record<string, ComfyUINodeClass>;
+    const source = {} as BuiltinNodeClasses & Record<string, ComfyUINodeClass>;
     return new Proxy(source, {
       get: (target, p, receiver) => {
         if (p in target) {
@@ -157,52 +163,55 @@ export class ComfyUIWorkflow {
 }
 
 // #usage case:
-// const main = () => {
-//   const workflow1 = new ComfyUIWorkflow();
-//   const {
-//     CLIPTextEncode,
-//     CheckpointLoaderSimple,
-//     EmptyLatentImage,
-//     KSampler,
-//     SaveImage,
-//     VAEDecode,
-//   } = workflow1.classes;
+const main = () => {
+  const workflow1 = new ComfyUIWorkflow();
+  const {
+    CLIPTextEncode,
+    CheckpointLoaderSimple,
+    EmptyLatentImage,
+    KSampler,
+    SaveImage,
+    VAEDecode,
+    AnythingNode,
+  } = workflow1.classes;
 
-//   // 这里输出的 model => ["1", 0] 表示是 第一个节点的第一个输出
-//   const [model, clip, vae] = CheckpointLoaderSimple({
-//     ckpt_name: "v1-5-pruned-emaonly.ckpt",
-//   });
-//   const [conditioning] = CLIPTextEncode({
-//     text: "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
-//     clip,
-//   });
-//   const [conditioning2] = CLIPTextEncode({
-//     text: "text, watermark",
-//     clip,
-//   });
-//   let [latent] = EmptyLatentImage({
-//     width: 512,
-//     height: 512,
-//     batch_size: 1,
-//   });
-//   [latent] = KSampler({
-//     model,
-//     seed: 156680208700286,
-//     steps: 20,
-//     cfg: 8,
-//     sampler_name: "euler",
-//     scheduler: "normal",
-//     positive: conditioning,
-//     negative: conditioning2,
-//     latent,
-//     denoise: 1,
-//   });
-//   const [image] = VAEDecode({ latent, vae });
-//   SaveImage({
-//     images: image,
-//     filename_prefix: "ComfyUI",
-//   });
+  // const [output1] = AnythingNode({
+  //   hello: "x",
+  // });
+  const [model, clip, vae] = CheckpointLoaderSimple({
+    ckpt_name: "v1-5-pruned-emaonly.ckpt",
+  });
+  const [conditioning] = CLIPTextEncode({
+    text: "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
+    clip,
+  });
+  const [conditioning2] = CLIPTextEncode({
+    text: "text, watermark",
+    clip,
+  });
+  let [latent_image] = EmptyLatentImage({
+    width: 512,
+    height: 512,
+    batch_size: 1,
+  });
+  let [samples] = KSampler({
+    model,
+    seed: 156680208700286,
+    steps: 20,
+    cfg: 8,
+    sampler_name: "euler",
+    scheduler: "normal",
+    positive: conditioning,
+    negative: conditioning2,
+    latent_image,
+    denoise: 1,
+  });
+  const [image] = VAEDecode({ samples, vae });
+  SaveImage({
+    images: image,
+    filename_prefix: "ComfyUI",
+  });
 
-//   const workflow = workflow1.end();
-//   console.log(workflow);
-// };
+  const workflow = workflow1.end();
+  console.log(workflow);
+};
