@@ -17,7 +17,27 @@ type ComfyUIClientEvents = {
   message: any;
 };
 
-export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
+/**
+ * A client for interacting with the ComfyUI API server using WebSockets.
+ *
+ * @example
+ * ```typescript
+ * const client = new ComfyUIWsClient({
+ *  api_host: "YOUR_API_HOST"
+ * });
+ *
+ * // Connect to the server
+ * client.connect();
+ *
+ * // Listen for status updates
+ * client.on("status", (status) => {
+ *   console.log("Status:", status);
+ * });
+ *
+ * // when done, close the client
+ * client.close();
+ */
+export class ComfyUIWsClient {
   static DEFAULT_API_HOST = "127.0.0.1:8188";
   static DEFAULT_API_BASE = "";
   static DEFAULT_SESSION_NAME = "";
@@ -33,12 +53,15 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
   user: string;
   fetch: typeof fetch;
 
+  events: EventEmitter<ComfyUIClientEvents> = new EventEmitter();
+
   readonly IS_BROWSER = typeof window !== "undefined";
 
   protected registered = new Set();
 
+  protected socket_callbacks: Record<string, any> = {};
+
   constructor(config: IComfyApiConfig) {
-    super();
     this.api_host = config.api_host ?? ComfyUIWsClient.DEFAULT_API_HOST;
     this.api_base = config.api_base ?? ComfyUIWsClient.DEFAULT_API_BASE;
     this.clientId = config.clientId;
@@ -102,14 +125,36 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
    * @param {keyof ComfyUIClientEvents | (string & {})} type - The type of event to listen for.
    * @param {(...args: any) => void} callback - The callback function to be executed when the event is triggered.
    * @param {any} options - (Optional) Additional options for the event listener.
+   * @return {() => void} A function that removes the event listener when called.
    */
   addEventListener(
     type: keyof ComfyUIClientEvents | (string & {}),
     callback: (...args: any) => void,
     options: any
   ) {
-    super.on(type as any, callback, options);
+    this.events.on(type as any, callback, options);
     this.registered.add(type);
+
+    return () => {
+      this.events.off(type as any, callback);
+      this.registered.delete(type);
+    };
+  }
+
+  /**
+   * Adds an event listener for the specified event type.
+   *
+   * @param {keyof ComfyUIClientEvents | (string & {})} type - The type of event to listen for.
+   * @param {(...args: any) => void} callback - The callback function to be executed when the event is triggered.
+   * @param {any} options - (Optional) Additional options for the event listener.
+   * @return {() => void} A function that removes the event listener when called.
+   */
+  on(
+    type: keyof ComfyUIClientEvents | (string & {}),
+    callback: (...args: any) => void,
+    options: any
+  ) {
+    return this.addEventListener(type, callback, options);
   }
 
   /**
@@ -120,11 +165,38 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
       try {
         const resp = await this.fetchApi("/prompt");
         const status = await resp.json();
-        this.emit("status", status);
+        this.events.emit("status", status);
       } catch (error) {
-        this.emit("status", null);
+        this.events.emit("status", null);
       }
     }, 1000);
+  }
+
+  protected addSocketCallback<K extends keyof WebSocketEventMap>(
+    socket: WebSocket,
+    type: K,
+    listener: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
+    options?: boolean | AddEventListenerOptions
+  ) {
+    this.socket_callbacks[type] = listener;
+    socket.addEventListener(type, listener, options);
+    return () => {
+      delete this.socket_callbacks[type];
+      socket.removeEventListener(type, listener, options);
+    };
+  }
+
+  /**
+   * Removes all event listeners from the given WebSocket and clears the socket_callbacks object.
+   */
+  protected removeSocketCallbacks() {
+    if (this.socket) {
+      for (const type in this.socket_callbacks) {
+        const listener = this.socket_callbacks[type];
+        this.socket.removeEventListener(type, listener);
+      }
+    }
+    this.socket_callbacks = {};
   }
 
   /**
@@ -144,28 +216,28 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
     );
     this.socket.binaryType = "arraybuffer";
 
-    this.socket.addEventListener("open", () => {
+    this.addSocketCallback(this.socket, "open", () => {
       opened = true;
       if (isReconnect) {
-        this.emit("reconnected");
+        this.events.emit("reconnected");
       }
     });
 
-    this.socket.addEventListener("error", () => {
+    this.addSocketCallback(this.socket, "error", () => {
       if (this.socket) this.socket.close();
       if (!isReconnect && !opened) {
         this.pollQueue();
       }
     });
 
-    this.socket.addEventListener("close", () => {
+    this.addSocketCallback(this.socket, "close", () => {
       setTimeout(() => {
         this.socket = null;
         this.createSocket(true);
       }, 300);
       if (opened) {
-        this.emit("status", null);
-        this.emit("reconnecting");
+        this.events.emit("status", null);
+        this.events.emit("reconnecting");
       }
     });
 
@@ -177,7 +249,7 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
       }
     };
 
-    this.socket.addEventListener("message", (event) => {
+    this.addSocketCallback(this.socket, "message", (event) => {
       try {
         if (isImageMessage(event)) {
           const view = new DataView(event.data);
@@ -201,7 +273,7 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
                     type: imageMime,
                   })
                 : buffer;
-              this.emit("b_preview", image);
+              this.events.emit("b_preview", image);
               break;
             default:
               throw new Error(
@@ -210,36 +282,36 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
           }
         } else {
           const msg = JSON.parse(event.data);
-          this.emit("message", msg);
+          this.events.emit("message", msg);
 
           switch (msg.type) {
             case "status":
               if (msg.data.sid) {
                 this.clientId = msg.data.sid;
               }
-              this.emit("status", msg.data.status);
+              this.events.emit("status", msg.data.status);
               break;
             case "progress":
-              this.emit("progress", msg.data);
+              this.events.emit("progress", msg.data);
               break;
             case "executing":
-              this.emit("executing", msg.data);
+              this.events.emit("executing", msg.data);
               break;
             case "executed":
-              this.emit("executed", msg.data);
+              this.events.emit("executed", msg.data);
               break;
             case "execution_start":
-              this.emit("execution_start", msg.data);
+              this.events.emit("execution_start", msg.data);
               break;
             case "execution_error":
-              this.emit("execution_error", msg.data);
+              this.events.emit("execution_error", msg.data);
               break;
             case "execution_cached":
-              this.emit("execution_cached", msg.data);
+              this.events.emit("execution_cached", msg.data);
               break;
             default:
               if (this.registered.has(msg.type)) {
-                this.emit(msg.type, msg.data);
+                this.events.emit(msg.type, msg.data);
               } else {
                 throw new Error(`Unknown message type ${msg.type}`);
               }
@@ -271,7 +343,7 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
     this.closed = true;
 
     this.disconnect();
-    this.removeAllListeners();
+    this.events.removeAllListeners();
   }
 
   /**
@@ -286,14 +358,15 @@ export class ComfyUIWsClient extends EventEmitter<ComfyUIClientEvents> {
    * Disconnects the WebSocket connection and cleans up event listeners.
    */
   disconnect() {
-    if (this.socket) {
-      if (this.socket.readyState === this.WebSocket.OPEN) {
-        this.socket.close(1000, "Client closed");
-      }
-      if ("removeAllListeners" in this.socket) {
-        (this.socket.removeAllListeners as any)?.();
-      }
-      this.socket = null;
+    const { socket } = this;
+    if (!socket) return;
+    this.socket = null;
+    if (socket.readyState === this.WebSocket.OPEN) {
+      socket.close(1000, "Client closed");
+    }
+    this.removeSocketCallbacks();
+    if ("removeAllListeners" in socket) {
+      (socket.removeAllListeners as any)?.();
     }
   }
 }
