@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/comfyui-client",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "api Client for ComfyUI that supports both NodeJS and Browser environments. It provides full support for all RESTful / WebSocket APIs.",
   "source": "src/main.ts",
   "main": "dist/main.umd.js",

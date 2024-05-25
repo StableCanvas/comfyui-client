@@ -11,7 +11,7 @@
           "htm": "https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm",
           "preact/hooks": "https://cdn.jsdelivr.net/npm/preact@10.22.0/hooks/dist/hooks.module.js",
           "@quik-fe/stand": "https://cdn.jsdelivr.net/npm/@quik-fe/stand@1.1.2/+esm",
-          "@stable-canvas/comfyui-client": "https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@1.2.4/+esm"
+          "@stable-canvas/comfyui-client": "https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@1.2.5/+esm"
         }
       }
     </script>
@@ -61,7 +61,7 @@
         cursor: pointer;
         background-color: rgb(0, 122, 255, 0.5);
         color: white;
-        margin: 1rem 0;
+        margin: 1rem 0.5rem;
       }
       .start-button:disabled {
         background-color: #333;
@@ -71,9 +71,18 @@
       input[type="number"] {
         padding: 0.5rem;
       }
+      input[type="text"] {
+        padding: 0.5rem;
+      }
 
       input,
       textarea {
+        background-color: #333;
+        color: white;
+      }
+
+      select {
+        padding: 0.5rem;
         background-color: #333;
         color: white;
       }
@@ -106,20 +115,23 @@
 
       const html = htm.bind(h);
       const create = bindReact(React);
-      console.log(React);
 
       const useStore = create((set, get) => ({
+        samplers: [],
+        schedulers: [],
         payload: {
-          prompt: "best quality,1girl",
-          negative_prompt: "worst quality, bad anatomy",
+          prompt: "best quality, RAW, 1girl",
+          negative_prompt:
+            "(worst quality:2), bad anatomy, embedding:NG_DeepNegative_V1_75T",
           steps: 35,
           cfg: 4,
           sampler_name: "dpmpp_2m_sde_gpu",
           scheduler: "karras",
           denoise: 1,
-          width: 512,
-          height: 512,
+          width: 640,
+          height: 960,
           batch_size: 1,
+          ckpt_name: "lofi_v5.baked.fp16.safetensors",
         },
         loading: false,
         progress: {
@@ -164,12 +176,13 @@
             width,
             height,
             batch_size,
+            ckpt_name,
           },
         } = useStore.get();
         const workflow = new ComfyUIWorkflow();
         const cls = workflow.classes;
         const [model, clip, vae] = cls.CheckpointLoaderSimple({
-          ckpt_name: "lofi_v5.baked.fp16.safetensors",
+          ckpt_name,
         });
         const enc = (text) => cls.CLIPTextEncode({ text, clip })[0];
         const [samples] = cls.KSampler({
@@ -208,6 +221,12 @@
         });
       });
 
+      client.getNodeDefs().then(async () => {
+        const samplers = await client.getSamplers();
+        const schedulers = await client.getSchedulers();
+        useStore.set({ samplers, schedulers });
+      });
+
       function App() {
         const {
           payload,
@@ -220,6 +239,8 @@
           stopLoading,
           appendImage,
           setPayload,
+          samplers,
+          schedulers,
         } = useStore();
 
         const handleStart = async () => {
@@ -309,23 +330,31 @@
                 </label>
                 <label>
                   Sampler Name
-                  <input
-                    type="text"
+                  <select
                     value=${payload.sampler_name}
-                    onInput=${(e) => {
+                    onChange=${(e) => {
                       setPayload({ ...payload, sampler_name: e.target.value });
                     }}
-                  />
+                  >
+                    ${samplers.map(
+                      (sampler) =>
+                        html`<option value=${sampler}>${sampler}</option>`
+                    )}
+                  </select>
                 </label>
                 <label>
                   Scheduler
-                  <input
-                    type="text"
+                  <select
                     value=${payload.scheduler}
-                    onInput=${(e) => {
+                    onChange=${(e) => {
                       setPayload({ ...payload, scheduler: e.target.value });
                     }}
-                  />
+                  >
+                    ${schedulers.map(
+                      (scheduler) =>
+                        html`<option value=${scheduler}>${scheduler}</option>`
+                    )}
+                  </select>
                 </label>
                 <label>
                   Width
@@ -366,15 +395,29 @@
                     }}
                   />
                 </label>
+                <label>
+                  Checkpoint Name
+                  <input
+                    type="text"
+                    value=${payload.ckpt_name}
+                    onInput=${(e) => {
+                      setPayload({
+                        ...payload,
+                        ckpt_name: e.target.value,
+                      });
+                    }}
+                  />
               </div>
             </fieldset>
-            ${loading
-              ? html`<button class="start-button" disabled>
-                  Generating...
-                </button>`
-              : html`<button class="start-button" onClick=${handleStart}>
-                  Start
-                </button>`}
+            ${
+              loading
+                ? html`<button class="start-button" disabled>
+                    Generating...
+                  </button>`
+                : html`<button class="start-button" onClick=${handleStart}>
+                    Generate
+                  </button>`
+            }
           </div>
           <div>
             <fieldset>
@@ -389,17 +432,19 @@
             </fieldset>
             <fieldset>
               <legend>Images</legend>
-              ${images.length === 0
-                ? html`<p>no images.</p>`
-                : html`<div class="images-container">
-                    ${images.map(
-                      (image) =>
-                        html`<img
-                          src=${image}
-                          style="max-width: 100%; max-height: 100%"
-                        />`
-                    )}
-                  </div>`}
+              ${
+                images.length === 0
+                  ? html`<p>no images.</p>`
+                  : html`<div class="images-container">
+                      ${images.map(
+                        (image) =>
+                          html`<img
+                            src=${image}
+                            style="max-width: 100%; max-height: 100%"
+                          />`
+                      )}
+                    </div>`
+              }
             </fieldset>
           </div>
         `;

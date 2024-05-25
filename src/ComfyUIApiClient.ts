@@ -42,46 +42,46 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     return await resp.json();
   }
 
+  // just cache 30s
+  private _node_defs_cache: ComfyUIClientResponseTypes.ObjectInfo | null = null;
   /**
    * Loads node object definitions for the graph
-   * @returns The node definitions
+   * @returns {Promise<ComfyUIClientResponseTypes.ObjectInfo>} The object info for the graph
    */
-  async getNodeDefs(): Promise<Record<string, unknown>> {
+  async getNodeDefs(): Promise<ComfyUIClientResponseTypes.ObjectInfo> {
+    if (this._node_defs_cache) {
+      return this._node_defs_cache;
+    }
+
     const resp = await this.fetchApi("/object_info", { cache: "no-store" });
-    return await resp.json();
+    const node_defs = await resp.json();
+
+    this._node_defs_cache = node_defs;
+    setTimeout(() => {
+      this._node_defs_cache = null;
+    }, 30000);
+    return node_defs;
+  }
+
+  /**
+   * Clears the node object definitions cache
+   */
+  clearNodeDefsCache() {
+    this._node_defs_cache = null;
   }
 
   /**
    *
    * @param {number} queue_index The index at which to queue the prompt, passing -1 will insert the prompt at the front of the queue
-   * @param {object} prompt The prompt data to queue
+   * @param {Object} options
+   * @param {Object} options.prompt The prompt to queue
+   * @param {Object} options.workflow This png info to be added to resulting image
+   * @returns {Promise<ComfyUIClientResponseTypes.QueuePrompt>} The response from the server
    */
   async queuePrompt(
     queue_index: number,
     { prompt, workflow }: { prompt: any; workflow: any }
-  ): Promise<
-    | {
-        prompt_id: string;
-        number: number;
-        node_errors: any;
-      }
-    | {
-        error: string;
-        node_errors: Record<
-          string,
-          {
-            class_type: string;
-            dependent_outputs: string[];
-            errors: Array<{
-              details: string;
-              extra_info: any;
-              message: string;
-              type: string;
-            }>;
-          }
-        >;
-      }
-  > {
+  ): Promise<ComfyUIClientResponseTypes.QueuePrompt> {
     const body: Record<string, unknown> = {
       client_id: this.clientId,
       prompt,
@@ -337,6 +337,47 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
         `Error storing user data file '${file}': ${resp.status} ${error}`
       );
     }
+  }
+
+  // ----------------- get status ++ -----------------
+
+  /**
+   * Retrieves the list of samplers from the node definitions.
+   *
+   * @return {Promise<string[]>} A promise that resolves to an array of strings representing the sampler names.
+   */
+  async getSamplers() {
+    const node_config = await this.getNodeDefs();
+    // find KSampler node
+    const node = node_config["KSampler"];
+    const sampler_name = node?.input?.required?.["sample_name"].flat() || [];
+    return sampler_name as string[];
+  }
+
+  /**
+   * Retrieves the list of schedulers from the node definitions.
+   *
+   * @return {Promise<string[]>} A promise that resolves to an array of strings representing the scheduler names.
+   */
+  async getSchedulers() {
+    const node_config = await this.getNodeDefs();
+    // find Scheduler node
+    const node = node_config["KSampler"];
+    const scheduler_name = node?.input?.required?.["scheduler"].flat() || [];
+    return scheduler_name as string[];
+  }
+
+  /**
+   * Retrieves the list of model names from the node definitions.
+   *
+   * @return {Promise<string[]>} A promise that resolves to an array of strings representing the model names.
+   */
+  async getModels() {
+    const node_config = await this.getNodeDefs();
+    // find CheckpointLoaderSimple node
+    const node = node_config["CheckpointLoaderSimple"];
+    const model_name = node?.input?.required?.["ckpt_name"].flat() || [];
+    return model_name as string[];
   }
 
   // ----------------- Prompt ++ -----------------
