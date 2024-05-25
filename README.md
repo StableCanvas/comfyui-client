@@ -94,22 +94,29 @@ const createWorkflow = () => {
     SaveImage,
   } = workflow.classes;
 
-  const [model, clip, vae] = CheckpointLoaderSimple({
-    ckpt_name: "lofi_v5.baked.fp16.safetensors",
-  });
-  const [latent_image] = EmptyLatentImage({
-    width: 512,
-    height: 768,
-    batch_size: 1,
-  });
-  const [positive_conditioning] = CLIPTextEncode({
-    text: "best quality, 1girl",
-    clip,
-  });
-  const [negative_conditioning] = CLIPTextEncode({
-    text: "text,error,username,fake,drawing,painting,worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
-    clip,
-  });
+  const load_model = (model_name: string) => {
+    return CheckpointLoaderSimple({
+      ckpt_name: model_name,
+    });
+  };
+  const empty_latent = (w: number, h: number) =>
+    EmptyLatentImage({ width: w, height: h, batch_size: 1 })[0];
+  const text_encode = (text: string, clip) => CLIPTextEncode({ text, clip })[0];
+
+  const text_prompt = (positive: string, negative: string, clip) => {
+    return {
+      positive: text_encode(positive, clip),
+      negative: text_encode(negative, clip),
+    };
+  };
+
+  const [model, clip, vae] = load_model("lofi_v5.baked.fp16.safetensors");
+  const latent_image = empty_latent(512, 512);
+  const { positive, negative } = text_prompt(
+    "best quality, 1girl",
+    "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
+    clip
+  );
 
   const [samples] = KSampler({
     seed: Math.floor(Math.random() * 2 ** 32),
@@ -119,8 +126,8 @@ const createWorkflow = () => {
     scheduler: "karras",
     denoise: 1,
     model,
-    positive: positive_conditioning,
-    negative: negative_conditioning,
+    positive,
+    negative,
     latent_image,
   });
 
@@ -141,9 +148,19 @@ const wf1 = createWorkflow();
 // { prompt: {...}, workflow: {...} }
 ```
 
-And it comes with type hints
+### type support
 
-![types hint](./assets/wk_types.png)
+- builtin node types
+ 
+![node types](./assets/type_hints.png)
+
+- builtin node params
+
+![node params](./assets/params.png)
+
+- any other node
+
+![other node](./assets/anynode.png)
 
 ### Invoke workflow
 ```ts
