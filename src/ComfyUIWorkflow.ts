@@ -180,8 +180,19 @@ export class ComfyUIWorkflow {
    * Returns the current workflow object.
    *
    * @return {IWorkflow} The current workflow object.
+   *
+   * @deprecated use `workflow` instead
    */
   public end() {
+    return this.workflow();
+  }
+
+  /**
+   * Returns the current workflow object.
+   *
+   * @return {IWorkflow} The current workflow object.
+   */
+  public workflow() {
     return deepClone(this._workflow);
   }
 
@@ -192,10 +203,22 @@ export class ComfyUIWorkflow {
    * @return {Promise<WorkflowOutput>} A promise that resolves with the result of the prompt.
    */
   public invoke(client: ComfyUIApiClient) {
-    const { prompt, workflow } = this.end();
-    const invoked = new InvokedWorkflow({ prompt, workflow }, client);
-    const result = invoked.waitForCompletion();
+    const invoked = this.instance(client);
+    invoked.enqueue();
+    const result = invoked.wait();
     return result;
+  }
+
+  /**
+   * Creates a new invoked workflow instance.
+   *
+   * @param {ComfyUIApiClient} client - The client used to run the prompt.
+   * @return {InvokedWorkflow} The invoked workflow instance.
+   */
+  public instance(client: ComfyUIApiClient) {
+    const { prompt, workflow } = this.workflow();
+    const invoked = new InvokedWorkflow({ prompt, workflow }, client);
+    return invoked;
   }
 
   /**
@@ -205,14 +228,14 @@ export class ComfyUIWorkflow {
    * @return {Promise<WorkflowOutput>} A promise that resolves with the result of the prompt.
    */
   public invoke_polling(client: ComfyUIApiClient) {
-    const { prompt, workflow } = this.end();
+    const { prompt, workflow } = this.workflow();
     return client.enqueue_polling(prompt, { workflow });
   }
 }
 
 export class InvokedWorkflow {
-  protected _task_id: Promise<string>;
-  protected _enqueue_req: ReturnType<ComfyUIApiClient["_enqueue_prompt"]>;
+  protected _task_id?: Promise<string>;
+  protected _enqueue_req?: ReturnType<ComfyUIApiClient["_enqueue_prompt"]>;
 
   protected _result: WorkflowOutput = {
     images: [],
@@ -221,7 +244,9 @@ export class InvokedWorkflow {
 
   executed = false;
 
-  constructor(public workflow: IWorkflow, public client: ComfyUIApiClient) {
+  constructor(public workflow: IWorkflow, public client: ComfyUIApiClient) {}
+
+  public enqueue() {
     const { prompt, workflow: wf } = this.workflow;
     this._enqueue_req = this.client._enqueue_prompt(prompt, { workflow: wf });
     this._task_id = this._enqueue_req.then((data) => data.prompt_id);
@@ -248,7 +273,40 @@ export class InvokedWorkflow {
     }
   }
 
-  public async waitForCompletion() {
+  public async query() {
+    if (!this._task_id) {
+      throw new Error(
+        "This workflow is not enqueued and the execution status cannot be queried"
+      );
+    }
+    return this.client.getPromptStatus(await this._task_id);
+  }
+
+  public async interrupt() {
+    if (!this._task_id) {
+      throw new Error(
+        "This workflow is not enqueued and the execution status cannot be interrupt"
+      );
+    }
+    const id = await this._task_id;
+    const { pending, running, done } = await this.query();
+    if (done) return;
+    if (pending) {
+      this.client.deleteItem("queue", id);
+      return;
+    }
+    if (running) {
+      return this.client.interrupt();
+    }
+    throw new Error(`wrong task status, id: ${id}`);
+  }
+
+  public async wait() {
+    if (!this._task_id) {
+      throw new Error(
+        "This workflow is not enqueued and the execution status cannot be wait"
+      );
+    }
     const task_id = await this._task_id;
     return new Promise<WorkflowOutput>((resolve, reject) => {
       const offEvent2 = this.client.on("image_data", (data) => {
