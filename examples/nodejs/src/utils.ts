@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 import fs from "fs";
 import { WorkflowOutput } from "../../../src/types";
 import path from "path";
+import { isNone } from "../../../src/misc";
 
 export const save_url_to_file = async (url: string, filepath: string) => {
   const res = await fetch(url);
@@ -31,7 +32,7 @@ export const save_wf_outputs = async (outputs: WorkflowOutput) => {
         const filename = new URLSearchParams(new URL(url).search).get(
           "filename"
         );
-        if (!filename) {
+        if (isNone(filename)) {
           console.error("No filename in URL");
           continue;
         }

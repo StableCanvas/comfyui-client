@@ -1,4 +1,5 @@
 import { ComfyUIWsClient } from "./ComfyUIWsClient";
+import { isNone } from "./misc";
 import { ComfyUIClientResponseTypes } from "./response.types";
 import { IComfyApiConfig, WorkflowOutput } from "./types";
 
@@ -404,7 +405,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     const images_url = images
       .map((image) => {
         const { filename, subfolder, type } = image;
-        if (!filename || !subfolder || type !== "output") {
+        if (isNone(filename) || isNone(subfolder) || type !== "output") {
           return null;
         }
         return this.viewURL(filename, subfolder, type);
@@ -458,7 +459,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
         // collect url images
         for (const image of images) {
           const { filename, subfolder, type } = image || {};
-          if (!filename || !subfolder || type !== "output") {
+          if (isNone(filename) || isNone(subfolder) || type !== "output") {
             continue;
           }
           output.images.push({

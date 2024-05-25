@@ -1,4 +1,5 @@
 import { ComfyUIApiClient } from "./ComfyUIApiClient";
+import { isNone } from "./misc";
 import { ComfyUINodeTypes } from "./schema/comfyui.node.typs";
 import { WorkflowOutput } from "./types";
 
@@ -237,7 +238,7 @@ export class InvokedWorkflow {
     // collect url images
     for (const image of images) {
       const { filename, subfolder, type } = image || {};
-      if (!filename || !subfolder || type !== "output") {
+      if (isNone(filename) || isNone(subfolder) || type !== "output") {
         continue;
       }
       this._result.images.push({
