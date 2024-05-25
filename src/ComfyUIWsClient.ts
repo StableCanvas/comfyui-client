@@ -1,6 +1,7 @@
 import { IComfyApiConfig } from "./types";
 import { EventEmitter } from "eventemitter3";
 import { ComfyUiWsTypes } from "./ws.typs";
+import { uuidv4 } from "./misc";
 
 type ComfyUIClientEvents = {
   status: [ComfyUiWsTypes.Messages.Status["status"] | null];
@@ -16,7 +17,11 @@ type ComfyUIClientEvents = {
   // this web client events
   reconnected: any;
   reconnecting: any;
-  b_preview: any;
+
+  /**
+   * load image data from websocket
+   */
+  image_data: [ArrayBuffer];
 
   /**
    * get all messages
@@ -47,13 +52,38 @@ type ComfyUIClientEvents = {
 export class ComfyUIWsClient {
   static DEFAULT_API_HOST = "127.0.0.1:8188";
   static DEFAULT_API_BASE = "";
-  static DEFAULT_SESSION_NAME = "";
   static DEFAULT_USER = "";
+  static IS_BROWSER = typeof window !== "undefined";
+
+  static loadImageData(buf: ArrayBuffer) {
+    const view = new DataView(buf);
+    const eventType = view.getUint32(0);
+    switch (eventType) {
+      case 1:
+        const view2 = new DataView(buf);
+        const imageType = view2.getUint32(0);
+        let imageMime;
+        switch (imageType) {
+          case 1:
+          default:
+            imageMime = "image/jpeg";
+            break;
+          case 2:
+            imageMime = "image/png";
+        }
+        const image_buffer = buf.slice(8);
+        return image_buffer;
+        break;
+      default:
+        throw new Error(
+          `Unknown binary websocket message of type ${eventType}`
+        );
+    }
+  }
 
   api_host: string;
   api_base: string;
   clientId?: string;
-  sessionName: string;
   socket?: WebSocket | null;
   WebSocket: typeof WebSocket;
   ssl: boolean;
@@ -62,8 +92,6 @@ export class ComfyUIWsClient {
 
   events: EventEmitter<ComfyUIClientEvents> = new EventEmitter();
 
-  readonly IS_BROWSER = typeof window !== "undefined";
-
   protected registered = new Set();
 
   protected socket_callbacks: Record<string, any> = {};
@@ -71,9 +99,7 @@ export class ComfyUIWsClient {
   constructor(config: IComfyApiConfig) {
     this.api_host = config.api_host ?? ComfyUIWsClient.DEFAULT_API_HOST;
     this.api_base = config.api_base ?? ComfyUIWsClient.DEFAULT_API_BASE;
-    this.clientId = config.clientId;
-    this.sessionName =
-      config.sessionName ?? ComfyUIWsClient.DEFAULT_SESSION_NAME;
+    this.clientId = config.clientId ?? uuidv4();
     this.WebSocket = config.WebSocket ?? WebSocket;
     this.ssl = config.ssl ?? false;
     this.user = config.user ?? ComfyUIWsClient.DEFAULT_USER;
@@ -93,6 +119,25 @@ export class ComfyUIWsClient {
     return `http${this.ssl ? "s" : ""}://${this.api_host}${
       this.api_base
     }${route}`;
+  }
+
+  /**
+   * Generates a URL for viewing a specific file with the given filename, subfolder, and type.
+   *
+   * @param {string} filename - The name of the file to view.
+   * @param {string} subfolder - The subfolder where the file is located.
+   * @param {string} type - The type of the file.
+   * @return {string} The URL for viewing the file.
+   */
+  viewURL(filename: string, subfolder: string, type: string): string {
+    const query = new URLSearchParams({
+      filename,
+      subfolder,
+      type,
+    }).toString();
+    return `http${this.ssl ? "s" : ""}://${this.api_host}${
+      this.api_base
+    }/view?${query}`;
   }
 
   /**
@@ -221,10 +266,14 @@ export class ComfyUIWsClient {
     }
 
     let opened = false;
+    let existingSession = "";
+    if (this.clientId) {
+      existingSession = "?clientId=" + this.clientId;
+    }
     this.socket = new this.WebSocket(
-      `ws${this.ssl ? "s" : ""}://${this.api_host}${this.api_base}/ws${
-        this.sessionName ?? ""
-      }`
+      `ws${this.ssl ? "s" : ""}://${this.api_host}${
+        this.api_base
+      }/ws${existingSession}`
     );
     this.socket.binaryType = "arraybuffer";
 
@@ -254,47 +303,29 @@ export class ComfyUIWsClient {
     });
 
     const isImageMessage = (event: MessageEvent) => {
-      if (this.IS_BROWSER) {
-        return event.data instanceof Blob;
-      } else {
-        return Buffer.isBuffer(event.data);
+      if (typeof event.data === "string") {
+        return false;
       }
+      if (ComfyUIWsClient.IS_BROWSER) {
+        return event.data instanceof Blob;
+      }
+      if (ArrayBuffer && event.data instanceof ArrayBuffer) {
+        return true;
+      }
+      if (Buffer && Buffer.isBuffer(event.data)) {
+        return true;
+      }
+      return false;
     };
 
     this.addSocketCallback(this.socket, "message", (event) => {
+      this.events.emit("message", event);
       try {
         if (isImageMessage(event)) {
-          const view = new DataView(event.data);
-          const eventType = view.getUint32(0);
-          const buffer = event.data.slice(4);
-          switch (eventType) {
-            case 1:
-              const view2 = new DataView(event.data);
-              const imageType = view2.getUint32(0);
-              let imageMime;
-              switch (imageType) {
-                case 1:
-                default:
-                  imageMime = "image/jpeg";
-                  break;
-                case 2:
-                  imageMime = "image/png";
-              }
-              const image = this.IS_BROWSER
-                ? new Blob([buffer.slice(4)], {
-                    type: imageMime,
-                  })
-                : buffer;
-              this.events.emit("b_preview", image);
-              break;
-            default:
-              throw new Error(
-                `Unknown binary websocket message of type ${eventType}`
-              );
-          }
+          const image = ComfyUIWsClient.loadImageData(event.data);
+          this.events.emit("image_data", image);
         } else {
           const msg = JSON.parse(event.data);
-          this.events.emit("message", msg);
 
           switch (msg.type) {
             case "status":

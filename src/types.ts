@@ -46,3 +46,17 @@ export interface IComfyApiConfig {
    */
   fetch?: typeof fetch;
 }
+
+export type WorkflowOutput = {
+  images: (
+    | {
+        type: "buff";
+        data: ArrayBuffer;
+      }
+    | {
+        type: "url";
+        data: string;
+      }
+  )[];
+  prompt_id: string;
+};

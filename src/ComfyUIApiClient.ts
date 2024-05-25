@@ -1,7 +1,6 @@
 import { ComfyUIWsClient } from "./ComfyUIWsClient";
 import { ComfyUIClientResponseTypes } from "./response.types";
-import { IComfyApiConfig } from "./types";
-import { ComfyUiWsTypes } from "./ws.typs";
+import { IComfyApiConfig, WorkflowOutput } from "./types";
 
 /**
  * The ComfyUIApiClient class provides a high-level interface for interacting with the ComfyUI API.
@@ -364,12 +363,13 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   }
 
   /**
-   * Retrieves the result of a prompt based on the provided prompt ID.
+   * Retrieves the outputs of a prompt with the given ID from the history.
    *
-   * @param {string} prompt_id - The ID of the prompt to retrieve the result for.
-   * @return {Object} An object containing the images associated with the prompt and the prompt ID.
+   * @param {string} prompt_id - The ID of the prompt to retrieve the outputs for.
+   * @return {Promise<any>} A promise that resolves to the outputs of the prompt.
+   * @throws {Error} If the prompt with the given ID is not found in the history or if it failed with a non-"success" status.
    */
-  async getPromptResult(prompt_id: string) {
+  async getPromptOutputs(prompt_id: string) {
     const { History: history } = await this.getHistory();
     const item = history.find((item) => item.prompt[1] === prompt_id);
     if (!item) {
@@ -378,30 +378,40 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
 
     const status = item.status.status_str;
     if (status !== "success") {
-      // TODO throw Error class
-      throw item;
+      throw new Error(`Prompt [${prompt_id}] failed with status: ${status}`);
     }
+
+    return item.outputs;
+  }
+
+  /**
+   * Retrieves the result of a prompt based on the provided prompt ID.
+   *
+   * @param {string} prompt_id - The ID of the prompt to retrieve the result for.
+   * @return {WorkflowOutput} An object containing the images associated with the prompt and the prompt ID.
+   */
+  async getPromptImageResult(prompt_id: string) {
+    const outputs = await this.getPromptOutputs(prompt_id);
 
     // find image from history
     const images: {
-      filename: string;
-      subfolder: string;
+      filename?: string;
+      subfolder?: string;
       type: string;
-    }[] = Object.values(item.outputs).flatMap((node_output) => {
+    }[] = Object.values(outputs).flatMap((node_output) => {
       return (node_output as any).images || [];
     });
-    const images_url = images.map((image) => {
-      const { filename, subfolder, type } = image;
-      return `http${this.ssl ? "s" : ""}://${
-        this.api_host
-      }/view?${new URLSearchParams({
-        filename,
-        subfolder,
-        type,
-      }).toString()}`;
-    });
+    const images_url = images
+      .map((image) => {
+        const { filename, subfolder, type } = image;
+        if (!filename || !subfolder || type !== "output") {
+          return null;
+        }
+        return this.viewURL(filename, subfolder, type);
+      })
+      .filter(Boolean) as string[];
     return {
-      images: images_url,
+      images: images_url.map((data) => ({ type: "url", data })),
       prompt_id,
     };
   }
@@ -422,19 +432,44 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   }
 
   /**
-   * Asynchronously waits for the prompt with the provided ID to be done.
+   * Asynchronously waits for the prompt with the provided ID to be done using WebSocket.
    *
    * @param {string} prompt_id - The ID of the prompt to wait for.
-   * @param {number} [polling_ms=1000] - The number of milliseconds to wait between checks.
+   * @return {Promise<WorkflowOutput>} A promise that resolves to a WorkflowOutput object containing the images and prompt_id.
    */
-  async waitForPromptWebSocket(prompt_id: string, last_node_id: string) {
-    return new Promise((resolve, reject) => {
+  async waitForPromptWebSocket(prompt_id: string) {
+    const output: WorkflowOutput = {
+      images: [],
+      prompt_id,
+    };
+    return new Promise<WorkflowOutput>((resolve, reject) => {
+      let done = false;
+      const offEvent2 = this.on("image_data", (data) => {
+        output.images.push({ type: "buff", data });
+      });
       const offEvent = this.on("executed", (data) => {
-        const { node, prompt_id: current_prompt_id, output } = data;
-        if (node === last_node_id && current_prompt_id === prompt_id) {
-          resolve(output);
-          offEvent();
+        const { prompt_id: current_prompt_id, output: executed_output } = data;
+        if (current_prompt_id !== prompt_id) {
+          return;
         }
+        done = true;
+        const { images = [] } = executed_output || {};
+
+        // collect url images
+        for (const image of images) {
+          const { filename, subfolder, type } = image || {};
+          if (!filename || !subfolder || type !== "output") {
+            continue;
+          }
+          output.images.push({
+            type: "url",
+            data: this.viewURL(filename, subfolder, type),
+          });
+        }
+
+        resolve(output);
+        offEvent();
+        offEvent2();
       });
     });
   }
@@ -455,21 +490,20 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   }
 
   /**
-   * Asynchronously runs a prompt with the provided options.
+   * Asynchronously enqueues a prompt with optional workflow and random seed.
    *
-   * @param {Record<string, unknown>} prompt - The prompt to run.
-   * @param {Object} options - The options for running the prompt.
-   * @param {Record<string, unknown>} options.workflow - The workflow for the prompt, It will be added to the png info of the generated image.
-   * @param {boolean} [options.disable_random_seed] - Flag to disable random seed generation.
-   * @param {number} [options.polling_ms=1000] - The number of milliseconds to polling query prompt result.
-   * @return {Promise<any>} A promise that resolves with the prompt result.
+   * @param {Record<string, unknown>} prompt - The prompt to enqueue.
+   * @param {Object} [options] - The options for enqueueing the prompt.
+   * @param {Record<string, unknown>} [options.workflow] - The workflow for the prompt.
+   * @param {boolean} [options.disable_random_seed=false] - Whether to disable random seed.
+   * @return {Promise<{ prompt_id: string; number: number; node_errors: any; }>} A promise that resolves with the enqueued prompt response.
+   * @throws {Error} If there is an error in the response.
    */
-  async runPrompt(
+  async _enqueue_prompt(
     prompt: Record<string, unknown>,
     options?: {
       workflow?: Record<string, unknown>;
       disable_random_seed?: boolean;
-      polling_ms?: number;
     }
   ) {
     if (!options?.disable_random_seed) {
@@ -483,9 +517,86 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
       // TODO new Error class
       throw new Error(resp.error);
     }
-    // TODO use websocket to wait for prompt result
+    return resp;
+  }
+
+  /**
+   * Asynchronously runs a prompt with the provided options.
+   *
+   * This function does not use WebSocket, but uses polling to get the result
+   * So if your workflow contains custom ws events, this function will not be able to get these events
+   *
+   * @param {Record<string, unknown>} prompt - The prompt to run.
+   * @param {Object} options - The options for running the prompt.
+   * @param {Record<string, unknown>} options.workflow - The workflow for the prompt, It will be added to the png info of the generated image.
+   * @param {boolean} [options.disable_random_seed] - Flag to disable random seed generation.
+   * @param {number} [options.polling_ms=1000] - The number of milliseconds to polling query prompt result.
+   * @return {Promise<WorkflowOutput>} A promise that resolves with the prompt result.
+   *
+   * @deprecated Use `enqueue_polling` instead
+   */
+  async runPrompt(
+    prompt: Record<string, unknown>,
+    options?: {
+      workflow?: Record<string, unknown>;
+      disable_random_seed?: boolean;
+      polling_ms?: number;
+    }
+  ) {
+    const resp = await this._enqueue_prompt(prompt, options);
     const prompt_id = resp.prompt_id;
     await this.waitForPrompt(prompt_id, options?.polling_ms);
-    return await this.getPromptResult(prompt_id);
+    return await this.getPromptImageResult(prompt_id);
+  }
+
+  /**
+   * Asynchronously runs a prompt with the provided options.
+   *
+   * This function does not use WebSocket, but uses polling to get the result
+   * So if your workflow contains custom ws events, this function will not be able to get these events
+   *
+   * @param {Record<string, unknown>} prompt - The prompt to run.
+   * @param {Object} options - The options for running the prompt.
+   * @param {Record<string, unknown>} options.workflow - The workflow for the prompt, It will be added to the png info of the generated image.
+   * @param {boolean} [options.disable_random_seed] - Flag to disable random seed generation.
+   * @param {number} [options.polling_ms=1000] - The number of milliseconds to polling query prompt result.
+   * @return {Promise<WorkflowOutput>} A promise that resolves with the prompt result.
+   */
+  async enqueue_polling(
+    prompt: Record<string, unknown>,
+    options?: {
+      workflow?: Record<string, unknown>;
+      disable_random_seed?: boolean;
+      polling_ms?: number;
+    }
+  ) {
+    const resp = await this._enqueue_prompt(prompt, options);
+    const prompt_id = resp.prompt_id;
+    await this.waitForPrompt(prompt_id, options?.polling_ms);
+    return await this.getPromptImageResult(prompt_id);
+  }
+
+  /**
+   * Enqueues a prompt and waits for the corresponding prompt websocket.
+   *
+   * @param {Record<string, unknown>} prompt - The prompt to enqueue.
+   * @param {{ workflow?: Record<string, unknown>; disable_random_seed?: boolean; }} [options] - The options for enqueueing the prompt.
+   * @param {Record<string, unknown>} [options.workflow] - This data for PNG info.
+   * @param {boolean} [options.disable_random_seed] - Whether to disable random seed.
+   * @return {Promise<WorkflowOutput>} A promise that resolves with the prompt result.
+   */
+  async enqueue(
+    prompt: Record<string, unknown>,
+    options?: {
+      /**
+       * this data for PNG info
+       */
+      workflow?: Record<string, unknown>;
+      disable_random_seed?: boolean;
+    }
+  ) {
+    const resp = await this._enqueue_prompt(prompt, options);
+    const prompt_id = resp.prompt_id;
+    return await this.waitForPromptWebSocket(prompt_id);
   }
 }

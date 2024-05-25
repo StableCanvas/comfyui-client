@@ -66,18 +66,19 @@ const client = new ComfyUIApiClient({
 // connect ws client
 client.connect();
 ```
-Execute prompt
-```javascript
+enqueue prompt
+```ts
 // Define the prompt and optional workflow
 let prompt = { /* prompt details */ };
 let workflow = { /* workflow details */ };
 
 // Execute the prompt
-const result = await client.runPrompt(prompt, { workflow });
-console.log(result); // { images: [...] }
+const result = await client.enqueue(prompt, { workflow });
+console.log(result);
+// { images: [...] }
 ```
 
-## Programmable calls
+## Programmable/Human-readable pattern
 Inspired by [this issue](https://github.com/comfyanonymous/ComfyUI/issues/612) and [this library](https://github.com/Chaoses-Ib/ComfyScript), this library provides a programmable workflow interface.
 
 Both implementation and usage are extremely simple and human-readable. Below is a simple example of creating a workflow:
@@ -92,54 +93,71 @@ const createWorkflow = () => {
     CLIPTextEncode,
     VAEDecode,
     SaveImage,
+    NODE1,
   } = workflow.classes;
 
-  const load_model = (model_name: string) => {
-    return CheckpointLoaderSimple({
-      ckpt_name: model_name,
-    });
-  };
-  const empty_latent = (w: number, h: number) =>
-    EmptyLatentImage({ width: w, height: h, batch_size: 1 })[0];
-  const text_encode = (text: string, clip) => CLIPTextEncode({ text, clip })[0];
-
-  const text_prompt = (positive: string, negative: string, clip) => {
-    return {
-      positive: text_encode(positive, clip),
-      negative: text_encode(negative, clip),
-    };
-  };
-
-  const [model, clip, vae] = load_model("lofi_v5.baked.fp16.safetensors");
-  const latent_image = empty_latent(512, 512);
-  const { positive, negative } = text_prompt(
-    "best quality, 1girl",
-    "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
-    clip
-  );
-
-  const [samples] = KSampler({
-    seed: Math.floor(Math.random() * 2 ** 32),
+  const seed = Math.floor(Math.random() * 2 ** 32);
+  const pos = "best quality, 1girl";
+  const neg = "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T";
+  const model1_name = "lofi_v5.baked.fp16.safetensors";
+  const model2_name = "case-h-beta.baked.fp16.safetensors";
+  const sampler_settings = {
+    seed,
     steps: 35,
     cfg: 4,
     sampler_name: "dpmpp_2m_sde_gpu",
     scheduler: "karras",
     denoise: 1,
-    model,
-    positive,
-    negative,
-    latent_image,
+  };
+
+  const [model1, clip1, vae1] = CheckpointLoaderSimple({
+    ckpt_name: model1_name,
+  });
+  const [model2, clip2, vae2] = CheckpointLoaderSimple({
+    ckpt_name: model2_name,
   });
 
-  const [image] = VAEDecode({
-    samples,
-    vae,
-  });
+  const dress_case = [
+    "white yoga",
+    "black office",
+    "pink sportswear",
+    "cosplay",
+  ];
 
-  SaveImage({
-    filename_prefix: "from-sc-comfy-ui-client",
-    images: image,
-  });
+  const generate_pipeline = (model, clip, vae, pos, neg) => {
+    const [latent_image] = EmptyLatentImage({
+      width: 640,
+      height: 960,
+      batch_size: 1,
+    });
+    const [positive] = CLIPTextEncode({ text: pos, clip });
+    const [negative] = CLIPTextEncode({ text: neg, clip });
+    const [samples] = KSampler({
+      ...sampler_settings,
+      model,
+      positive,
+      negative,
+      latent_image,
+    });
+    const [image] = VAEDecode({ samples, vae });
+    return image;
+  };
+
+  for (const cloth of dress_case) {
+    const input_pos = `${pos}, ${cloth} dress`;
+    const image = generate_pipeline(model1, clip1, vae1, input_pos, neg);
+    SaveImage({
+      images: image,
+      filename_prefix: `${cloth}-lofi-v5`,
+    });
+
+    const input_pos2 = `${pos}, ${cloth} dress`;
+    const image2 = generate_pipeline(model2, clip2, vae2, input_pos2, neg);
+    SaveImage({
+      images: image2,
+      filename_prefix: `${cloth}-case-h-beta`,
+    });
+  }
 
   return workflow;
 };

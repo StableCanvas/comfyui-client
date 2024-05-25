@@ -1,5 +1,6 @@
 import { ComfyUIApiClient } from "./ComfyUIApiClient";
 import { ComfyUINodeTypes } from "./schema/comfyui.node.typs";
+import { WorkflowOutput } from "./types";
 
 const deepClone: <T>(obj: T) => T = globalThis.structuredClone
   ? globalThis.structuredClone
@@ -34,7 +35,9 @@ type NodeClassInputs = Record<
 
 // { k: { [k:string]: unknown } } => { k: any }
 type InputsFormat<T> = {
-  [K in keyof T]: T[K] extends { [k: string]: unknown } ? any : T[K];
+  [K in keyof T]: T[K] extends { [k: string]: unknown }
+    ? NodeOutput
+    : T[K] | NodeOutput;
 };
 
 interface ComfyUINodeClass<INP extends NodeClassInputs = NodeClassInputs> {
@@ -154,11 +157,88 @@ export class ComfyUIWorkflow {
    * Invoke this workflow using the provided client.
    *
    * @param {ComfyUIApiClient} client - The client used to run the prompt.
-   * @return {Promise<any>} A promise that resolves with the result of the prompt.
+   * @return {Promise<WorkflowOutput>} A promise that resolves with the result of the prompt.
    */
   public invoke(client: ComfyUIApiClient) {
     const { prompt, workflow } = this.end();
-    return client.runPrompt(prompt, { workflow });
+    const invoked = new InvokedWorkflow({ prompt, workflow }, client);
+    const result = invoked.waitForCompletion();
+    return result;
+  }
+
+  /**
+   * Invokes the workflow using the provided client with polling.
+   *
+   * @param {ComfyUIApiClient} client - The client used to run the prompt.
+   * @return {Promise<WorkflowOutput>} A promise that resolves with the result of the prompt.
+   */
+  public invoke_polling(client: ComfyUIApiClient) {
+    const { prompt, workflow } = this.end();
+    return client.enqueue_polling(prompt, { workflow });
+  }
+}
+
+export class InvokedWorkflow {
+  protected _task_id: Promise<string>;
+  protected _enqueue_req: ReturnType<ComfyUIApiClient["_enqueue_prompt"]>;
+
+  protected _result: WorkflowOutput = {
+    images: [],
+    prompt_id: "",
+  };
+
+  executed = false;
+
+  constructor(public workflow: IWorkflow, public client: ComfyUIApiClient) {
+    const { prompt, workflow: wf } = this.workflow;
+    this._enqueue_req = this.client._enqueue_prompt(prompt, { workflow: wf });
+    this._task_id = this._enqueue_req.then((data) => data.prompt_id);
+
+    this._enqueue_req.then((data) => {
+      this._result.prompt_id = data.prompt_id;
+    });
+  }
+
+  protected load_result_data(data: any) {
+    const { output: executed_output } = data;
+    const { images = [] } = executed_output || {};
+
+    // collect url images
+    for (const image of images) {
+      const { filename, subfolder, type } = image || {};
+      if (!filename || !subfolder || type !== "output") {
+        continue;
+      }
+      this._result.images.push({
+        type: "url",
+        data: this.client.viewURL(filename, subfolder, type),
+      });
+    }
+  }
+
+  public async waitForCompletion() {
+    const task_id = await this._task_id;
+    return new Promise<WorkflowOutput>((resolve, reject) => {
+      const offEvent2 = this.client.on("image_data", (data) => {
+        if (this.executed) {
+          return;
+        }
+        this._result.images.push({
+          type: "buff",
+          data,
+        });
+      });
+      const offEvent1 = this.client.on("executed", (data) => {
+        if (data.prompt_id !== task_id) {
+          return;
+        }
+        this.load_result_data(data);
+        this.executed = true;
+        resolve(this._result);
+        offEvent1();
+        offEvent2();
+      });
+    });
   }
 }
 

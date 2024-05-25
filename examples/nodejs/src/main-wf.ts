@@ -3,6 +3,9 @@ import { ComfyUIApiClient, ComfyUIWorkflow } from "../../../src/main";
 import WebSocket from "ws";
 import fetch from "node-fetch";
 
+import fs from "fs";
+import { save_wf_outputs } from "./utils";
+
 const createWorkflow = () => {
   const workflow = new ComfyUIWorkflow();
   const {
@@ -12,6 +15,7 @@ const createWorkflow = () => {
     CLIPTextEncode,
     VAEDecode,
     SaveImage,
+    ETN_SendImageWebSocket,
   } = workflow.classes;
 
   const load_model = (model_name: string) => {
@@ -56,8 +60,12 @@ const createWorkflow = () => {
     vae,
   });
 
-  SaveImage({
-    filename_prefix: "from-sc-comfy-ui-client",
+  // SaveImage({
+  //   filename_prefix: "from-sc-comfy-ui-client",
+  //   images: image,
+  // });
+
+  ETN_SendImageWebSocket({
     images: image,
   });
 
@@ -67,18 +75,31 @@ const createWorkflow = () => {
 const main = async () => {
   const client = new ComfyUIApiClient({
     api_host: "127.0.0.1:8188",
-    api_base: "",
-    sessionName: "",
+    clientId: "comfy-ui-client-nodejs-test-id",
     // user: "comfy-client",
     user: "undefined",
     WebSocket,
     fetch: fetch as any,
   });
   client.connect();
+
+  client.on("message", (event) => {
+    const { data } = event;
+    if (data instanceof Buffer || data instanceof ArrayBuffer) {
+      console.log("Received image data");
+    } else {
+      console.log(data);
+    }
+  });
+
+  console.log(client.socket?.url);
+
   const wk1 = createWorkflow();
   const resp = await wk1.invoke(client);
   client.close();
-  console.log(resp);
+  // console.log(resp);
+
+  await save_wf_outputs(resp);
 };
 
 main()
