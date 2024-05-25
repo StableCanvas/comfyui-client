@@ -1,3 +1,4 @@
+import { CachedFn } from "./CachedFn";
 import { ComfyUIWsClient } from "./ComfyUIWsClient";
 import { isNone } from "./misc";
 import { ComfyUIClientResponseTypes } from "./response.types";
@@ -20,8 +21,12 @@ import { IComfyApiConfig, WorkflowOutput } from "./types";
  * ```
  */
 export class ComfyUIApiClient extends ComfyUIWsClient {
+  private _cached_fn: CachedFn;
+
   constructor(config: IComfyApiConfig) {
     super(config);
+
+    this._cached_fn = new CachedFn(config.cache);
   }
 
   /**
@@ -29,8 +34,12 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    * @returns An array of script urls to import
    */
   async getExtensions(): Promise<string[]> {
-    const resp = await this.fetchApi("/extensions", { cache: "no-store" });
-    return await resp.json();
+    const invoke = async () => {
+      const resp = await this.fetchApi("/extensions", { cache: "no-store" });
+      return await resp.json();
+    };
+    const cached = this._cached_fn.warp("extensions", invoke);
+    return cached();
   }
 
   /**
@@ -38,36 +47,33 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    * @returns An array of script urls to import
    */
   async getEmbeddings(): Promise<string[]> {
-    const resp = await this.fetchApi("/embeddings", { cache: "no-store" });
-    return await resp.json();
+    const invoke = async () => {
+      const resp = await this.fetchApi("/embeddings", { cache: "no-store" });
+      return await resp.json();
+    };
+    const cached = this._cached_fn.warp("embeddings", invoke);
+    return cached();
   }
 
-  // just cache 30s
-  private _node_defs_cache: ComfyUIClientResponseTypes.ObjectInfo | null = null;
   /**
    * Loads node object definitions for the graph
    * @returns {Promise<ComfyUIClientResponseTypes.ObjectInfo>} The object info for the graph
    */
   async getNodeDefs(): Promise<ComfyUIClientResponseTypes.ObjectInfo> {
-    if (this._node_defs_cache) {
-      return this._node_defs_cache;
-    }
-
-    const resp = await this.fetchApi("/object_info", { cache: "no-store" });
-    const node_defs = await resp.json();
-
-    this._node_defs_cache = node_defs;
-    setTimeout(() => {
-      this._node_defs_cache = null;
-    }, 30000);
-    return node_defs;
+    const invoke = async () => {
+      const resp = await this.fetchApi("/object_info", { cache: "no-store" });
+      const node_defs = await resp.json();
+      return node_defs;
+    };
+    const cached = this._cached_fn.warp("object_info", invoke);
+    return cached();
   }
 
   /**
    * Clears the node object definitions cache
    */
-  clearNodeDefsCache() {
-    this._node_defs_cache = null;
+  resetCache() {
+    this._cached_fn.reset();
   }
 
   /**
@@ -191,52 +197,48 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
 
   /**
    * Sends a POST request to the API
-   * @param {string} type The endpoint to post to
+   * @param {"queue" | "history"} type The endpoint to post to
    * @param {any} body Optional POST data
    */
-  private async postItem(type: string, body: any) {
-    try {
-      await this.fetchApi("/" + type, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: body ? JSON.stringify(body) : undefined,
-      });
-    } catch (error) {
-      console.error(error);
-    }
+  private async postApi(type: string, body: any) {
+    await this.fetchApi("/" + type, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
   }
 
   /**
    * Deletes an item from the specified list
-   * @param {string} type The type of item to delete, queue or history
-   * @param {number} id The id of the item to delete
+   * @param {"queue" | "history"} type The type of item to delete, queue or history
+   * @param {any} id The id of the item to delete
    */
-  async deleteItem(type: string, id: number) {
-    await this.postItem(type, { delete: [id] });
+  async deleteItem(type: "queue" | "history", id: any) {
+    await this.postApi(type, { delete: [id] });
   }
 
   /**
    * Clears the specified list
-   * @param {string} type The type of list to clear, queue or history
+   * @param {"queue" | "history"} type The type of list to clear, queue or history
    */
-  async clearItems(type: string) {
-    await this.postItem(type, { clear: true });
+  async clearItems(type: "queue" | "history") {
+    await this.postApi(type, { clear: true });
   }
 
   /**
    * Interrupts the execution of the running prompt
    */
   async interrupt() {
-    await this.postItem("interrupt", null);
+    await this.postApi("interrupt", null);
   }
 
   /**
    * Free up memory by unloading models and freeing memory
    */
   async free(params?: { unload_models?: boolean; free_memory?: boolean }) {
-    await this.postItem("free", params);
+    await this.postApi("free", params);
   }
 
   /**
@@ -350,7 +352,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     const node_config = await this.getNodeDefs();
     // find KSampler node
     const node = node_config["KSampler"];
-    const sampler_name = node?.input?.required?.["sampler_name"].flat() || [];
+    const sampler_name = node?.input?.required?.["sampler_name"]?.[0] || [];
     return sampler_name as string[];
   }
 
@@ -363,7 +365,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     const node_config = await this.getNodeDefs();
     // find Scheduler node
     const node = node_config["KSampler"];
-    const scheduler_name = node?.input?.required?.["scheduler"].flat() || [];
+    const scheduler_name = node?.input?.required?.["scheduler"]?.[0] || [];
     return scheduler_name as string[];
   }
 
@@ -372,11 +374,76 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    *
    * @return {Promise<string[]>} A promise that resolves to an array of strings representing the model names.
    */
-  async getModels() {
+  async getSDModels() {
     const node_config = await this.getNodeDefs();
     // find CheckpointLoaderSimple node
     const node = node_config["CheckpointLoaderSimple"];
-    const model_name = node?.input?.required?.["ckpt_name"].flat() || [];
+    const model_name = node?.input?.required?.["ckpt_name"]?.[0] || [];
+    return model_name as string[];
+  }
+
+  /**
+   * Retrieves the list of model names from the node definitions.
+   *
+   * @return {Promise<string[]>} A promise that resolves to an array of strings representing the model names.
+   */
+  async getCNetModels() {
+    const node_config = await this.getNodeDefs();
+    // find ControlNetLoader node
+    const node = node_config["ControlNetLoader"];
+    const model_name = node?.input?.required?.["control_net_name"]?.[0] || [];
+    return model_name as string[];
+  }
+
+  /**
+   * Retrieves the list of model names from the node definitions for the UpscaleModelLoader node.
+   *
+   * @return {Promise<string[]>} A promise that resolves to an array of strings representing the model names.
+   */
+  async getUpscaleModels() {
+    const node_config = await this.getNodeDefs();
+    // find UpscaleModelLoader node
+    const node = node_config["UpscaleModelLoader"];
+    const model_name = node?.input?.required?.["model_name"]?.[0] || [];
+    return model_name as string[];
+  }
+
+  /**
+   * Retrieves the list of hypernetwork names from the node definitions.
+   *
+   * @return {Promise<string[]>} A promise that resolves to an array of strings representing the hypernetwork names.
+   */
+  async getHyperNetworks() {
+    const node_config = await this.getNodeDefs();
+    // find HypernetworkLoader node
+    const node = node_config["HypernetworkLoader"];
+    const model_name = node?.input?.required?.["hypernetwork_name"]?.[0] || [];
+    return model_name as string[];
+  }
+
+  /**
+   * Retrieves the list of LoRAs from the node definitions.
+   *
+   * @return {Promise<string[]>} A promise that resolves to an array of strings representing the LoRAs.
+   */
+  async getLoRAs() {
+    const node_config = await this.getNodeDefs();
+    // find LoraLoader node
+    const node = node_config["LoraLoader"];
+    const model_name = node?.input?.required?.["lora_name"]?.[0] || [];
+    return model_name as string[];
+  }
+
+  /**
+   * Retrieves the list of VAE names from the node definitions.
+   *
+   * @return {Promise<string[]>} A promise that resolves to an array of strings representing the VAE names.
+   */
+  async getVAEs() {
+    const node_config = await this.getNodeDefs();
+    // find VAELoader node
+    const node = node_config["VAELoader"];
+    const model_name = node?.input?.required?.["vae_name"]?.[0] || [];
     return model_name as string[];
   }
 

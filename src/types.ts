@@ -1,3 +1,5 @@
+import type { CachedFnOptions } from "./CachedFn";
+
 export interface IComfyApiConfig {
   /**
    * The host address of the API server, defaults to '127.0.0.1:8188'.
@@ -45,6 +47,8 @@ export interface IComfyApiConfig {
    * @type {typeof fetch} [fetch] - The fetch function to use.
    */
   fetch?: typeof fetch;
+
+  cache?: CachedFnOptions;
 }
 
 export type WorkflowOutput = {
