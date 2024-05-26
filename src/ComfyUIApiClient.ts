@@ -3,6 +3,7 @@ import { ComfyUIWsClient } from "./ComfyUIWsClient";
 import { isNone } from "./misc";
 import { ComfyUIClientResponseTypes } from "./response.types";
 import { IComfyApiConfig, WorkflowOutput } from "./types";
+import { ComfyUiWsTypes } from "./ws.typs";
 
 /**
  * The ComfyUIApiClient class provides a high-level interface for interacting with the ComfyUI API.
@@ -702,10 +703,24 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
        */
       workflow?: Record<string, unknown>;
       disable_random_seed?: boolean;
+      progress?: (p: ComfyUiWsTypes.Messages.Progress["progress"]) => void;
     }
   ) {
     const resp = await this._enqueue_prompt(prompt, options);
     const prompt_id = resp.prompt_id;
-    return await this.waitForPromptWebSocket(prompt_id);
+
+    let off: any;
+    if (options?.progress) {
+      off = this.on("progress", (data) => {
+        if (data.progress.prompt_id === prompt_id) {
+          options?.progress?.(data.progress);
+        }
+      });
+    }
+    try {
+      return await this.waitForPromptWebSocket(prompt_id);
+    } finally {
+      off?.();
+    }
   }
 }
