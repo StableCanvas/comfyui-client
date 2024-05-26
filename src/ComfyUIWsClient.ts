@@ -8,6 +8,7 @@ type ComfyUIClientEvents = {
   progress: [ComfyUiWsTypes.Messages.Progress];
   executing: [ComfyUiWsTypes.Messages.Executing];
   executed: [ComfyUiWsTypes.Messages.Executed];
+  execution_interrupted: [ComfyUiWsTypes.Messages.ExecutionInterrupted];
 
   // this group events
   execution_start: any;
@@ -353,6 +354,9 @@ export class ComfyUIWsClient {
               break;
             case "execution_cached":
               this.events.emit("execution_cached", msg.data);
+              break;
+            case "execution_interrupted":
+              this.events.emit("execution_interrupted", msg.data);
               break;
             default:
               if (this.registered.has(msg.type)) {
