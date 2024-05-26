@@ -37,7 +37,7 @@ Use npm or yarn to install the `@stable-canvas/comfyui-client` package.
 pnpm add @stable-canvas/comfyui-client
 ```
 
-## Usage
+## Client Usage
 
 First, import the `ComfyUIApiClient` class from the package.
 
@@ -66,20 +66,57 @@ const client = new ComfyUIApiClient({
 // connect ws client
 client.connect();
 ```
-enqueue prompt
-```ts
-// Define the prompt and optional workflow
-let prompt = { /* prompt details */ };
-let workflow = { /* workflow details */ };
 
-// Execute the prompt
-const result = await client.enqueue(prompt, { workflow });
-console.log(result);
-// { images: [...] }
+
+### Advanced functions
+In addition to the standard API interfaces provided by comfyui, this library also wraps them to provide advanced calls
+
+#### enqueue
+```ts
+const result = await client.enqueue(
+  { /* workflow prompt */ },
+  {
+    progress: ({max,value}) => console.log(`progress: ${value}/${max}`);
+  }
+);
+```
+It's very simple; it includes the entire prompt interface life cycle and waits for and collectively returns the result at the end of the request
+
+> In some cases you might not want to use ws, then you can use `enqueue_polling`, this function will perform similar behavior to `enqueue`, but uses rest http to poll the task status
+
+#### Get XXX
+Sometimes you may need to check some configurations of ComfyUI, such as whether a deployment service contains the needed model or lora, then these interfaces will be useful
+
+`getSamplers` `getSchedulers` `getSDModels` `getCNetModels` `getUpscaleModels` `getHyperNetworks` `getLoRAs` `getVAEs`
+
+#### InvokedWorkflow
+If you need to manage the life cycle of your request, then this class can be very convenient
+
+```ts
+const invoked = new InvokedWorkflow({ /* workflow */ }, client);
+invoked.enqueue();
+const job_promise = invoked.wait();
+
+// if you want interrupt it
+invoked.interrupt();
+// query job status
+invoked.query();
 ```
 
-## Programmable/Human-readable pattern
+
+## Workflow Usage
+### Programmable/Human-readable pattern
 Inspired by [this issue](https://github.com/comfyanonymous/ComfyUI/issues/612) and [this library](https://github.com/Chaoses-Ib/ComfyScript), this library provides a programmable workflow interface.
+
+It has the following use cases:
+- **Interactive GUI Integration**: Offers support for seamless integration with ComfyUI's new GUI, enhancing user interaction possibilities.
+- **LLMs for Workflow Generation**: Leverages the ability of large language models to understand Javascript for creating workflows.
+- **Cross-Project Workflow Reuse**: Enables the sharing and repurposing of workflow components across different projects using ComfyUI.
+- **Custom Node Creation**: Assists in developing and integrating custom nodes into existing workflows for expanded functionality.
+- **Workflow Visualization**: Facilitates a clearer understanding of workflows by translating them into a visual format suitable for ComfyUI's GUI.
+- **Model Research and Development**: Provides a framework for leveraging ComfyUI nodes in machine learning research without execution capabilities.
+- **Script-Driven Workflow Templates**: Enables the generation of templated workflows through scripting for consistent and efficient project setups.
+- **Web UI-independent Workflow Deployment**: Enables the creation and deployment of workflows without reliance on a web-based user interface.
 
 ### Minimal case
 Here is a minimal example demonstrating how to create and execute a simple workflow using this library.

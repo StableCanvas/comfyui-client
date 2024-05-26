@@ -1,4 +1,4 @@
-import { ComfyUIWorkflow, InvokedWorkflow } from "../src/ComfyUIWorkflow";
+import { ComfyUIWorkflow } from "../src/ComfyUIWorkflow";
 import { ComfyUIApiClient } from "../src/ComfyUIApiClient";
 
 jest.mock("../src/ComfyUIApiClient");
