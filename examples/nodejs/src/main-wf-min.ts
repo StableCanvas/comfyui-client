@@ -55,11 +55,20 @@ const main = async () => {
     }
   });
 
-  const wk1 = createWorkflow();
-  const resp = await wk1.invoke(client);
-  client.close();
+  // test for interrupt
+  // setTimeout(() => {
+  //   client.interrupt();
+  // }, 2000);
 
-  await save_wf_outputs(resp);
+  const wk1 = createWorkflow();
+  try {
+    const resp = await wk1.invoke(client);
+    await save_wf_outputs(resp);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    client.close();
+  }
 };
 
 main()

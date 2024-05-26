@@ -5,6 +5,12 @@ export namespace ComfyUiWsTypes {
       output: Record<string, any>;
       prompt_id: string;
     }
+    export interface ExecutionInterrupted {
+      prompt_id: string;
+      node_id: string;
+      node_type: string;
+      executed: string[];
+    }
     export interface Executing {
       node: string;
       prompt_id: string;

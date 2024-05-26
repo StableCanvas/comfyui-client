@@ -64,3 +64,21 @@ export type WorkflowOutput = {
   )[];
   prompt_id: string;
 };
+export interface IWorkflow {
+  // id => node
+  prompt: Record<string, WorkflowPromptNode>;
+
+  // TODO
+  workflow?: {
+    nodes: [];
+    links: [];
+    groups: [];
+    config: {};
+    extra: {};
+    version: 0.4;
+  };
+}
+export type WorkflowPromptNode = {
+  class_type: string;
+  inputs: Record<string, any>;
+};
