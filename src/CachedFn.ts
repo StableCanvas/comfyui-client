@@ -1,15 +1,44 @@
-export type CachedFnOptions = { expire_time?: number; enabled?: boolean };
+export type CachedFnOptions = {
+  expire_time?: number;
+  enabled?: boolean;
+};
+
+class GlobalCacheHub {
+  static KEY = "__COMFY_UI_CLIENT_CACHE__";
+  protected _cached: Map<string, { result: any; expire: number }>;
+
+  constructor() {
+    this._cached = (globalThis as any)[GlobalCacheHub.KEY] || new Map();
+    (globalThis as any)[GlobalCacheHub.KEY] = this._cached;
+  }
+
+  clear() {
+    this._cached.clear();
+  }
+
+  get(key: string) {
+    return this._cached.get(key);
+  }
+
+  set(key: string, value: { result: any; expire: number }) {
+    this._cached.set(key, value);
+  }
+}
 
 export class CachedFn {
   static _defaultExpire: number = 60 * 1000;
-  protected _cached = new Map<string, { result: any; expire: number }>();
 
   protected expire_time_ms: number;
   protected enabled: boolean;
 
-  constructor(options?: CachedFnOptions) {
+  protected _cached = new GlobalCacheHub();
+
+  protected cache_ns: string = "";
+
+  constructor(ns: string, options?: CachedFnOptions) {
     this.expire_time_ms = options?.expire_time ?? CachedFn._defaultExpire;
     this.enabled = options?.enabled ?? true;
+    this.cache_ns = ns;
   }
 
   public reset() {
@@ -34,7 +63,7 @@ export class CachedFn {
     return (...args: ARGS) => {
       const now = Date.now();
       const argsHash = this._hashArgs(args);
-      const cacheKey = `${key}-${argsHash}`;
+      const cacheKey = `${this.cache_ns}:${key}:${argsHash}`;
       const hit_cached = this._cached.get(cacheKey);
 
       if (hit_cached && hit_cached.expire > now) {

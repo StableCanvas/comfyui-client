@@ -27,7 +27,8 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   constructor(config: IComfyApiConfig) {
     super(config);
 
-    this._cached_fn = new CachedFn(config.cache);
+    const cache_ns = `${config.api_host}`;
+    this._cached_fn = new CachedFn(cache_ns, config.cache);
   }
 
   /**
