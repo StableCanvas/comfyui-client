@@ -297,6 +297,7 @@ cuc-w2c -i workflow.json -o out.js -t esm
 
 <details>
 <summary>Input</summary>
+
 ```json
 {
   "prompt": {
@@ -387,6 +388,7 @@ cuc-w2c -i workflow.json -o out.js -t esm
   }
 }
 ```
+
 </details>
 
 
