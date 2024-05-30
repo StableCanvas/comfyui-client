@@ -268,6 +268,11 @@ const result = await wf1.invoke(client);
 
 ## CLI
 
+### install
+```
+npm install @stable-canvas/comfyui-client-cli
+```
+
 ### Workflow to code
 
 This tool converts the input workflow into executable code that uses this library.

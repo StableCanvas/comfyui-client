@@ -12,7 +12,7 @@ const prettier = require("prettier");
 
 const exifr = require("exifr");
 
-const node_types = require("../src/schema/comfyui.node.types.json");
+const node_types = require("./comfyui.node.types.json");
 
 function generateCode(nodes) {
   // 初始化变量名计数器和输出映射
