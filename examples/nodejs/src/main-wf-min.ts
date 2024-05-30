@@ -5,6 +5,9 @@ import fetch from "node-fetch";
 
 import { save_wf_outputs } from "./utils";
 
+import fs from "fs";
+import path from "path";
+
 const createWorkflow = () => {
   const workflow = new ComfyUIWorkflow();
   const cls = workflow.classes;
@@ -61,6 +64,12 @@ const main = async () => {
   // }, 2000);
 
   const wk1 = createWorkflow();
+
+  fs.writeFileSync(
+    path.join(__dirname, "../outputs", "workflow-min.json"),
+    JSON.stringify(wk1.workflow(), null, 2)
+  );
+
   try {
     const resp = await wk1.invoke(client);
     await save_wf_outputs(resp);

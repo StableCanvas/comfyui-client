@@ -92,11 +92,19 @@ Sometimes you may need to check some configurations of ComfyUI, such as whether 
 #### InvokedWorkflow
 If you need to manage the life cycle of your request, then this class can be very convenient
 
+instance
 ```ts
+// You can instantiate manually
 const invoked = new InvokedWorkflow({ /* workflow */ }, client);
+// or use the workflow api to instantiate
+const invoked = your_workflow.instance();
+```
+running
+```ts
+// job enqueue
 invoked.enqueue();
+// job result promise
 const job_promise = invoked.wait();
-
 // if you want interrupt it
 invoked.interrupt();
 // query job status
@@ -258,10 +266,215 @@ const wf1 = createWorkflow();
 const result = await wf1.invoke(client);
 ```
 
+## CLI
+
+### Workflow to code
+
+This tool converts the input workflow into executable code that uses this library.
+
+```
+Usage: nodejs-comfy-ui-client-code-gen [options]
+
+Use this tool to generate the corresponding calling code using workflow
+
+Options:
+  -V, --version              output the version number
+  -t, --template [template]  Specify the template for generating code, builtin tpl: [esm,cjs,web,none] (default: "esm")     
+  -o, --out [output]         Specify the output file for the generated code
+  -i, --in <input>           Specify the input file, support .json file
+  -h, --help                 display help for command
+```
+
+example
+```
+cuc-w2c -i workflow.json -o out.js -t esm
+```
+
+<details>
+<summary>Input</summary>
+```json
+{
+  "prompt": {
+    "1": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "lofi_v5.baked.fp16.safetensors"
+      }
+    },
+    "2": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "best quality, 1girl",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "3": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "4": {
+      "class_type": "EmptyLatentImage",
+      "inputs": {
+        "width": 512,
+        "height": 512,
+        "batch_size": 1
+      }
+    },
+    "5": {
+      "class_type": "KSampler",
+      "inputs": {
+        "seed": 2765233096,
+        "steps": 35,
+        "cfg": 4,
+        "sampler_name": "dpmpp_2m_sde_gpu",
+        "scheduler": "karras",
+        "denoise": 1,
+        "model": [
+          "1",
+          0
+        ],
+        "positive": [
+          "2",
+          0
+        ],
+        "negative": [
+          "3",
+          0
+        ],
+        "latent_image": [
+          "4",
+          0
+        ]
+      }
+    },
+    "6": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "5",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "7": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "filename_prefix": "from-sc-comfy-ui-client",
+        "images": [
+          "6",
+          0
+        ]
+      }
+    }
+  }
+}
+```
+</details>
+
+
+<details>
+<summary>Output</summary>
+
+```ts
+import {
+  ComfyUIApiClient,
+  ComfyUIWorkflow,
+} from "@stable-canvas/comfyui-client";
+
+async function main(envs = {}) {
+  const env = (k) => envs[k];
+
+  const client = new ComfyUIApiClient({
+    api_host: env("COMFYUI_CLIENT_API_HOST"),
+    api_host: env("COMFYUI_CLIENT_API_BASE"),
+    clientId: env("COMFYUI_CLIENT_CLIENT_ID"),
+  });
+
+  const createWorkflow = () => {
+    const workflow = new ComfyUIWorkflow();
+    const cls = workflow.classes;
+
+    const [MODEL_1, CLIP_1, VAE_1] = cls.CheckpointLoaderSimple({
+      ckpt_name: "lofi_v5.baked.fp16.safetensors",
+    });
+    const [CONDITIONING_1] = cls.CLIPTextEncode({
+      text: "best quality, 1girl",
+      clip: CLIP_1,
+    });
+    const [CONDITIONING_2] = cls.CLIPTextEncode({
+      text: "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
+      clip: CLIP_1,
+    });
+    const [LATENT_1] = cls.EmptyLatentImage({
+      width: 512,
+      height: 512,
+      batch_size: 1,
+    });
+    const [LATENT_2] = cls.KSampler({
+      seed: 2765233096,
+      steps: 35,
+      cfg: 4,
+      sampler_name: "dpmpp_2m_sde_gpu",
+      scheduler: "karras",
+      denoise: 1,
+      model: MODEL_1,
+      positive: CONDITIONING_1,
+      negative: CONDITIONING_2,
+      latent_image: LATENT_1,
+    });
+    const [IMAGE_1] = cls.VAEDecode({
+      samples: LATENT_2,
+      vae: VAE_1,
+    });
+    const [] = cls.SaveImage({
+      filename_prefix: "from-sc-comfy-ui-client",
+      images: IMAGE_1,
+    });
+
+    return workflow;
+  };
+
+  const workflow = createWorkflow();
+
+  console.time("enqueue workflow");
+  try {
+    return await workflow.invoke(client);
+  } catch (error) {
+    throw error;
+  } finally {
+    console.timeEnd("enqueue workflow");
+  }
+}
+
+main("process" in globalThis ? globalThis.process.env : globalThis)
+  .then(() => {
+    console.log("DONE");
+  })
+  .catch((err) => {
+    console.error("ERR", err);
+  });
+
+```
+
+</details>
+
 ## TODOs
 
+- [x] workflow to code: Transpiler workflow to code
 - [ ] code to workflow: Output a json file that can be imported into the web front end
-- [ ] workflow to code: Transpiler workflow to code
 - [ ] Output type hints
 
 ## Contributing
