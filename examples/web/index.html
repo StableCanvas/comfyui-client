@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ComfyUI Client playground</title>
-    <script type="importmap">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ComfyUI Client playground</title>
+  <script type="importmap">
       {
         "imports": {
           "preact": "https://cdn.jsdelivr.net/npm/preact@10.22.0/+esm",
@@ -15,276 +16,275 @@
         }
       }
     </script>
-    <style>
-      * {
-        box-sizing: border-box;
-        padding: 0;
-        margin: 0;
-      }
+  <style>
+    * {
+      box-sizing: border-box;
+      padding: 0;
+      margin: 0;
+    }
 
-      html {
-        background-color: #1f1f1f;
-        color: white;
-      }
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+    }
 
-      body {
-        font-family: sans-serif;
-        padding: 1rem;
-      }
+    .payload-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
 
-      .payload-panel {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-      }
+    .payload-panel label {
+      padding: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
 
-      .payload-panel label {
-        padding: 0.5rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
+    .images-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
 
-      .images-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
-      }
+    textarea {
+      min-height: 100px;
+    }
 
-      textarea {
-        min-height: 100px;
-      }
+    .start-button {
+      padding: 0.5rem 1rem;
+      border: none;
+      cursor: pointer;
+      background-color: rgb(0, 122, 255, 0.5);
+      color: white;
+      margin: 1rem 0.5rem;
+    }
 
-      .start-button {
-        padding: 0.5rem 1rem;
-        border: none;
-        cursor: pointer;
-        background-color: rgb(0, 122, 255, 0.5);
-        color: white;
-        margin: 1rem 0.5rem;
-      }
-      .start-button:disabled {
-        background-color: #333;
-        color: #666;
-      }
+    .start-button:disabled {
+      background-color: #333;
+      color: #666;
+    }
 
-      input[type="number"] {
-        padding: 0.5rem;
-      }
-      input[type="text"] {
-        padding: 0.5rem;
-      }
+    input[type="number"] {
+      padding: 0.5rem;
+    }
 
-      input,
-      textarea {
-        background-color: #333;
-        color: white;
-      }
+    input[type="text"] {
+      padding: 0.5rem;
+    }
 
-      select {
-        padding: 0.5rem;
-        background-color: #333;
-        color: white;
-      }
+    input,
+    textarea {
+      background-color: #333;
+      color: white;
+    }
 
-      progress {
-        flex: 1;
-      }
-      .progress-container {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-        padding: 1rem;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>@StableCanvas/comfyui-client</h1>
+    select {
+      padding: 0.5rem;
+      background-color: #333;
+      color: white;
+    }
 
-    <div id="app"></div>
+    progress {
+      flex: 1;
+    }
 
-    <script type="module">
-      import { h, Component, render } from "preact";
-      import * as React from "preact/hooks";
-      import htm from "htm";
-      import { bindReact } from "@quik-fe/stand";
-      // import {
-      //   ComfyUIApiClient,
-      //   ComfyUIWorkflow,
-      // } from "@stable-canvas/comfyui-client";
-      import {
-        ComfyUIApiClient,
-        ComfyUIWorkflow,
-      } from "../../dist/main.module.mjs";
+    .progress-container {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      padding: 1rem;
+    }
+  </style>
+</head>
 
-      const html = htm.bind(h);
-      const create = bindReact(React);
+<body>
+  <h1>@StableCanvas/comfyui-client</h1>
 
-      const useStore = create((set, get) => ({
-        samplers: [],
-        schedulers: [],
-        sd_models: [],
-        payload: {
-          prompt: "best quality, RAW, 1girl",
-          negative_prompt:
-            "(worst quality:2), bad anatomy, embedding:NG_DeepNegative_V1_75T",
-          steps: 35,
-          cfg: 4,
-          sampler_name: "dpmpp_2m_sde_gpu",
-          scheduler: "karras",
-          denoise: 1,
-          width: 640,
-          height: 960,
-          batch_size: 1,
-          ckpt_name: "lofi_v5.baked.fp16.safetensors",
-        },
-        loading: false,
-        progress: {
-          current: 0,
-          total: 0,
-        },
-        // base64[]
-        images: [],
+  <div id="app"></div>
 
-        setProgress: (progress) => {
-          set({ progress });
-        },
-        setImages: (images) => {
-          set({ images });
-        },
-        startLoading: () => {
-          set({ loading: true });
-        },
-        stopLoading: () => {
-          set({ loading: false });
-        },
-        appendImage: (image) => {
-          set((state) => {
-            return { ...state, images: [...state.images, image] };
-          });
-        },
-        setPayload: (payload) => {
-          set({ payload });
-        },
-      }));
+  <script type="module">
+    import { h, Component, render } from "preact";
+    import * as React from "preact/hooks";
+    import htm from "htm";
+    import { bindReact } from "@quik-fe/stand";
+    // import {
+    //   ComfyUIApiClient,
+    //   ComfyUIWorkflow,
+    // } from "@stable-canvas/comfyui-client";
+    import {
+      ComfyUIApiClient,
+      ComfyUIWorkflow,
+    } from "../../dist/main.module.mjs";
 
-      const build_workflow = () => {
-        const {
-          payload: {
-            prompt,
-            negative_prompt,
-            steps,
-            cfg,
-            sampler_name,
-            scheduler,
-            denoise,
-            width,
-            height,
-            batch_size,
-            ckpt_name,
-          },
-        } = useStore.get();
-        const workflow = new ComfyUIWorkflow();
-        const cls = workflow.classes;
-        const [model, clip, vae] = cls.CheckpointLoaderSimple({
-          ckpt_name,
+    const html = htm.bind(h);
+    const create = bindReact(React);
+
+    const useStore = create((set, get) => ({
+      samplers: [],
+      schedulers: [],
+      sd_models: [],
+      payload: {
+        prompt: "best quality, RAW, 1girl",
+        negative_prompt:
+          "(worst quality:2), bad anatomy, embedding:NG_DeepNegative_V1_75T",
+        steps: 35,
+        cfg: 4,
+        sampler_name: "dpmpp_2m_sde_gpu",
+        scheduler: "karras",
+        denoise: 1,
+        width: 640,
+        height: 960,
+        batch_size: 1,
+        ckpt_name: "lofi_v5.baked.fp16.safetensors",
+      },
+      loading: false,
+      progress: {
+        current: 0,
+        total: 0,
+      },
+      // base64[]
+      images: [],
+
+      setProgress: (progress) => {
+        set({ progress });
+      },
+      setImages: (images) => {
+        set({ images });
+      },
+      startLoading: () => {
+        set({ loading: true });
+      },
+      stopLoading: () => {
+        set({ loading: false });
+      },
+      appendImage: (image) => {
+        set((state) => {
+          return { ...state, images: [...state.images, image] };
         });
-        const enc = (text) => cls.CLIPTextEncode({ text, clip })[0];
-        const [samples] = cls.KSampler({
-          seed: Math.floor(Math.random() * 2 ** 32),
-          model,
+      },
+      setPayload: (payload) => {
+        set({ payload });
+      },
+    }));
+
+    const build_workflow = () => {
+      const {
+        payload: {
+          prompt,
+          negative_prompt,
           steps,
           cfg,
           sampler_name,
           scheduler,
           denoise,
-          positive: enc(prompt),
-          negative: enc(negative_prompt),
-          latent_image: cls.EmptyLatentImage({
-            width,
-            height,
-            batch_size,
-          })[0],
-        });
-        cls.SaveImage({
-          filename_prefix: "from-sc-comfy-ui-client",
-          images: cls.VAEDecode({ samples, vae })[0],
-        });
-        return workflow;
-      };
-
-      const client = new ComfyUIApiClient({
-        api_host: "localhost:8188",
+          width,
+          height,
+          batch_size,
+          ckpt_name,
+        },
+      } = useStore.get();
+      const workflow = new ComfyUIWorkflow();
+      const cls = workflow.classes;
+      const [model, clip, vae] = cls.CheckpointLoaderSimple({
+        ckpt_name,
       });
-      client.connect();
-
-      client.on("progress", (progress) => {
-        const { value, max } = progress;
-        useStore.get().setProgress({
-          current: value,
-          total: max,
-        });
+      const enc = (text) => cls.CLIPTextEncode({ text, clip })[0];
+      const [samples] = cls.KSampler({
+        seed: Math.floor(Math.random() * 2 ** 32),
+        model,
+        steps,
+        cfg,
+        sampler_name,
+        scheduler,
+        denoise,
+        positive: enc(prompt),
+        negative: enc(negative_prompt),
+        latent_image: cls.EmptyLatentImage({
+          width,
+          height,
+          batch_size,
+        })[0],
       });
+      cls.SaveImage({
+        filename_prefix: "from-sc-comfy-ui-client",
+        images: cls.VAEDecode({ samples, vae })[0],
+      });
+      return workflow;
+    };
 
-      (async () => {
-        const samplers = await client.getSamplers();
-        const schedulers = await client.getSchedulers();
-        const sd_models = await client.getSDModels();
-        useStore.set({ samplers, schedulers, sd_models });
-      })();
+    const client = new ComfyUIApiClient({
+      api_host: "localhost:8188",
+    });
+    client.connect();
 
-      function App() {
-        const {
-          payload,
-          loading,
-          progress,
-          images,
-          setProgress,
-          setImages,
-          startLoading,
-          stopLoading,
-          appendImage,
-          setPayload,
-          samplers,
-          schedulers,
-          sd_models,
-        } = useStore();
+    client.on("progress", (progress) => {
+      const { value, max } = progress;
+      useStore.get().setProgress({
+        current: value,
+        total: max,
+      });
+    });
 
-        const handleStart = async () => {
-          startLoading();
-          const workflow = build_workflow();
-          const { images } = await workflow.invoke(client);
-          console.log(images);
-          for (const image of images) {
-            switch (image.type) {
-              case "url": {
-                const response = await fetch(image.data);
-                const blob = await response.blob();
-                const reader = new FileReader();
-                reader.onload = () => {
-                  appendImage(reader.result);
-                };
-                reader.readAsDataURL(blob);
-                break;
-              }
-              // arraybuffer
-              case "buff": {
-                const reader = new FileReader();
-                reader.onload = () => {
-                  appendImage(reader.result);
-                };
-                reader.readAsDataURL(new Blob([image.buff]));
-                break;
-              }
+    (async () => {
+      const samplers = await client.getSamplers();
+      const schedulers = await client.getSchedulers();
+      const sd_models = await client.getSDModels();
+      useStore.set({ samplers, schedulers, sd_models });
+    })();
+
+    function App() {
+      const {
+        payload,
+        loading,
+        progress,
+        images,
+        setProgress,
+        setImages,
+        startLoading,
+        stopLoading,
+        appendImage,
+        setPayload,
+        samplers,
+        schedulers,
+        sd_models,
+      } = useStore();
+
+      const handleStart = async () => {
+        startLoading();
+        const workflow = build_workflow();
+        const { images } = await workflow.invoke(client);
+        console.log(images);
+        for (const image of images) {
+          switch (image.type) {
+            case "url": {
+              const response = await fetch(image.data);
+              const blob = await response.blob();
+              const reader = new FileReader();
+              reader.onload = () => {
+                appendImage(reader.result);
+              };
+              reader.readAsDataURL(blob);
+              break;
+            }
+            // arraybuffer
+            case "buff": {
+              const reader = new FileReader();
+              reader.onload = () => {
+                appendImage(reader.result);
+              };
+              reader.readAsDataURL(new Blob([image.buff]));
+              break;
             }
           }
-          stopLoading();
-          setTimeout(() => {
-            setProgress({ current: 0, total: 0 });
-          });
-        };
+        }
+        stopLoading();
+        setTimeout(() => {
+          setProgress({ current: 0, total: 0 });
+        });
+      };
 
-        return html`
+      return html`
           <div>
             <fieldset>
               <legend>Settings</legend>
@@ -295,8 +295,8 @@
                     type="text"
                     value=${payload.prompt}
                     onInput=${(e) => {
-                      setPayload({ ...payload, prompt: e.target.value });
-                    }}
+          setPayload({ ...payload, prompt: e.target.value });
+        }}
                   />
                 </label>
                 <label>
@@ -305,11 +305,11 @@
                     type="text"
                     value=${payload.negative_prompt}
                     onInput=${(e) => {
-                      setPayload({
-                        ...payload,
-                        negative_prompt: e.target.value,
-                      });
-                    }}
+          setPayload({
+            ...payload,
+            negative_prompt: e.target.value,
+          });
+        }}
                   />
                 </label>
                 <label>
@@ -318,11 +318,11 @@
                     type="number"
                     value=${payload.steps}
                     onInput=${(e) => {
-                      setPayload({
-                        ...payload,
-                        steps: parseInt(e.target.value),
-                      });
-                    }}
+          setPayload({
+            ...payload,
+            steps: parseInt(e.target.value),
+          });
+        }}
                   />
                 </label>
                 <label>
@@ -331,8 +331,8 @@
                     type="number"
                     value=${payload.cfg}
                     onInput=${(e) => {
-                      setPayload({ ...payload, cfg: parseInt(e.target.value) });
-                    }}
+          setPayload({ ...payload, cfg: parseInt(e.target.value) });
+        }}
                   />
                 </label>
                 <label>
@@ -340,13 +340,13 @@
                   <select
                     value=${payload.sampler_name}
                     onChange=${(e) => {
-                      setPayload({ ...payload, sampler_name: e.target.value });
-                    }}
+          setPayload({ ...payload, sampler_name: e.target.value });
+        }}
                   >
                     ${samplers.map(
-                      (sampler) =>
-                        html`<option value=${sampler}>${sampler}</option>`
-                    )}
+          (sampler) =>
+            html`<option value=${sampler}>${sampler}</option>`
+        )}
                   </select>
                 </label>
                 <label>
@@ -354,13 +354,13 @@
                   <select
                     value=${payload.scheduler}
                     onChange=${(e) => {
-                      setPayload({ ...payload, scheduler: e.target.value });
-                    }}
+          setPayload({ ...payload, scheduler: e.target.value });
+        }}
                   >
                     ${schedulers.map(
-                      (scheduler) =>
-                        html`<option value=${scheduler}>${scheduler}</option>`
-                    )}
+          (scheduler) =>
+            html`<option value=${scheduler}>${scheduler}</option>`
+        )}
                   </select>
                 </label>
                 <label>
@@ -369,11 +369,11 @@
                     type="number"
                     value=${payload.width}
                     onInput=${(e) => {
-                      setPayload({
-                        ...payload,
-                        width: parseInt(e.target.value),
-                      });
-                    }}
+          setPayload({
+            ...payload,
+            width: parseInt(e.target.value),
+          });
+        }}
                   />
                 </label>
                 <label>
@@ -382,11 +382,11 @@
                     type="number"
                     value=${payload.height}
                     onInput=${(e) => {
-                      setPayload({
-                        ...payload,
-                        height: parseInt(e.target.value),
-                      });
-                    }}
+          setPayload({
+            ...payload,
+            height: parseInt(e.target.value),
+          });
+        }}
                   />
                 </label>
                 <label>
@@ -395,11 +395,11 @@
                     type="number"
                     value=${payload.batch_size}
                     onInput=${(e) => {
-                      setPayload({
-                        ...payload,
-                        batch_size: parseInt(e.target.value),
-                      });
-                    }}
+          setPayload({
+            ...payload,
+            batch_size: parseInt(e.target.value),
+          });
+        }}
                   />
                 </label>
                 <label>
@@ -407,25 +407,24 @@
                   <select
                     value=${payload.ckpt_name}
                     onChange=${(e) => {
-                      setPayload({ ...payload, ckpt_name: e.target.value });
-                    }}
+          setPayload({ ...payload, ckpt_name: e.target.value });
+        }}
                   >
                     ${sd_models.map(
-                      (ckpt_name) =>
-                        html`<option value=${ckpt_name}>${ckpt_name}</option>`
-                    )}
+          (ckpt_name) =>
+            html`<option value=${ckpt_name}>${ckpt_name}</option>`
+        )}
                   </select>
               </div>
             </fieldset>
-            ${
-              loading
-                ? html`<button class="start-button" disabled>
+            ${loading
+          ? html`<button class="start-button" disabled>
                     Generating...
                   </button>`
-                : html`<button class="start-button" onClick=${handleStart}>
+          : html`<button class="start-button" onClick=${handleStart}>
                     Generate
                   </button>`
-            }
+        }
           </div>
           <div>
             <fieldset>
@@ -440,25 +439,26 @@
             </fieldset>
             <fieldset>
               <legend>Images</legend>
-              ${
-                images.length === 0
-                  ? html`<p>no images.</p>`
-                  : html`<div class="images-container">
+              ${images.length === 0
+          ? html`<p>no images.</p>`
+          : html`<div class="images-container">
                       ${images.map(
-                        (image) =>
-                          html`<img
+            (image) =>
+              html`<img
                             src=${image}
                             style="max-width: 100%; max-height: 100%"
                           />`
-                      )}
+          )}
                     </div>`
-              }
+        }
             </fieldset>
           </div>
         `;
-      }
+    }
 
-      render(html`<${App} />`, document.querySelector("#app"));
-    </script>
-  </body>
+    render(html`<${App} />`, document.querySelector("#app"));
+
+  </script>
+</body>
+
 </html>
