@@ -133,28 +133,18 @@ export class WorkflowCodeGenerator {
       bfs(node);
     }
 
-    return sorted;
+    return sorted.reverse();
   }
 
   generate(wk: CUIWorkflow) {
-    const nodes = this.wkGraphSort(wk).reduce(
-      (acc, x) => {
-        acc[x.node.index] = x.node;
-        return acc;
-      },
-      {} as Record<number, WorkflowNode>
-    );
+    const sortedNodes = this.wkGraphSort(wk);
 
     const outputMap = this.collectionOutputMap(wk);
 
     const astNodes: types.VariableDeclaration[] = [];
 
-    const sortedNodes = Object.entries(nodes).sort(
-      ([aid], [bid]) => Number(aid) - Number(bid)
-    );
-
-    for (const [nodeKey, nodeValue] of sortedNodes) {
-      const nodeData = nodeValue.data;
+    for (const node of sortedNodes) {
+      const nodeData = node.node.data;
 
       const inputs = nodeData.inputs;
       const inputExpressions = Object.entries(inputs).map(
@@ -233,3 +223,22 @@ export class WorkflowCodeGenerator {
     return generatedCode;
   }
 }
+
+// if (require.main === module) {
+//   (async () => {
+//     const WorkflowMinNodes = (
+//       await import("../tests/test-inputs/workflow-min.png.workflow.json", {
+//         assert: {
+//           type: "json",
+//         },
+//       })
+//     ).default;
+//     const generator = new WorkflowCodeGenerator();
+
+//     const wk = new CUIWorkflow();
+//     wk.nodes = WorkflowMinNodes as any;
+//     const code = await generator.generate(wk);
+
+//     console.log(code);
+//   })();
+// }
