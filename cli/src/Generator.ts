@@ -3,7 +3,12 @@ import { CUIWorkflow } from "./Workflow";
 import * as types from "@babel/types";
 import generator from "@babel/generator";
 
-import { WorkflowNodeInputRef } from "./types";
+import { WorkflowNode, WorkflowNodeInputRef } from "./types";
+
+interface WkNodeGraphNode {
+  node: WorkflowNode;
+  children: WkNodeGraphNode[];
+}
 
 export class WorkflowCodeGenerator {
   constructor() {}
@@ -13,6 +18,7 @@ export class WorkflowCodeGenerator {
       Object.values(x.data.inputs).filter((x) => Array.isArray(x))
     ) as WorkflowNodeInputRef[][];
 
+    // node_index -> [output_index]
     return all_refs.reduce(
       (acc, x) => {
         x.forEach(([key, output_index]) => {
@@ -37,7 +43,6 @@ export class WorkflowCodeGenerator {
     );
 
     const nodes = wk.nodes;
-    // 初始化变量名计数器和输出映射
     const outputMap: Record<string, string> = {};
     const counter: Record<string, number> = {};
 
@@ -68,28 +73,93 @@ export class WorkflowCodeGenerator {
     return outputMap;
   }
 
+  wkToGraph(wk: CUIWorkflow): WkNodeGraphNode[] {
+    // 没有依赖任何节点的节点作为根节点
+    // 可能有多个根节点
+    const nodes = {} as Record<number, WkNodeGraphNode>;
+    const rootNodes = [] as WkNodeGraphNode[];
+
+    for (const node of wk.nodes) {
+      const deps = Object.values(node.data.inputs)
+        .filter((x) => Array.isArray(x))
+        .map(([node_index, _]: any) => Number(node_index));
+      const is_root = deps.length === 0;
+      const graph_node = {
+        node: node,
+        children: [],
+      };
+      if (is_root) {
+        rootNodes.push(graph_node);
+      }
+      nodes[node.index] = graph_node;
+    }
+
+    for (const node of wk.nodes) {
+      const graph_node = nodes[node.index];
+      const deps = Object.values(node.data.inputs)
+        .filter((x) => Array.isArray(x))
+        .map(([node_index, _]: any) => Number(node_index));
+
+      for (const dep of deps) {
+        nodes[dep].children.push(graph_node);
+      }
+    }
+
+    return rootNodes;
+  }
+
+  // 根据 graph 结构排序
+  // 从根节点开始广度优先
+  wkGraphSort(wk: CUIWorkflow) {
+    const graph = this.wkToGraph(wk);
+    const sorted = [] as WkNodeGraphNode[];
+
+    const visited = new Set<WkNodeGraphNode>();
+
+    const bfs = (node: WkNodeGraphNode) => {
+      if (visited.has(node)) {
+        return;
+      }
+      visited.add(node);
+
+      for (const child of node.children) {
+        bfs(child);
+      }
+
+      sorted.push(node);
+    };
+
+    for (const node of graph) {
+      bfs(node);
+    }
+
+    return sorted;
+  }
+
   generate(wk: CUIWorkflow) {
-    const nodes = wk.nodes;
+    const nodes = this.wkGraphSort(wk).reduce(
+      (acc, x) => {
+        acc[x.node.index] = x.node;
+        return acc;
+      },
+      {} as Record<number, WorkflowNode>
+    );
 
     const outputMap = this.collectionOutputMap(wk);
 
-    // 创建一个AST节点数组，用来保存所有的表达式声明
-    const astNodes: any[] = [];
+    const astNodes: types.VariableDeclaration[] = [];
 
     const sortedNodes = Object.entries(nodes).sort(
       ([aid], [bid]) => Number(aid) - Number(bid)
     );
 
-    // 遍历节点，生成每个节点的代码
     for (const [nodeKey, nodeValue] of sortedNodes) {
       const nodeData = nodeValue.data;
 
-      // 处理输入参数
       const inputs = nodeData.inputs;
       const inputExpressions = Object.entries(inputs).map(
         ([inputKey, inputValue]) => {
           if (Array.isArray(inputValue)) {
-            // 映射输出为变量名
             const refNodeKey = inputValue[0];
             const refOutputIndex = inputValue[1];
             const refVarName = outputMap[`${refNodeKey}_${refOutputIndex}`];
@@ -129,19 +199,15 @@ export class WorkflowCodeGenerator {
         }
       );
 
-      // 创建输入对象表达式
       const inputObjectExpression = types.objectExpression(inputExpressions);
 
-      // 处理输出参数
       const outputs = nodeData.outputs;
       const outputIdentifiers = outputs.map((name, index) => {
         return types.identifier(name);
       });
 
-      // 创建左侧的数组模式
       const leftArrayPattern = types.arrayPattern(outputIdentifiers);
 
-      // 创建表达式声明
       const callExpression = types.callExpression(
         types.memberExpression(
           types.identifier("cls"),
@@ -161,7 +227,6 @@ export class WorkflowCodeGenerator {
       astNodes.push(variableDeclaration);
     }
 
-    // 使用 generator 将 AST 节点数组转换为代码字符串
     const codeFragments = astNodes.map((node) => generator(node).code);
     const generatedCode = codeFragments.join("\n");
 

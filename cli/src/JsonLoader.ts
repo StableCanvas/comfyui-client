@@ -3,14 +3,17 @@ import { WorkflowNodeDefine } from "./types";
 
 import * as fs from "fs";
 
+// 从 comfyui 中导出的格式
+interface WorkflowJsonPrompt {
+  [index: number]: {
+    class_type: string;
+    inputs: any;
+  };
+}
+
+// 从 comfyui-client 中导出的格式，带有 workflow 可以写入到生成文件中
 interface WorkflowJsonObject {
-  prompt: Record<
-    number,
-    {
-      class_type: string;
-      inputs: any;
-    }
-  >;
+  prompt: WorkflowJsonPrompt;
   workflow?: any;
 }
 
@@ -25,13 +28,14 @@ export class JsonLoader {
   }
 
   load(json_object: WorkflowJsonObject) {
-    if (!json_object.prompt) {
-      throw new Error("Wrong workflow");
+    let prompt = json_object as any as WorkflowJsonObject["prompt"];
+    if (json_object.prompt) {
+      prompt = json_object.prompt;
     }
 
     const nodes = [] as WorkflowNodeDefine[];
 
-    for (const [index, node] of Object.entries(json_object.prompt)) {
+    for (const [index, node] of Object.entries(prompt)) {
       nodes.push({
         index: Number(index),
         class_type: node.class_type,
