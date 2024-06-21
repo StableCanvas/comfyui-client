@@ -1,0 +1,121 @@
+[
+  {
+    "index": 7,
+    "data": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "Node name for S&R": "CLIPTextEncode",
+        "clip": [
+          4,
+          1
+        ]
+      },
+      "outputs": [
+        "CONDITIONING"
+      ]
+    }
+  },
+  {
+    "index": 6,
+    "data": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "Node name for S&R": "CLIPTextEncode",
+        "clip": [
+          4,
+          1
+        ]
+      },
+      "outputs": [
+        "CONDITIONING"
+      ]
+    }
+  },
+  {
+    "index": 5,
+    "data": {
+      "class_type": "EmptyLatentImage",
+      "inputs": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "outputs": [
+        "LATENT"
+      ]
+    }
+  },
+  {
+    "index": 3,
+    "data": {
+      "class_type": "KSampler",
+      "inputs": {
+        "Node name for S&R": "KSampler",
+        "model": [
+          4,
+          0
+        ],
+        "positive": [
+          6,
+          0
+        ],
+        "negative": [
+          7,
+          0
+        ],
+        "latent_image": [
+          5,
+          0
+        ]
+      },
+      "outputs": [
+        "LATENT"
+      ]
+    }
+  },
+  {
+    "index": 8,
+    "data": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "Node name for S&R": "VAEDecode",
+        "samples": [
+          3,
+          0
+        ],
+        "vae": [
+          4,
+          2
+        ]
+      },
+      "outputs": [
+        "IMAGE"
+      ]
+    }
+  },
+  {
+    "index": 9,
+    "data": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          8,
+          0
+        ]
+      },
+      "outputs": []
+    }
+  },
+  {
+    "index": 4,
+    "data": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "outputs": [
+        "MODEL",
+        "CLIP",
+        "VAE"
+      ]
+    }
+  }
+]

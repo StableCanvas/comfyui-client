@@ -39,7 +39,7 @@ export class WorkflowCodeGenerator {
         acc[node_index] = Math.max(...args_index) + 1;
         return acc;
       },
-      {}
+      {} as Record<number | string, number>
     );
 
     const nodes = wk.nodes;

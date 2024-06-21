@@ -1,12 +1,9 @@
-import * as fs from "fs";
 import * as path from "path";
-
-import prettier from "prettier";
-
+import * as fs from "fs";
 import exifr from "exifr";
 import { ComfyUIExportImage } from "./Image.types";
+import { CUIWorkflow } from "./Workflow";
 
-// TODO
 export class ImageLoader {
   constructor() {}
 
@@ -24,13 +21,53 @@ export class ImageLoader {
 
     return json as ComfyUIExportImage.Root;
   }
+
+  async imageWkToWorkflow(root: ComfyUIExportImage.Root) {
+    const nodes_define = root.nodes.map((node) => {
+      return {
+        index: node.id,
+        class_type: node.type,
+        inputs: {
+          ...node.properties,
+          ...(node.inputs?.reduce(
+            (acc, cur) => {
+              const link = root.links.find((x) => x[0] === cur.link);
+              if (!link) {
+                console.warn("No link found for input", cur);
+                return acc;
+              }
+              // [input_node_id, input_slot_id]
+              acc[cur.name] = [link[1], link[2]];
+              return acc;
+            },
+            {} as Record<string, any>
+          ) || {}),
+        },
+      };
+    });
+
+    return new CUIWorkflow(nodes_define);
+  }
 }
 
 if (require.main === module) {
-  const loader = new ImageLoader();
-  loader
-    .loadFromFile(path.join(__dirname, "../tests/test-inputs/workflow-min.png"))
-    .then((json) => {
-      console.log(json);
-    });
+  (async () => {
+    const loader = new ImageLoader();
+    const json = await loader.loadFromFile(
+      path.join(__dirname, "../tests/test-inputs/workflow-min.png")
+    );
+    fs.writeFileSync(
+      path.join(__dirname, "../tests/test-inputs/workflow-min.png.export.json"),
+      JSON.stringify(json, null, 2)
+    );
+    const workflow = await loader.imageWkToWorkflow(json);
+    console.log(workflow.nodes);
+    fs.writeFileSync(
+      path.join(
+        __dirname,
+        "../tests/test-inputs/workflow-min.png.workflow.json"
+      ),
+      JSON.stringify(workflow.nodes, null, 2)
+    );
+  })();
 }

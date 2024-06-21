@@ -24,11 +24,14 @@ export class CUIWorkflow {
   }
 
   findOutputs(class_type: string): string[] {
-    const types = ComfyUINodeTypes.properties;
+    const types = ComfyUINodeTypes.properties as any;
 
     const schema = types[class_type];
-    if (schema?.properties?.outputs?.items) {
-      return schema.properties.outputs.items.map((x) => x.type);
+    if (
+      schema?.properties?.outputs?.items &&
+      Array.isArray(schema.properties.outputs.items)
+    ) {
+      return schema.properties.outputs.items.map((x: any) => x.type);
     }
 
     return [];
