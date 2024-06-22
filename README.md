@@ -284,203 +284,123 @@ Use this tool to generate the corresponding calling code using workflow
 
 Options:
   -V, --version              output the version number
-  -t, --template [template]  Specify the template for generating code, builtin tpl: [esm,cjs,web,none] (default: "esm")     
-  -o, --out [output]         Specify the output file for the generated code
-  -i, --in <input>           Specify the input file, support .json file
+  -t, --template [template]  Specify the template for generating code, builtin tpl: [esm,cjs,web,none]        
+                             (default: "esm")
+  -o, --out [output]         Specify the output file for the generated code. default to stdout
+  -i, --in <input>           Specify the input file, support .json/.png file
   -h, --help                 display help for command
 ```
 
-example
+#### example: api.json to code
 ```
-cuc-w2c -i workflow.json -o out.js -t esm
+cuc-w2c -i ./tests/test-inputs/workflow_api.json -t none
 ```
+
+input file: [./cli/tests/test-inputs/workflow_api.json](./cli/tests/test-inputs/workflow_api.json)
 
 <details>
-<summary>Input</summary>
+<summary>Output</summary>
 
-```json
-{
-  "prompt": {
-    "1": {
-      "class_type": "CheckpointLoaderSimple",
-      "inputs": {
-        "ckpt_name": "lofi_v5.baked.fp16.safetensors"
-      }
-    },
-    "2": {
-      "class_type": "CLIPTextEncode",
-      "inputs": {
-        "text": "best quality, 1girl",
-        "clip": [
-          "1",
-          1
-        ]
-      }
-    },
-    "3": {
-      "class_type": "CLIPTextEncode",
-      "inputs": {
-        "text": "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
-        "clip": [
-          "1",
-          1
-        ]
-      }
-    },
-    "4": {
-      "class_type": "EmptyLatentImage",
-      "inputs": {
-        "width": 512,
-        "height": 512,
-        "batch_size": 1
-      }
-    },
-    "5": {
-      "class_type": "KSampler",
-      "inputs": {
-        "seed": 2765233096,
-        "steps": 35,
-        "cfg": 4,
-        "sampler_name": "dpmpp_2m_sde_gpu",
-        "scheduler": "karras",
-        "denoise": 1,
-        "model": [
-          "1",
-          0
-        ],
-        "positive": [
-          "2",
-          0
-        ],
-        "negative": [
-          "3",
-          0
-        ],
-        "latent_image": [
-          "4",
-          0
-        ]
-      }
-    },
-    "6": {
-      "class_type": "VAEDecode",
-      "inputs": {
-        "samples": [
-          "5",
-          0
-        ],
-        "vae": [
-          "1",
-          2
-        ]
-      }
-    },
-    "7": {
-      "class_type": "SaveImage",
-      "inputs": {
-        "filename_prefix": "from-sc-comfy-ui-client",
-        "images": [
-          "6",
-          0
-        ]
-      }
-    }
-  }
-}
+```ts
+const [LATENT_2] = cls.EmptyLatentImage({
+  width: 512,
+  height: 512,
+  batch_size: 1,
+});
+const [MODEL_1, CLIP_1, VAE_1] = cls.CheckpointLoaderSimple({
+  ckpt_name: "EPIC-la-v1.ckpt",
+});
+const [CONDITIONING_2] = cls.CLIPTextEncode({
+  text: "text, watermark",
+  clip: CLIP_1,
+});
+const [CONDITIONING_1] = cls.CLIPTextEncode({
+  text: "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
+  clip: CLIP_1,
+});
+const [LATENT_1] = cls.KSampler({
+  seed: 156680208700286,
+  steps: 20,
+  cfg: 8,
+  sampler_name: "euler",
+  scheduler: "normal",
+  denoise: 1,
+  model: MODEL_1,
+  positive: CONDITIONING_1,
+  negative: CONDITIONING_2,
+  latent_image: LATENT_2,
+});
+const [IMAGE_1] = cls.VAEDecode({
+  samples: LATENT_1,
+  vae: VAE_1,
+});
+const [] = cls.SaveImage({
+  filename_prefix: "ComfyUI",
+  images: IMAGE_1,
+});
 ```
 
 </details>
+
+#### example: export-png to code
+```
+cuc-w2c -i ./tests/test-inputs/workflow-min.png -t none
+```
+
+input file: [./cli/tests/test-inputs/workflow-min.png](./cli/tests/test-inputs/workflow-min.png)
 
 
 <details>
 <summary>Output</summary>
 
 ```ts
-import {
-  ComfyUIApiClient,
-  ComfyUIWorkflow,
-} from "@stable-canvas/comfyui-client";
-
-async function main(envs = {}) {
-  const env = (k) => envs[k];
-
-  const client = new ComfyUIApiClient({
-    api_host: env("COMFYUI_CLIENT_API_HOST"),
-    api_host: env("COMFYUI_CLIENT_API_BASE"),
-    clientId: env("COMFYUI_CLIENT_CLIENT_ID"),
-  });
-
-  const createWorkflow = () => {
-    const workflow = new ComfyUIWorkflow();
-    const cls = workflow.classes;
-
-    const [MODEL_1, CLIP_1, VAE_1] = cls.CheckpointLoaderSimple({
-      ckpt_name: "lofi_v5.baked.fp16.safetensors",
-    });
-    const [CONDITIONING_1] = cls.CLIPTextEncode({
-      text: "best quality, 1girl",
-      clip: CLIP_1,
-    });
-    const [CONDITIONING_2] = cls.CLIPTextEncode({
-      text: "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
-      clip: CLIP_1,
-    });
-    const [LATENT_1] = cls.EmptyLatentImage({
-      width: 512,
-      height: 512,
-      batch_size: 1,
-    });
-    const [LATENT_2] = cls.KSampler({
-      seed: 2765233096,
-      steps: 35,
-      cfg: 4,
-      sampler_name: "dpmpp_2m_sde_gpu",
-      scheduler: "karras",
-      denoise: 1,
-      model: MODEL_1,
-      positive: CONDITIONING_1,
-      negative: CONDITIONING_2,
-      latent_image: LATENT_1,
-    });
-    const [IMAGE_1] = cls.VAEDecode({
-      samples: LATENT_2,
-      vae: VAE_1,
-    });
-    const [] = cls.SaveImage({
-      filename_prefix: "from-sc-comfy-ui-client",
-      images: IMAGE_1,
-    });
-
-    return workflow;
-  };
-
-  const workflow = createWorkflow();
-
-  console.time("enqueue workflow");
-  try {
-    return await workflow.invoke(client);
-  } catch (error) {
-    throw error;
-  } finally {
-    console.timeEnd("enqueue workflow");
-  }
-}
-
-main("process" in globalThis ? globalThis.process.env : globalThis)
-  .then(() => {
-    console.log("DONE");
-  })
-  .catch((err) => {
-    console.error("ERR", err);
-  });
-
+const [MODEL_1, CLIP_1, VAE_1] = cls.CheckpointLoaderSimple({
+  ckpt_name: "EPIC-la-v1.ckpt",
+});
+const [CONDITIONING_2] = cls.CLIPTextEncode({
+  text: "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
+  clip: CLIP_1,
+});
+const [CONDITIONING_1] = cls.CLIPTextEncode({
+  text: "text, watermark",
+  clip: CLIP_1,
+});
+const [LATENT_1] = cls.EmptyLatentImage({
+  width: 512,
+  height: 512,
+  batch_size: 1,
+});
+const [LATENT_2] = cls.KSampler({
+  seed: 156680208700286,
+  control_after_generate: "randomize",
+  steps: 20,
+  cfg: 8,
+  sampler_name: "euler",
+  scheduler: "normal",
+  denoise: 1,
+  model: MODEL_1,
+  positive: CONDITIONING_2,
+  negative: CONDITIONING_1,
+  latent_image: LATENT_1,
+});
+const [IMAGE_1] = cls.VAEDecode({
+  samples: LATENT_2,
+  vae: VAE_1,
+});
+const [] = cls.SaveImage({
+  filename_prefix: "ComfyUI",
+  images: IMAGE_1,
+});
 ```
-
 </details>
 
-## TODOs
+> Since the order of widgets may change at any time, the function from .png to code may be unstable. It is recommended to use .json to code
+
+## Roadmap
 
 - [x] workflow to code: Transpiler workflow to code
+  - [x] .json => code
+  - [x] .png => code
 - [ ] code to workflow: Output a json file that can be imported into the web front end
 - [ ] Output type hints
 
