@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/comfyui-client-cli",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "cli tools for @stable-canvas/comfyui-client",
   "bin": {
     "cuc-w2c": "./bin/generate.js"

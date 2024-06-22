@@ -64,7 +64,10 @@ async function main() {
       "-o, --out [output]",
       "Specify the output file for the generated code. default to stdout"
     )
-    .option("-i, --in <input>", "Specify the input file, support .json file");
+    .option(
+      "-i, --in <input>",
+      "Specify the input file, support .json/.png file"
+    );
 
   program.parse();
 

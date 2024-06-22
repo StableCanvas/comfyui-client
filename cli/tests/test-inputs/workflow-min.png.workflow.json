@@ -4,7 +4,7 @@
     "data": {
       "class_type": "CLIPTextEncode",
       "inputs": {
-        "Node name for S&R": "CLIPTextEncode",
+        "text": "text, watermark",
         "clip": [
           4,
           1
@@ -20,7 +20,7 @@
     "data": {
       "class_type": "CLIPTextEncode",
       "inputs": {
-        "Node name for S&R": "CLIPTextEncode",
+        "text": "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
         "clip": [
           4,
           1
@@ -36,7 +36,9 @@
     "data": {
       "class_type": "EmptyLatentImage",
       "inputs": {
-        "Node name for S&R": "EmptyLatentImage"
+        "width": 512,
+        "height": 512,
+        "batch_size": 1
       },
       "outputs": [
         "LATENT"
@@ -48,7 +50,13 @@
     "data": {
       "class_type": "KSampler",
       "inputs": {
-        "Node name for S&R": "KSampler",
+        "seed": 156680208700286,
+        "control_after_generate": "randomize",
+        "steps": 20,
+        "cfg": 8,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1,
         "model": [
           4,
           0
@@ -76,7 +84,6 @@
     "data": {
       "class_type": "VAEDecode",
       "inputs": {
-        "Node name for S&R": "VAEDecode",
         "samples": [
           3,
           0
@@ -96,6 +103,7 @@
     "data": {
       "class_type": "SaveImage",
       "inputs": {
+        "filename_prefix": "ComfyUI",
         "images": [
           8,
           0
@@ -109,7 +117,7 @@
     "data": {
       "class_type": "CheckpointLoaderSimple",
       "inputs": {
-        "Node name for S&R": "CheckpointLoaderSimple"
+        "ckpt_name": "EPIC-la-v1.ckpt"
       },
       "outputs": [
         "MODEL",

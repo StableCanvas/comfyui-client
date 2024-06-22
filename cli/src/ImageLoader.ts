@@ -4,6 +4,8 @@ import exifr from "exifr";
 import { ComfyUIExportImage } from "./Image.types";
 import { CUIWorkflow } from "./Workflow";
 
+import * as ComfyUINodeWidgetsMap from "../data/comfyui.node.widgets.json";
+
 export class ImageLoader {
   constructor() {}
 
@@ -24,11 +26,18 @@ export class ImageLoader {
 
   async imageWkToWorkflow(root: ComfyUIExportImage.Root) {
     const nodes_define = root.nodes.map((node) => {
+      const widgets_name: string[] =
+        (ComfyUINodeWidgetsMap as any)[node.type] || [];
       return {
         index: node.id,
         class_type: node.type,
         inputs: {
-          ...node.properties,
+          ...Object.fromEntries(
+            node.widgets_values?.map((value, index) => {
+              const widget_name = widgets_name[index] || `unknown_${index}`;
+              return [widget_name, value];
+            }) || []
+          ),
           ...(node.inputs?.reduce(
             (acc, cur) => {
               const link = root.links.find((x) => x[0] === cur.link);
