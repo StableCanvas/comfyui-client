@@ -1,3 +1,3 @@
 #!/usr/bin/env node
-
-console.log('WIP')
+require("ts-node").register();
+require("../src/main-cli.ts");

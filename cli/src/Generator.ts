@@ -155,7 +155,7 @@ export class WorkflowCodeGenerator {
             const refVarName = outputMap[`${refNodeKey}_${refOutputIndex}`];
 
             return types.objectProperty(
-              types.identifier(inputKey),
+              types.stringLiteral(inputKey),
               types.identifier(refVarName)
             );
           } else {
@@ -184,7 +184,7 @@ export class WorkflowCodeGenerator {
                 throw new Error("Wrong workflow");
               }
             }
-            return types.objectProperty(types.identifier(inputKey), val);
+            return types.objectProperty(types.stringLiteral(inputKey), val);
           }
         }
       );
