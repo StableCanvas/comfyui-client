@@ -1,15 +1,15 @@
 {
   "name": "@stable-canvas/comfyui-client-cli",
-  "version": "1.2.2",
+  "version": "1.5.1",
   "description": "cli tools for @stable-canvas/comfyui-client",
   "bin": {
     "cuc-w2c": "./bin/generate.js"
   },
   "keywords": [],
   "files": [
-    "bin/**/*.js*",
-    "bin/**/*.mjs*",
-    "bin/**/*.ts"
+    "bin/**/*",
+    "src/**/*",
+    "data/**/*"
   ],
   "scripts": {
     "test": "jest"
