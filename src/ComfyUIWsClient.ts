@@ -103,13 +103,37 @@ export class ComfyUIWsClient {
     this.api_host = config.api_host ?? ComfyUIWsClient.DEFAULT_API_HOST;
     this.api_base = config.api_base ?? ComfyUIWsClient.DEFAULT_API_BASE;
     this.clientId = config.clientId ?? uuidv4();
-    this.WebSocket = config.WebSocket ?? WebSocket;
+    this.WebSocket = config.WebSocket ?? globalThis.WebSocket;
     this.ssl = config.ssl ?? false;
     this.user = config.user ?? ComfyUIWsClient.DEFAULT_USER;
     if (!globalThis.fetch) {
       throw new Error("fetch is not defined");
     }
     this.fetch = config.fetch ?? globalThis.fetch.bind(globalThis);
+
+    if (!this.WebSocket) {
+      console.warn("No WebSocket implementation available, WebSocket disabled");
+    }
+  }
+
+  /**
+   * Returns the headers for the API request.
+   *
+   * @param {RequestInit} [options] - (Optional) Additional options for the request.
+   * @return {HeadersInit} The headers for the API request.
+   */
+  apiHeaders(options?: RequestInit) {
+    const headers: HeadersInit = {
+      ...(this.user
+        ? {
+            "Comfy-User": this.user,
+          }
+        : {}),
+      // "User-Agent": `ComfyUIClient/${version}`,
+      Accept: "*/*",
+      ...(options?.headers ?? {}),
+    };
+    return headers;
   }
 
   /**
@@ -119,9 +143,10 @@ export class ComfyUIWsClient {
    * @return {string} The generated URL for the API endpoint.
    */
   apiURL(route: string): string {
-    return `http${this.ssl ? "s" : ""}://${this.api_host}${
-      this.api_base
-    }${route}`;
+    const url = new URL(`http${this.ssl ? "s" : ""}://${this.api_host}`);
+    url.pathname = this.api_base + route;
+    url.pathname = url.pathname.replace(/\/+/g, "/");
+    return url.toString();
   }
 
   /**
@@ -144,6 +169,20 @@ export class ComfyUIWsClient {
   }
 
   /**
+   * Generates the WebSocket URL based on the current API host and SSL configuration.
+   *
+   * @return {string} The generated WebSocket URL.
+   */
+  wsURL(): string {
+    const url = new URL(`ws${this.ssl ? "s" : ""}://${this.api_host}`);
+    url.pathname = "/ws";
+    if (this.clientId) {
+      url.searchParams.set("clientId", this.clientId);
+    }
+    return url.toString();
+  }
+
+  /**
    * Fetches API data based on the provided route and options.
    *
    * NOTE: CORS policy: Request header field comfy-user is not allowed by Access-Control-Allow-Headers in preflight response. Please use empty string in browser.
@@ -156,21 +195,10 @@ export class ComfyUIWsClient {
     if (this.closed) {
       throw new Error("Client is closed");
     }
-    const headers: HeadersInit = {
-      ...(this.user
-        ? {
-            "Comfy-User": this.user,
-          }
-        : {}),
-      // "User-Agent": `ComfyUIClient/${version}`,
-      Accept: "*/*",
-      ...(options?.headers ?? {}),
-    };
-
     const url = this.apiURL(route);
     return this.fetch(url, {
       ...options,
-      headers,
+      headers: this.apiHeaders(options),
     });
   }
 
@@ -267,17 +295,15 @@ export class ComfyUIWsClient {
     if (this.socket) {
       return;
     }
+    if (!this.WebSocket) {
+      throw new Error(
+        "WebSocket is not defined, please provide a WebSocket implementation"
+      );
+    }
 
     let opened = false;
-    let existingSession = "";
-    if (this.clientId) {
-      existingSession = "?clientId=" + this.clientId;
-    }
-    this.socket = new this.WebSocket(
-      `ws${this.ssl ? "s" : ""}://${this.api_host}${
-        this.api_base
-      }/ws${existingSession}`
-    );
+
+    this.socket = new this.WebSocket(this.wsURL());
     this.socket.binaryType = "arraybuffer";
 
     this.addSocketCallback(this.socket, "open", () => {

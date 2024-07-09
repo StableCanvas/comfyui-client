@@ -1,0 +1,1 @@
+export { LoginAuthPlugin } from "./LoginAuthPlugin";

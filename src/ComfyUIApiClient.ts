@@ -1,4 +1,5 @@
 import { CachedFn } from "./CachedFn";
+import type { ClientPlugin } from "./ClientPlugin";
 import { ComfyUIWsClient } from "./ComfyUIWsClient";
 import { isNone } from "./misc";
 import { ComfyUIClientResponseTypes } from "./response.types";
@@ -24,11 +25,24 @@ import { ComfyUiWsTypes } from "./ws.typs";
 export class ComfyUIApiClient extends ComfyUIWsClient {
   private _cached_fn: CachedFn;
 
+  // NOTE: useless ... just for debug
+  private _plugins = [] as ClientPlugin[];
+
   constructor(config: IComfyApiConfig) {
     super(config);
 
     const cache_ns = `${config.api_host}`;
     this._cached_fn = new CachedFn(cache_ns, config.cache);
+  }
+
+  /**
+   * Use a plugin by calling its install method on this instance.
+   *
+   * @param {ClientPlugin} plugin - The plugin to install.
+   */
+  use(plugin: ClientPlugin) {
+    plugin.install(this);
+    this._plugins.push(plugin);
   }
 
   /**
