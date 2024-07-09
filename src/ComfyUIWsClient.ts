@@ -144,8 +144,15 @@ export class ComfyUIWsClient {
    */
   apiURL(route: string): string {
     const url = new URL(`http${this.ssl ? "s" : ""}://${this.api_host}`);
-    url.pathname = this.api_base + route;
+    let [pathname, query] = (this.api_base + route).split("?");
+    url.pathname = pathname;
     url.pathname = url.pathname.replace(/\/+/g, "/");
+    if (query) {
+      url.search = query;
+    }
+    if (this.clientId) {
+      url.searchParams.set("clientId", this.clientId);
+    }
     return url.toString();
   }
 
