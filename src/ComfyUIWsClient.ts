@@ -28,6 +28,11 @@ type ComfyUIClientEvents = {
    * get all messages
    */
   message: any;
+
+  /**
+   * close client
+   */
+  close: any;
 };
 
 /**
@@ -307,6 +312,9 @@ export class ComfyUIWsClient {
         "WebSocket is not defined, please provide a WebSocket implementation"
       );
     }
+    if (this.closed) {
+      return;
+    }
 
     let opened = false;
 
@@ -423,6 +431,7 @@ export class ComfyUIWsClient {
       return;
     }
     this.closed = true;
+    this.events.emit("close");
 
     this.disconnect();
     this.events.removeAllListeners();
@@ -469,7 +478,11 @@ export class ComfyUIWsClient {
    * Disconnects the WebSocket connection and cleans up event listeners.
    */
   disconnect() {
-    this._disconnectSocket();
+    if (!this.socket) {
+      process.nextTick(this._disconnectPolling.bind(this));
+    } else {
+      this._disconnectSocket();
+    }
     this._disconnectPolling();
   }
 
@@ -482,8 +495,12 @@ export class ComfyUIWsClient {
     const { socket } = this;
     if (!socket) return;
     this.socket = null;
-    if (socket.readyState === this.WebSocket.OPEN) {
-      socket.close(1000, "Client closed");
+    try {
+      if (socket.readyState === socket.OPEN) {
+        socket.close(1000, "Client closed");
+      }
+    } catch (error) {
+      // pass
     }
     this.removeSocketCallbacks();
     if ("removeAllListeners" in socket) {

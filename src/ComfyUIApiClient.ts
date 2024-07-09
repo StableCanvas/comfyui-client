@@ -515,7 +515,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    * @param {string} prompt_id - The ID of the prompt to retrieve the result for.
    * @return {WorkflowOutput} An object containing the images associated with the prompt and the prompt ID.
    */
-  async getPromptImageResult(prompt_id: string) {
+  async getPromptImageResult(prompt_id: string): Promise<WorkflowOutput> {
     const outputs = await this.getPromptOutputs(prompt_id);
 
     // find image from history

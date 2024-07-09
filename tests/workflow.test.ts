@@ -14,6 +14,7 @@ describe("ComfyUIWorkflow", () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    client.disconnect();
   });
 
   it("should create a workflow with nodes", () => {

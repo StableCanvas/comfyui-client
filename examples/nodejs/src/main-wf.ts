@@ -34,7 +34,7 @@ const createWorkflow = () => {
     };
   };
 
-  const [model, clip, vae] = load_model("lofi_v5.baked.fp16.safetensors");
+  const [model, clip, vae] = load_model("LOFI_V5.fp16.safetensors");
   const latent_image = empty_latent(512, 512);
   const { positive, negative } = text_prompt(
     "best quality, 1girl",
@@ -78,7 +78,7 @@ const main = async () => {
     clientId: "comfy-ui-client-nodejs-test-id",
     // user: "comfy-client",
     user: "undefined",
-    WebSocket,
+    WebSocket: WebSocket as any,
     fetch: fetch as any,
   });
   client.connect();

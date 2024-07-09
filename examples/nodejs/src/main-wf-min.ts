@@ -12,7 +12,7 @@ const createWorkflow = () => {
   const workflow = new ComfyUIWorkflow();
   const cls = workflow.classes;
   const [model, clip, vae] = cls.CheckpointLoaderSimple({
-    ckpt_name: "lofi_v5.baked.fp16.safetensors",
+    ckpt_name: "LOFI_V5.fp16.safetensors",
   });
   const enc = (text: string) => cls.CLIPTextEncode({ text, clip })[0];
   const [samples] = cls.KSampler({
@@ -44,7 +44,7 @@ const createWorkflow = () => {
 const main = async () => {
   const client = new ComfyUIApiClient({
     api_host: "127.0.0.1:8188",
-    WebSocket,
+    WebSocket: WebSocket as any,
     fetch: fetch as any,
   });
   client.connect();

@@ -22,7 +22,7 @@ const createWorkflow = () => {
   const seed = Math.floor(Math.random() * 2 ** 32);
   const pos = "best quality, 1girl";
   const neg = "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T";
-  const model1_name = "lofi_v5.baked.fp16.safetensors";
+  const model1_name = "LOFI_V5.fp16.safetensors";
   const model2_name = "case-h-beta.baked.fp16.safetensors";
   const sampler_settings = {
     seed,
@@ -98,7 +98,7 @@ const main = async () => {
     sessionName: "",
     // user: "comfy-client",
     user: "undefined",
-    WebSocket,
+    WebSocket: WebSocket as any,
     fetch: fetch as any,
   });
   client.connect();
