@@ -396,6 +396,44 @@ const [] = cls.SaveImage({
 
 > Since the order of widgets may change at any time, the function from .png to code may be unstable. It is recommended to use .json to code
 
+## Client Plugin
+We provide ClientPlugin to expand Client capabilities.
+
+simple example
+```ts
+import { ClientPlugin } from "@stable-canvas/comfy"
+export class LoggingPlugin extends ClientPlugin {
+  constructor() {
+    super();
+
+    this.addHook({
+      type: "function",
+      name: "fetch",
+      fn: async (original, ...args) => {
+        console.log("fetch args", args);
+        const resp = await original(...args);
+        console.log("fetch resp", resp);
+        return resp;
+      },
+    });
+  }
+}
+```
+
+### ComfyUI Login Auth
+For example, sometimes you may need to provide node authentication capabilities, and you may have many solutions to implement your ComfyUI permission management
+
+If you use the [ComfyUI-Login](https://github.com/liusida/ComfyUI-Login/tree/main) extension, you can use the built-in `LoginAuthPlugin` to configure the Client to support authentication
+```ts
+import { ComfyUIApiClient, LoginAuthPlugin } from "@stable-canvas/comfyui-client";
+const client = new ComfyUIApiClient()
+client.use(
+  new LoginAuthPlugin({
+    token: "MY_TOP_SECRET"
+  })
+);
+```
+
 ## Roadmap
 
 - [x] workflow to code: Transpiler workflow to code
