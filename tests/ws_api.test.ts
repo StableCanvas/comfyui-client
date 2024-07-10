@@ -62,18 +62,18 @@ describe("WS", () => {
   });
 
   it("should subscribe to the correct event stream", async () => {
-    const events_arr = collect_events(client, ["status"]);
+    const events_arr = collect_events(client, [
+      "status",
+      "execution_cached",
+      "executing",
+    ]);
     const prompt = create_s1_prompt();
     const resp = await client.enqueue(prompt);
 
     expect(events_arr).toEqual([
       "execution_start",
-      "execution_cached",
-      "executing",
       // Because only 1 step is executed, there is only one progress
       "progress",
-      "executing",
-      "executing",
       "executed",
     ]);
   });
