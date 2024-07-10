@@ -209,7 +209,7 @@ const main = async () => {
     sessionName: "",
     // user: "comfy-client",
     user: "undefined",
-    WebSocket,
+    WebSocket: WebSocket as any,
     fetch: fetch as any,
   });
   client.init();

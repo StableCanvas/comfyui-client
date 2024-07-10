@@ -4,6 +4,22 @@ import { create_s1_prompt } from "./test_utils";
 
 import { WebSocket } from "ws";
 
+const collect_events = (client: ComfyUIApiClient, ignore = [] as string[]) => {
+  const event_queue = [] as string[];
+  client.on("message", (event) => {
+    const { data } = event;
+    if (typeof data !== "string") return;
+    try {
+      const { type } = JSON.parse(data);
+      if (ignore.includes(type)) return;
+      event_queue.push(type);
+    } catch (error) {
+      // pass
+    }
+  });
+  return event_queue;
+};
+
 describe("WS", () => {
   const client_id = "test_client_id";
 
@@ -43,5 +59,22 @@ describe("WS", () => {
       (x) => x.prompt[1] === resp.prompt_id
     );
     expect(history_prompt).toBeDefined();
+  });
+
+  it("should subscribe to the correct event stream", async () => {
+    const events_arr = collect_events(client, ["status"]);
+    const prompt = create_s1_prompt();
+    const resp = await client.enqueue(prompt);
+
+    expect(events_arr).toEqual([
+      "execution_start",
+      "execution_cached",
+      "executing",
+      // Because only 1 step is executed, there is only one progress
+      "progress",
+      "executing",
+      "executing",
+      "executed",
+    ]);
   });
 });

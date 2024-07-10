@@ -19,12 +19,14 @@ describe("API", () => {
       clientId: client_id,
       WebSocket: WebSocket as any,
     });
-    client.connect();
+    // 因为这里是 rest api，所以不需要连接
+    // client.connect();
   });
 
   afterEach(() => {
     jest.clearAllMocks();
-    process.nextTick(client.close.bind(client));
+    // 因为这里是 rest api，所以不需要关闭连接
+    // client.close();
   });
 
   it("should create a image from rest api", async () => {
