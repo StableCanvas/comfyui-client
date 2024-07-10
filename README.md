@@ -434,6 +434,43 @@ client.use(
 );
 ```
 
+## Custom Events
+
+### Subscribing to Custom Events
+
+If your ComfyUI instance emits custom WebSocket events, you can subscribe to them as follows:
+
+```ts
+client.events.on('your_custom_event_type', (data) => {
+  // 'data' contains the event payload object
+  console.log('Received custom event:', data);
+});
+```
+
+### Handling Unsubscribed Events
+
+To capture and process events that haven't been explicitly subscribed to, use the `unhandled` event listener:
+
+```ts
+client.events.on('unhandled', ({ type, data }) => {
+  // 'type' is the event type
+  // 'data' is the event payload object
+  console.log(`Received unhandled event of type '${type}':`, data);
+});
+```
+
+### Handling All Event Messages
+
+Register the `message` event to subscribe to all WebSocket messages pushed from ComfyUI
+
+```ts
+client.events.on('message', (event) => {
+  if (typeof event.data !== 'string') return;
+  const { type, data } = JSON.parse(event.data);
+  // ...
+});
+```
+
 ## Roadmap
 
 - [x] workflow to code: Transpiler workflow to code

@@ -33,6 +33,11 @@ type ComfyUIClientEvents = {
    * close client
    */
   close: any;
+
+  /**
+   * unhandled event message
+   */
+  unhandled: [{ type: string; data: any }];
 };
 
 /**
@@ -98,11 +103,14 @@ export class ComfyUIWsClient {
   user: string;
   fetch: typeof fetch;
 
-  events: EventEmitter<ComfyUIClientEvents> = new EventEmitter();
-
-  protected registered = new Set();
+  events: EventEmitter<ComfyUIClientEvents & Record<string & {}, any>> =
+    new EventEmitter();
 
   protected socket_callbacks: Record<string, any> = {};
+
+  get registered() {
+    return this.events.eventNames();
+  }
 
   constructor(config: IComfyApiConfig) {
     this.api_host = config.api_host ?? ComfyUIWsClient.DEFAULT_API_HOST;
@@ -228,11 +236,9 @@ export class ComfyUIWsClient {
     options?: any
   ) {
     this.events.on(type as any, callback, options);
-    this.registered.add(type);
 
     return () => {
       this.events.off(type as any, callback);
-      this.registered.delete(type);
     };
   }
 
@@ -364,51 +370,51 @@ export class ComfyUIWsClient {
 
     this.addSocketCallback(this.socket, "message", (event) => {
       this.events.emit("message", event);
-      try {
-        if (isImageMessage(event)) {
-          const image = ComfyUIWsClient.loadImageData(event.data);
-          this.events.emit("image_data", image);
-        } else {
-          const msg = JSON.parse(event.data);
 
-          switch (msg.type) {
-            case "status":
-              if (msg.data.sid) {
-                this.clientId = msg.data.sid;
-              }
-              this.events.emit("status", msg.data.status);
-              break;
-            case "progress":
-              this.events.emit("progress", msg.data);
-              break;
-            case "executing":
-              this.events.emit("executing", msg.data);
-              break;
-            case "executed":
-              this.events.emit("executed", msg.data);
-              break;
-            case "execution_start":
-              this.events.emit("execution_start", msg.data);
-              break;
-            case "execution_error":
-              this.events.emit("execution_error", msg.data);
-              break;
-            case "execution_cached":
-              this.events.emit("execution_cached", msg.data);
-              break;
-            case "execution_interrupted":
-              this.events.emit("execution_interrupted", msg.data);
-              break;
-            default:
-              if (this.registered.has(msg.type)) {
-                this.events.emit(msg.type, msg.data);
-              } else {
-                throw new Error(`Unknown message type ${msg.type}`);
-              }
-          }
+      if (isImageMessage(event)) {
+        const image = ComfyUIWsClient.loadImageData(event.data);
+        this.events.emit("image_data", image);
+      } else {
+        const msg = JSON.parse(event.data);
+
+        switch (msg.type) {
+          case "status":
+            if (msg.data.sid) {
+              this.clientId = msg.data.sid;
+            }
+            this.events.emit("status", msg.data.status);
+            break;
+          case "progress":
+            this.events.emit("progress", msg.data);
+            break;
+          case "executing":
+            this.events.emit("executing", msg.data);
+            break;
+          case "executed":
+            this.events.emit("executed", msg.data);
+            break;
+          case "execution_start":
+            this.events.emit("execution_start", msg.data);
+            break;
+          case "execution_error":
+            this.events.emit("execution_error", msg.data);
+            break;
+          case "execution_cached":
+            this.events.emit("execution_cached", msg.data);
+            break;
+          case "execution_interrupted":
+            this.events.emit("execution_interrupted", msg.data);
+            break;
+          default:
+            this.events.emit(msg.type, msg.data);
+            break;
         }
-      } catch (error) {
-        console.warn("Unhandled message:", event.data, error);
+
+        const is_unhandled_message =
+          this.registered.includes(msg.type) === false;
+        if (is_unhandled_message) {
+          this.events.emit("unhandled", msg);
+        }
       }
     });
   }
