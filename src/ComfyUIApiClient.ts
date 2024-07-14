@@ -718,7 +718,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
        */
       workflow?: Record<string, unknown>;
       disable_random_seed?: boolean;
-      progress?: (p: ComfyUiWsTypes.Messages.Progress["progress"]) => void;
+      progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
     }
   ) {
     const resp = await this._enqueue_prompt(prompt, options);
@@ -727,8 +727,8 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     let off: any;
     if (options?.progress) {
       off = this.on("progress", (data) => {
-        if (data.progress.prompt_id === prompt_id) {
-          options?.progress?.(data.progress);
+        if (data.prompt_id === prompt_id) {
+          options?.progress?.(data);
         }
       });
     }

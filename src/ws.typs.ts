@@ -16,13 +16,11 @@ export namespace ComfyUiWsTypes {
       prompt_id: string;
     }
     export interface Progress {
-      progress: {
-        value: number;
-        max: number;
-        prompt_id: string;
-        last_prompt_id: string;
-        node: string;
-      };
+      value: number;
+      max: number;
+      prompt_id: string;
+      last_prompt_id: string;
+      node: string;
     }
     export interface Status {
       status: {
