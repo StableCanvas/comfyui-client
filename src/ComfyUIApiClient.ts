@@ -726,7 +726,13 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
 
     let off: any;
     if (options?.progress) {
-      off = this.on("progress", (data) => {
+      off = this.on("progress", (_data) => {
+        const data = {
+          // old api response type:
+          ...("progress" in _data ? { ...(_data as any).progress } : {}),
+          // new api: https://github.com/StableCanvas/comfyui-client/issues/6
+          ..._data,
+        };
         if (data.prompt_id === prompt_id) {
           options?.progress?.(data);
         }

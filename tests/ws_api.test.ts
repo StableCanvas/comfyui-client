@@ -1,5 +1,6 @@
 import { ComfyUIApiClient } from "../src/ComfyUIApiClient";
 import { ComfyUIWorkflow } from "../src/ComfyUIWorkflow";
+import { ComfyUiWsTypes } from "../src/ws.typs";
 import { create_s1_prompt } from "./test_utils";
 
 import { WebSocket } from "ws";
@@ -76,5 +77,21 @@ describe("WS", () => {
       "progress",
       "executed",
     ]);
+  });
+
+  it("should listen on progress event when enqueue()", async () => {
+    const prompt1 = create_s1_prompt();
+    const logs = [] as ComfyUiWsTypes.Messages.Progress[];
+    await client.enqueue(prompt1, {
+      progress(p) {
+        logs.push(p);
+      },
+    });
+    expect(logs).toHaveLength(1);
+    const progress0 = logs[0];
+    expect(progress0.max).toBe(1);
+    expect(progress0.value).toBe(1);
+    // START_NOTE id
+    expect(progress0.node).toBe("3");
   });
 });
