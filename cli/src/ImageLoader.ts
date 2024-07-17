@@ -58,25 +58,3 @@ export class ImageLoader {
     return new CUIWorkflow(nodes_define);
   }
 }
-
-if (require.main === module) {
-  (async () => {
-    const loader = new ImageLoader();
-    const json = await loader.loadFromFile(
-      path.join(__dirname, "../tests/test-inputs/workflow-min.png")
-    );
-    fs.writeFileSync(
-      path.join(__dirname, "../tests/test-inputs/workflow-min.png.export.json"),
-      JSON.stringify(json, null, 2)
-    );
-    const workflow = await loader.imageWkToWorkflow(json);
-    console.log(workflow.nodes);
-    fs.writeFileSync(
-      path.join(
-        __dirname,
-        "../tests/test-inputs/workflow-min.png.workflow.json"
-      ),
-      JSON.stringify(workflow.nodes, null, 2)
-    );
-  })();
-}

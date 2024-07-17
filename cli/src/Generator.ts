@@ -223,22 +223,3 @@ export class WorkflowCodeGenerator {
     return generatedCode;
   }
 }
-
-// if (require.main === module) {
-//   (async () => {
-//     const WorkflowMinNodes = (
-//       await import("../tests/test-inputs/workflow-min.png.workflow.json", {
-//         assert: {
-//           type: "json",
-//         },
-//       })
-//     ).default;
-//     const generator = new WorkflowCodeGenerator();
-
-//     const wk = new CUIWorkflow();
-//     wk.nodes = WorkflowMinNodes as any;
-//     const code = await generator.generate(wk);
-
-//     console.log(code);
-//   })();
-// }
