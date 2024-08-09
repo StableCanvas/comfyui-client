@@ -471,6 +471,28 @@ client.events.on('message', (event) => {
 });
 ```
 
+## Custom Resolver
+
+Sometimes, you might use ComfyUI to generate non-image outputs, such as music, text, object detection results, etc. In these cases, you'll need a custom resolver, as the default behavior of this library primarily focuses on handling image generation.
+
+Here's an example that explains how to use a custom resolver:
+
+> Suppose you have a final output node named `phi3`, and its output might be `{ "result": "hi, I'm phi3" }`.
+
+```ts
+const prompt = {...};
+const resp = await client.enqueue<string>(prompt, {
+  resolver(resp, node_output, ctx) {
+    return {
+      ...resp,
+      data: resp.data ?? node_output.result
+    }
+  }
+});
+
+console.log(resp.data); // "hi, I'm phi3"
+```
+
 ## Roadmap
 
 - [x] workflow to code: Transpiler workflow to code

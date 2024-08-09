@@ -1,10 +1,39 @@
 import { CachedFn } from "./CachedFn";
 import type { ClientPlugin } from "./ClientPlugin";
 import { ComfyUIWsClient } from "./ComfyUIWsClient";
+import { WorkflowOutputResolver, EnqueueOptions } from "./client.types";
 import { isNone } from "./misc";
 import { ComfyUIClientResponseTypes } from "./response.types";
 import { IComfyApiConfig, WorkflowOutput } from "./types";
-import { ComfyUiWsTypes } from "./ws.typs";
+
+const output_resolvers = {
+  image: ((acc, output, { client }) => {
+    const output_images: {
+      filename?: string;
+      subfolder?: string;
+      type: string;
+    }[] = (output.images || []) as any;
+
+    const images_url = output_images
+      .map((image) => {
+        const { filename, subfolder, type } = image;
+        if (isNone(filename) || isNone(subfolder) || type !== "output") {
+          return null;
+        }
+        return client.viewURL(filename, subfolder, type);
+      })
+      .filter(Boolean) as string[];
+
+    const images = images_url.map((image) => ({
+      type: "url" as const,
+      data: image,
+    }));
+    return {
+      ...acc,
+      images: [...acc.images, ...images],
+    };
+  }) as WorkflowOutputResolver<WorkflowOutput>,
+};
 
 /**
  * The ComfyUIApiClient class provides a high-level interface for interacting with the ComfyUI API.
@@ -510,35 +539,38 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   }
 
   /**
-   * Retrieves the result of a prompt based on the provided prompt ID.
+   * Retrieves the result of a prompt with the given ID, resolved using the provided resolver.
    *
    * @param {string} prompt_id - The ID of the prompt to retrieve the result for.
-   * @return {WorkflowOutput} An object containing the images associated with the prompt and the prompt ID.
+   * @param {WorkflowOutputResolver<T>} resolver - The resolver to use when resolving the prompt result.
+   * @return {Promise<WorkflowOutput<T>>} A promise that resolves to the result of the prompt.
    */
-  async getPromptImageResult(prompt_id: string): Promise<WorkflowOutput> {
+  async getPromptResult<T>(
+    prompt_id: string,
+    resolver: WorkflowOutputResolver<T>
+  ): Promise<WorkflowOutput<T>>;
+  async getPromptResult(prompt_id: string): Promise<WorkflowOutput>;
+  async getPromptResult(
+    prompt_id: string,
+    resolver?: any
+  ): Promise<WorkflowOutput> {
     const outputs = await this.getPromptOutputs(prompt_id);
-
-    // find image from history
-    const images: {
-      filename?: string;
-      subfolder?: string;
-      type: string;
-    }[] = Object.values(outputs).flatMap((node_output) => {
-      return (node_output as any).images || [];
-    });
-    const images_url = images
-      .map((image) => {
-        const { filename, subfolder, type } = image;
-        if (isNone(filename) || isNone(subfolder) || type !== "output") {
-          return null;
-        }
-        return this.viewURL(filename, subfolder, type);
-      })
-      .filter(Boolean) as string[];
-    return {
-      images: images_url.map((data) => ({ type: "url", data })),
-      prompt_id,
-    };
+    if (typeof resolver !== "function") {
+      resolver = output_resolvers.image;
+    }
+    return Object.entries(outputs).reduce(
+      (acc, [node_id, output]) =>
+        resolver(acc, output, {
+          client: this,
+          prompt_id,
+          node_id,
+        }),
+      {
+        images: [],
+        prompt_id,
+        data: null,
+      } as WorkflowOutput
+    );
   }
 
   /**
@@ -557,42 +589,42 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   }
 
   /**
-   * Asynchronously waits for the prompt with the provided ID to be done using WebSocket.
+   * Asynchronously waits for the prompt with the provided ID to be done,
+   * using a WebSocket connection to receive updates.
    *
    * @param {string} prompt_id - The ID of the prompt to wait for.
-   * @return {Promise<WorkflowOutput>} A promise that resolves to a WorkflowOutput object containing the images and prompt_id.
+   * @param {WorkflowOutputResolver<T>} resolver - A function to resolve the output of the prompt.
+   * @return {Promise<WorkflowOutput<T>>} A promise that resolves with the output of the prompt.
    */
-  async waitForPromptWebSocket(prompt_id: string) {
-    const output: WorkflowOutput = {
+  async waitForPromptWebSocket<T>(
+    prompt_id: string,
+    resolver: WorkflowOutputResolver<T>
+  ) {
+    const output: WorkflowOutput<T> = {
       images: [],
       prompt_id,
+      data: null as T,
     };
-    return new Promise<WorkflowOutput>((resolve, reject) => {
-      let done = false;
+    return new Promise<WorkflowOutput<T>>((resolve, reject) => {
       const offEvent2 = this.on("image_data", (data) => {
+        // TODO: should hook web-socket resolver ?
         output.images.push({ type: "buff", data });
       });
       const offEvent = this.on("executed", (data) => {
-        const { prompt_id: current_prompt_id, output: executed_output } = data;
+        const {
+          prompt_id: current_prompt_id,
+          output: executed_output,
+          node: node_id,
+        } = data;
         if (current_prompt_id !== prompt_id) {
           return;
         }
-        done = true;
-        const { images = [] } = executed_output || {};
-
-        // collect url images
-        for (const image of images) {
-          const { filename, subfolder, type } = image || {};
-          if (isNone(filename) || isNone(subfolder) || type !== "output") {
-            continue;
-          }
-          output.images.push({
-            type: "url",
-            data: this.viewURL(filename, subfolder, type),
-          });
-        }
-
-        resolve(output);
+        const resolved = resolver(output, executed_output, {
+          client: this,
+          prompt_id,
+          node_id,
+        });
+        resolve(resolved);
         offEvent();
         offEvent2();
       });
@@ -671,34 +703,42 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     const resp = await this._enqueue_prompt(prompt, options);
     const prompt_id = resp.prompt_id;
     await this.waitForPrompt(prompt_id, options?.polling_ms);
-    return await this.getPromptImageResult(prompt_id);
+    return await this.getPromptResult(prompt_id, output_resolvers.image);
   }
 
   /**
-   * Asynchronously runs a prompt with the provided options.
+   * Asynchronously enqueues a prompt and waits for the corresponding prompt websocket.
    *
    * This function does not use WebSocket, but uses polling to get the result
    * So if your workflow contains custom ws events, this function will not be able to get these events
    *
-   * @param {Record<string, unknown>} prompt - The prompt to run.
-   * @param {Object} options - The options for running the prompt.
-   * @param {Record<string, unknown>} options.workflow - The workflow for the prompt, It will be added to the png info of the generated image.
-   * @param {boolean} [options.disable_random_seed] - Flag to disable random seed generation.
-   * @param {number} [options.polling_ms=1000] - The number of milliseconds to polling query prompt result.
-   * @return {Promise<WorkflowOutput>} A promise that resolves with the prompt result.
+   * @param {Record<string, unknown>} prompt - The prompt to enqueue.
+   * @param {EnqueueOptions<T>} [options] - The options for enqueueing the prompt.
+   * @return {Promise<WorkflowOutput<T>>} A promise that resolves with the prompt result.
    */
+  async enqueue_polling<T>(
+    prompt: Record<string, unknown>,
+    options?: EnqueueOptions<T>
+  ): Promise<WorkflowOutput<T>>;
   async enqueue_polling(
     prompt: Record<string, unknown>,
-    options?: {
-      workflow?: Record<string, unknown>;
-      disable_random_seed?: boolean;
-      polling_ms?: number;
+    options?: EnqueueOptions
+  ): Promise<WorkflowOutput>;
+  async enqueue_polling(
+    prompt: Record<string, unknown>,
+    options?: any
+  ): Promise<WorkflowOutput> {
+    if (typeof options?.progress === "function") {
+      throw new Error("progress option is not supported in polling mode");
     }
-  ) {
+
     const resp = await this._enqueue_prompt(prompt, options);
     const prompt_id = resp.prompt_id;
     await this.waitForPrompt(prompt_id, options?.polling_ms);
-    return await this.getPromptImageResult(prompt_id);
+    return await this.getPromptResult(
+      prompt_id,
+      options?.resolver ?? output_resolvers.image
+    );
   }
 
   /**
@@ -710,17 +750,15 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    * @param {boolean} [options.disable_random_seed] - Whether to disable random seed.
    * @return {Promise<WorkflowOutput>} A promise that resolves with the prompt result.
    */
+  async enqueue<T>(
+    prompt: Record<string, unknown>,
+    options?: EnqueueOptions<T>
+  ): Promise<WorkflowOutput<T>>;
   async enqueue(
     prompt: Record<string, unknown>,
-    options?: {
-      /**
-       * this data for PNG info
-       */
-      workflow?: Record<string, unknown>;
-      disable_random_seed?: boolean;
-      progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
-    }
-  ) {
+    options?: EnqueueOptions
+  ): Promise<WorkflowOutput>;
+  async enqueue(prompt: Record<string, unknown>, options?: any) {
     const resp = await this._enqueue_prompt(prompt, options);
     const prompt_id = resp.prompt_id;
 
@@ -739,7 +777,10 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
       });
     }
     try {
-      return await this.waitForPromptWebSocket(prompt_id);
+      return await this.waitForPromptWebSocket(
+        prompt_id,
+        options?.resolver ?? output_resolvers.image
+      );
     } finally {
       off?.();
     }

@@ -51,7 +51,7 @@ export interface IComfyApiConfig {
   cache?: CachedFnOptions;
 }
 
-export type WorkflowOutput = {
+export type WorkflowOutput<D = unknown> = {
   images: (
     | {
         type: "buff";
@@ -63,6 +63,15 @@ export type WorkflowOutput = {
       }
   )[];
   prompt_id: string;
+
+  /**
+   * Allows for a custom resolver to be provided.
+   *
+   * The custom resolver can parse non-image data into the `data` property, supporting generics.
+   *
+   * Related: https://github.com/StableCanvas/comfyui-client/issues/10
+   */
+  data?: D;
 };
 export interface IWorkflow {
   // id => node
