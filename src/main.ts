@@ -3,4 +3,5 @@ export * from "./ComfyUIWsClient";
 export * from "./ComfyUIApiClient";
 export * from "./ComfyUIWorkflow";
 export * from "./ClientPlugin";
-export * from "./plugins";
+export * as plugins from "./plugins";
+export * as builtins from "./builtins";

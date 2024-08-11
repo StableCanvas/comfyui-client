@@ -401,8 +401,8 @@ We provide ClientPlugin to expand Client capabilities.
 
 simple example
 ```ts
-import { ClientPlugin } from "@stable-canvas/comfy"
-export class LoggingPlugin extends ClientPlugin {
+import { plugins } from "@stable-canvas/comfy"
+export class LoggingPlugin extends plugins.ClientPlugin {
   constructor() {
     super();
 
@@ -475,22 +475,36 @@ client.events.on('message', (event) => {
 
 Sometimes, you might use ComfyUI to generate non-image outputs, such as music, text, object detection results, etc. In these cases, you'll need a custom resolver, as the default behavior of this library primarily focuses on handling image generation.
 
-Here's an example that explains how to use a custom resolver:
+Here's how to define a custom resolver:
 
-> Suppose you have a final output node named `phi3`, and its output might be `{ "result": "hi, I'm phi3" }`.
+> Suppose you have a final output node is custom non-image node, and its output might be `{ "result": "hi, I'm phi3" }`.
 
 ```ts
-const prompt = {...};
-const resp = await client.enqueue<string>(prompt, {
-  resolver(resp, node_output, ctx) {
-    return {
-      ...resp,
-      data: resp.data ?? node_output.result
-    }
-  }
-});
+const resolver = (resp, node_output, ctx) => {
+  // const { client, prompt_id, node_id } = ctx;
+  return {
+    ...resp,
+    data: resp.data ?? node_output.result,
+  };
+};
+```
+
+You can then use this resolver with `client.enqueue`:
+
+```ts
+const prompt = { ... };
+const resp = await client.enqueue<string>(prompt, { resolver });
 
 console.log(resp.data); // "hi, I'm phi3"
+```
+
+You can also apply the same resolver to a workflow using `workflow.invoke`:
+
+```ts
+const workflow = /* class ComfyUIWorkflow */;
+const result = await workflow.invoke(client, { resolver });
+
+console.log(result.data); // "hi, I'm phi3"
 ```
 
 ## Roadmap

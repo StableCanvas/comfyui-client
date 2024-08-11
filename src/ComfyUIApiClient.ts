@@ -1,39 +1,10 @@
 import { CachedFn } from "./CachedFn";
 import type { ClientPlugin } from "./ClientPlugin";
 import { ComfyUIWsClient } from "./ComfyUIWsClient";
+import { RESOLVERS } from "./builtins";
 import { WorkflowOutputResolver, EnqueueOptions } from "./client.types";
-import { isNone } from "./misc";
 import { ComfyUIClientResponseTypes } from "./response.types";
 import { IComfyApiConfig, WorkflowOutput } from "./types";
-
-const output_resolvers = {
-  image: ((acc, output, { client }) => {
-    const output_images: {
-      filename?: string;
-      subfolder?: string;
-      type: string;
-    }[] = (output.images || []) as any;
-
-    const images_url = output_images
-      .map((image) => {
-        const { filename, subfolder, type } = image;
-        if (isNone(filename) || isNone(subfolder) || type !== "output") {
-          return null;
-        }
-        return client.viewURL(filename, subfolder, type);
-      })
-      .filter(Boolean) as string[];
-
-    const images = images_url.map((image) => ({
-      type: "url" as const,
-      data: image,
-    }));
-    return {
-      ...acc,
-      images: [...acc.images, ...images],
-    };
-  }) as WorkflowOutputResolver<WorkflowOutput>,
-};
 
 /**
  * The ComfyUIApiClient class provides a high-level interface for interacting with the ComfyUI API.
@@ -556,7 +527,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   ): Promise<WorkflowOutput> {
     const outputs = await this.getPromptOutputs(prompt_id);
     if (typeof resolver !== "function") {
-      resolver = output_resolvers.image;
+      resolver = RESOLVERS.image;
     }
     return Object.entries(outputs).reduce(
       (acc, [node_id, output]) =>
@@ -703,7 +674,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     const resp = await this._enqueue_prompt(prompt, options);
     const prompt_id = resp.prompt_id;
     await this.waitForPrompt(prompt_id, options?.polling_ms);
-    return await this.getPromptResult(prompt_id, output_resolvers.image);
+    return await this.getPromptResult(prompt_id, RESOLVERS.image);
   }
 
   /**
@@ -737,7 +708,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     await this.waitForPrompt(prompt_id, options?.polling_ms);
     return await this.getPromptResult(
       prompt_id,
-      options?.resolver ?? output_resolvers.image
+      options?.resolver ?? RESOLVERS.image
     );
   }
 
@@ -779,7 +750,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     try {
       return await this.waitForPromptWebSocket(
         prompt_id,
-        options?.resolver ?? output_resolvers.image
+        options?.resolver ?? RESOLVERS.image
       );
     } finally {
       off?.();

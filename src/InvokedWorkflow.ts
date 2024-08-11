@@ -1,23 +1,43 @@
 import { ComfyUIApiClient } from "./ComfyUIApiClient";
+import { WorkflowOutputResolver } from "./client.types";
 import { isNone } from "./misc";
 import type { WorkflowOutput, IWorkflow } from "./types";
+import { RESOLVERS } from "./builtins";
+import { ComfyUiWsTypes } from "./ws.typs";
 
-export class InvokedWorkflow {
+export class InvokedWorkflow<T = unknown> {
   protected _task_id?: Promise<string>;
   protected _enqueue_req?: ReturnType<ComfyUIApiClient["_enqueue_prompt"]>;
 
-  protected _result: WorkflowOutput = {
+  protected _result: WorkflowOutput<T> = {
     images: [],
     prompt_id: "",
   };
 
   executed = false;
 
-  constructor(public workflow: IWorkflow, public client: ComfyUIApiClient) {}
+  workflow: IWorkflow;
+  client: ComfyUIApiClient;
+  resolver: WorkflowOutputResolver<T>;
+
+  constructor(
+    readonly options: {
+      workflow: IWorkflow;
+      client: ComfyUIApiClient;
+      resolver?: WorkflowOutputResolver<T>;
+    }
+  ) {
+    const { workflow, client, resolver } = options;
+    this.workflow = workflow;
+    this.client = client;
+    this.resolver = resolver || (RESOLVERS.image as any);
+  }
 
   public enqueue() {
-    const { prompt, workflow: wf } = this.workflow;
-    this._enqueue_req = this.client._enqueue_prompt(prompt, { workflow: wf });
+    const { client, workflow } = this;
+    const { prompt, workflow: wf } = workflow;
+
+    this._enqueue_req = client._enqueue_prompt(prompt, { workflow: wf });
     this._task_id = this._enqueue_req.then((data) => data.prompt_id);
 
     this._enqueue_req.then((data) => {
@@ -25,21 +45,15 @@ export class InvokedWorkflow {
     });
   }
 
-  protected load_result_data(data: any) {
-    const { output: executed_output } = data;
-    const { images = [] } = executed_output || {};
+  protected resolve_to_result(data: ComfyUiWsTypes.Messages.Executed) {
+    const { client, resolver } = this;
+    const { output, prompt_id, node } = data;
 
-    // collect url images
-    for (const image of images) {
-      const { filename, subfolder, type } = image || {};
-      if (isNone(filename) || isNone(subfolder) || type !== "output") {
-        continue;
-      }
-      this._result.images.push({
-        type: "url",
-        data: this.client.viewURL(filename, subfolder, type),
-      });
-    }
+    this._result = resolver(this._result, output, {
+      client,
+      prompt_id: prompt_id,
+      node_id: node,
+    });
   }
 
   public async query() {
@@ -102,7 +116,7 @@ export class InvokedWorkflow {
           if (data.prompt_id !== task_id) {
             return;
           }
-          this.load_result_data(data);
+          this.resolve_to_result(data);
           this.executed = true;
           resolve(this._result);
           done();

@@ -3,6 +3,7 @@ import { ComfyUIWorkflow } from "../src/ComfyUIWorkflow";
 
 import { WebSocket } from "ws";
 import { create_s1_prompt } from "./test_utils";
+import { useSimple1 } from "./workflows/useSimple1";
 
 describe("Client", () => {
   const client_id = "test_client_id";
@@ -27,7 +28,7 @@ describe("Client", () => {
     client.close();
   });
 
-  it("should resolve outputs with resolver in REST", async () => {
+  it("should accumulate images into data array with correct node in enqueue_polling", async () => {
     const prompt = create_s1_prompt();
 
     const calling_stack: any[] = [];
@@ -52,7 +53,7 @@ describe("Client", () => {
     expect(Array.isArray(output.images)).toBe(true);
   });
 
-  it("should resolve outputs with resolver in WS", async () => {
+  it("should accumulate images into data array with correct node in enqueue", async () => {
     const prompt = create_s1_prompt();
 
     const calling_stack: any[] = [];
@@ -77,7 +78,7 @@ describe("Client", () => {
     expect(Array.isArray(output.images)).toBe(true);
   });
 
-  it("should resolve outputs with typed(resolver) in REST", async () => {
+  it("should process polling with custom resolver and accumulate image data", async () => {
     const prompt = create_s1_prompt();
 
     const resp = await client.enqueue_polling<
@@ -101,5 +102,45 @@ describe("Client", () => {
     expect(resp.images).toStrictEqual([]);
     expect(Array.isArray(resp.data)).toBe(true);
     expect(resp.data?.[0].type).toBe("output");
+  });
+
+  it("should invoke workflow and accumulate image data correctly", async () => {
+    useSimple1(workflow);
+
+    const result = await workflow.invoke<any[]>(client, {
+      resolver: (acc, output, ctx) => {
+        return {
+          ...acc,
+          data: [
+            ...((acc.data as any) ?? []),
+            ...((output.images as any) ?? []),
+          ],
+        };
+      },
+    });
+
+    expect(result.images).toStrictEqual([]);
+    expect(Array.isArray(result.data)).toBe(true);
+    expect(result.data?.[0].type).toBe("output");
+  });
+
+  it("should invoke polling workflow and accumulate image data correctly", async () => {
+    useSimple1(workflow);
+
+    const result = await workflow.invoke_polling<any[]>(client, {
+      resolver: (acc, output, ctx) => {
+        return {
+          ...acc,
+          data: [
+            ...((acc.data as any) ?? []),
+            ...((output.images as any) ?? []),
+          ],
+        };
+      },
+    });
+
+    expect(result.images).toStrictEqual([]);
+    expect(Array.isArray(result.data)).toBe(true);
+    expect(result.data?.[0].type).toBe("output");
   });
 });
