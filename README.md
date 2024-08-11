@@ -401,8 +401,8 @@ We provide ClientPlugin to expand Client capabilities.
 
 simple example
 ```ts
-import { plugins } from "@stable-canvas/comfy"
-export class LoggingPlugin extends plugins.ClientPlugin {
+import { ClientPlugin } from "@stable-canvas/comfy"
+export class LoggingPlugin extends ClientPlugin {
   constructor() {
     super();
 
@@ -423,12 +423,12 @@ export class LoggingPlugin extends plugins.ClientPlugin {
 ### ComfyUI Login Auth
 For example, sometimes you may need to provide node authentication capabilities, and you may have many solutions to implement your ComfyUI permission management
 
-If you use the [ComfyUI-Login](https://github.com/liusida/ComfyUI-Login/tree/main) extension, you can use the built-in `LoginAuthPlugin` to configure the Client to support authentication
+If you use the [ComfyUI-Login](https://github.com/liusida/ComfyUI-Login/tree/main) extension, you can use the built-in `plugins.LoginAuthPlugin` to configure the Client to support authentication
 ```ts
-import { ComfyUIApiClient, LoginAuthPlugin } from "@stable-canvas/comfyui-client";
+import { ComfyUIApiClient, plugins } from "@stable-canvas/comfyui-client";
 const client = new ComfyUIApiClient()
 client.use(
-  new LoginAuthPlugin({
+  new plugins.LoginAuthPlugin({
     token: "MY_TOP_SECRET"
   })
 );
