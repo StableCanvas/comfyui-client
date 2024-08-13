@@ -183,11 +183,11 @@ export class ComfyUIWorkflow {
   }
 
   /**
-   * A description of the entire function.
+   * Invokes the workflow with the provided client and options.
    *
-   * @param {ComfyUIApiClient} client - description of parameter
-   * @param {InvokeOptions<T>} [options] - description of parameter
-   * @return {Promise<WorkflowOutput<T>>} description of return value
+   * @param {ComfyUIApiClient} client - The client to use for the invocation.
+   * @param {InvokeOptions<T>} [options] - Optional invoke options.
+   * @return {Promise<WorkflowOutput<T>>} A promise resolving to the workflow output.
    */
   public invoke<T>(
     client: ComfyUIApiClient,
