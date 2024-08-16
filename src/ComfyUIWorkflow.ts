@@ -1,7 +1,7 @@
 import { ComfyUIApiClient } from "./ComfyUIApiClient";
 import { InvokedWorkflow } from "./InvokedWorkflow";
 import { WorkflowOutputResolver } from "./client.types";
-import { ComfyUINodeTypes } from "./schema/comfyui.node.typs";
+import { ComfyUINodeTypes } from "./schema/comfyui.node.types";
 import { WorkflowOutput, WorkflowPromptNode } from "./types";
 import { IWorkflow } from "./types";
 
