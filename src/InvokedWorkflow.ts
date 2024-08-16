@@ -15,6 +15,7 @@ export class InvokedWorkflow<T = unknown> {
   };
 
   executed = false;
+  enqueued = false;
 
   workflow: IWorkflow;
   client: ComfyUIApiClient;
@@ -25,6 +26,7 @@ export class InvokedWorkflow<T = unknown> {
       workflow: IWorkflow;
       client: ComfyUIApiClient;
       resolver?: WorkflowOutputResolver<T>;
+      progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
     }
   ) {
     const { workflow, client, resolver } = options;
@@ -34,6 +36,12 @@ export class InvokedWorkflow<T = unknown> {
   }
 
   public enqueue() {
+    if (this.enqueued) {
+      throw new Error("This workflow is already enqueued");
+    }
+
+    this.enqueued = true;
+
     const { client, workflow } = this;
     const { prompt, workflow: wf } = workflow;
 
@@ -42,6 +50,25 @@ export class InvokedWorkflow<T = unknown> {
 
     this._enqueue_req.then((data) => {
       this._result.prompt_id = data.prompt_id;
+    });
+
+    this.hook_progress();
+  }
+
+  protected async hook_progress() {
+    const { progress } = this.options;
+    const { _task_id } = this;
+    if (!progress) return;
+    if (typeof progress !== "function") {
+      throw new Error("progress hook must be a function");
+    }
+    const task_id = await _task_id;
+    if (typeof task_id !== "string" || this._enqueue_req === undefined) {
+      throw new Error("this workflow is not enqueued");
+    }
+    const off_progress = this.client.on_progress(progress, task_id);
+    this._enqueue_req.finally(() => {
+      off_progress();
     });
   }
 
@@ -92,9 +119,11 @@ export class InvokedWorkflow<T = unknown> {
     }
     const task_id = await this._task_id;
     return new Promise<WorkflowOutput>((resolve, reject) => {
-      const zone = (fn: (done: () => void) => Function[]) => {
-        let offs: Function[] = [];
-        offs = fn(() => offs.forEach((cb) => cb()));
+      const zone = (fn: (done: () => void) => any[]) => {
+        let offs: any[] = [];
+        const done = () =>
+          offs.forEach((cb) => (typeof cb === "function" ? cb() : null));
+        offs = fn(done);
       };
       zone((done) => [
         this.client.on("execution_interrupted", (data) => {
@@ -121,6 +150,7 @@ export class InvokedWorkflow<T = unknown> {
           resolve(this._result);
           done();
         }),
+        this._enqueue_req?.finally(() => setTimeout(done, 1000)),
       ]);
     });
   }

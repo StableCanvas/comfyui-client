@@ -733,27 +733,36 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     const resp = await this._enqueue_prompt(prompt, options);
     const prompt_id = resp.prompt_id;
 
-    let off: any;
-    if (options?.progress) {
-      off = this.on("progress", (_data) => {
-        const data = {
-          // old api response type:
-          ...("progress" in _data ? { ...(_data as any).progress } : {}),
-          // new api: https://github.com/StableCanvas/comfyui-client/issues/6
-          ..._data,
-        };
-        if (data.prompt_id === prompt_id) {
-          options?.progress?.(data);
-        }
-      });
-    }
+    const off_progress = this.on_progress(options?.progress, prompt_id);
     try {
       return await this.waitForPromptWebSocket(
         prompt_id,
         options?.resolver ?? RESOLVERS.image
       );
     } finally {
-      off?.();
+      off_progress();
     }
+  }
+
+  /**
+   * Listens for progress updates for a specific task.
+   *
+   * @param {EnqueueOptions["progress"]} fn - The progress callback function.
+   * @param {string} task_id - The ID of the task to listen for progress updates.
+   * @return {Function} A function that can be used to remove the progress listener.
+   */
+  on_progress(fn: EnqueueOptions["progress"], task_id: string) {
+    if (!fn) return () => {};
+    return this.on("progress", (_data) => {
+      const data = {
+        // old api response type:
+        ...("progress" in _data ? { ...(_data as any).progress } : {}),
+        // new api: https://github.com/StableCanvas/comfyui-client/issues/6
+        ..._data,
+      };
+      if (data.prompt_id === task_id) {
+        fn(data);
+      }
+    });
   }
 }

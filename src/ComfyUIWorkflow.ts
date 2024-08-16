@@ -4,6 +4,7 @@ import { WorkflowOutputResolver } from "./client.types";
 import { ComfyUINodeTypes } from "./schema/comfyui.node.types";
 import { WorkflowOutput, WorkflowPromptNode } from "./types";
 import { IWorkflow } from "./types";
+import { ComfyUiWsTypes } from "./ws.typs";
 
 const deepClone: <T>(obj: T) => T = globalThis.structuredClone
   ? globalThis.structuredClone
@@ -39,6 +40,7 @@ type BuiltinNodeClasses = {
 
 type InvokeOptions<T> = {
   resolver?: WorkflowOutputResolver<T>;
+  progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
 };
 
 /**
@@ -231,6 +233,7 @@ export class ComfyUIWorkflow {
       workflow,
       client,
       resolver: options?.resolver,
+      progress: options?.progress,
     });
     return invoked;
   }
@@ -254,6 +257,9 @@ export class ComfyUIWorkflow {
     client: ComfyUIApiClient,
     options?: InvokeOptions<unknown>
   ) {
+    if (typeof options?.progress === "function") {
+      throw new Error("progress option is not supported in polling mode");
+    }
     const { prompt, workflow } = this.workflow();
     return client.enqueue_polling(prompt, {
       workflow,
