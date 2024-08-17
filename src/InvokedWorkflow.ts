@@ -150,7 +150,10 @@ export class InvokedWorkflow<T = unknown> {
           resolve(this._result);
           done();
         }),
-        this._enqueue_req?.finally(() => setTimeout(done, 1000)),
+        this._enqueue_req?.catch((error) => {
+          reject(error);
+          setTimeout(done, 0);
+        }),
       ]);
     });
   }
