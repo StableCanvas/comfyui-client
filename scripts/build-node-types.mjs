@@ -5,45 +5,18 @@ import url from "url";
 
 // 非法变量名
 const INVALID_VARIABLE_NAME = /^a-zA-Z|[\. \-*/+~]/;
+const VAR = (name) => (INVALID_VARIABLE_NAME.test(name) ? `["${name}"]` : name);
 
-function generateTypes(inputSchema) {
-  const project = new Project();
-  const sourceFile = project.createSourceFile("generated.ts", "", {
-    overwrite: true,
-  });
-
-  // 创建 namespace
-  const namespace = sourceFile.addModule({
-    name: "ComfyUINodeTypes",
+function addInterface(nodeName, nodeSchema, namespace) {
+  const nodeInterface = namespace.addInterface({
+    name: nodeName,
     isExported: true,
   });
 
-  // 添加 NodeTypes 接口
-  const nodeTypesInterface = namespace.addInterface({
-    name: "NodeTypes",
-    isExported: true,
-  });
-
-  // 为每个节点类型添加属性和接口
-  for (const [nodeName, nodeSchema] of Object.entries(inputSchema.properties)) {
-    // 向 NodeTypes 接口添加属性
-    nodeTypesInterface.addProperty({
-      name: nodeName,
-      type: nodeName,
-      hasQuestionToken: true,
-    });
-
-    // 为每个节点类型创建接口
-    const nodeInterface = namespace.addInterface({
-      name: nodeName,
-      isExported: true,
-    });
-
-    // 添加 inputs 属性
-    if (nodeSchema.properties.inputs) {
-      nodeInterface.addProperty({
-        name: "inputs",
-        type: `{
+  if (nodeSchema.properties.inputs) {
+    nodeInterface.addProperty({
+      name: "inputs",
+      type: `{
             ${Object.entries(nodeSchema.properties.inputs.properties)
               .map(
                 ([inputName, inputSchema]) =>
@@ -52,38 +25,81 @@ function generateTypes(inputSchema) {
               .join("\n")}
             [k: string]: unknown;
           }`,
-        hasQuestionToken: true,
-        docs: [
-          {
-            description: "\n" + nodeSchema.properties.inputs.description,
-          },
-        ],
-      });
-    }
-
-    // 添加 outputs 属性
-    if (nodeSchema.properties.outputs) {
-      const type = Array.from(nodeSchema.properties.outputs.items || [])
-        .map(() => `unknown`)
-        .join(", ");
-      nodeInterface.addProperty({
-        name: "outputs",
-        type: `[${type}]`,
-        hasQuestionToken: true,
-        docs: [
-          {
-            description: "\n" + nodeSchema.properties.outputs.description,
-          },
-        ],
-      });
-    }
-
-    // 添加索引签名
-    nodeInterface.addIndexSignature({
-      keyName: "k",
-      keyType: "string",
-      returnType: "unknown",
+      hasQuestionToken: true,
+      docs: [
+        {
+          description: "\n" + nodeSchema.properties.inputs.description,
+        },
+      ],
     });
+  }
+
+  let output_types = "";
+  let output_desc = "NO_OUTPUTS";
+  if (nodeSchema.properties.outputs) {
+    output_types = Array.from(nodeSchema.properties.outputs.items || [])
+      .map(() => `unknown`)
+      .join(", ");
+    output_desc = "\n" + nodeSchema.properties.outputs.description;
+  }
+  nodeInterface.addProperty({
+    name: "outputs",
+    type: `[${output_types}]`,
+    hasQuestionToken: true,
+    docs: [
+      {
+        description: output_desc,
+      },
+    ],
+  });
+
+  nodeInterface.addIndexSignature({
+    keyName: "k",
+    keyType: "string",
+    returnType: "unknown",
+  });
+}
+
+function generateTypes(inputSchema) {
+  const project = new Project();
+  const sourceFile = project.createSourceFile("generated.ts", "", {
+    overwrite: true,
+  });
+
+  const namespace = sourceFile.addModule({
+    name: "ComfyUINodeTypes",
+    isExported: true,
+  });
+
+  const nodeTypesInterface = namespace.addInterface({
+    name: "NodeTypes",
+    isExported: true,
+  });
+
+  for (let [nodeName, nodeSchema] of Object.entries(inputSchema.properties)) {
+    // NOTE: 这里有个问题，就是如果改成这样的话，最终创建的节点可能不对...
+    // NOTE: 不太好解决，就这样算了...至少能提供类型，名字不标准的自定义节点也只是少数
+    nodeName = nodeName.replace(/[ \-+=|:{}\(\)\]\[\/\\><@#%,'.?!]/g, "_");
+
+    try {
+      nodeTypesInterface.addProperty({
+        name: nodeName,
+        type: nodeName,
+        hasQuestionToken: true,
+      });
+    } catch (error) {
+      console.error(error);
+      console.log(nodeName, nodeSchema);
+      process.exit(1);
+    }
+
+    try {
+      addInterface(nodeName, nodeSchema, namespace);
+    } catch (error) {
+      console.error(error);
+      console.log(nodeName, nodeSchema);
+      process.exit(1);
+    }
   }
 
   return sourceFile.getFullText();
