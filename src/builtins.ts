@@ -4,11 +4,15 @@ import { WorkflowOutput } from "./types";
 
 export const RESOLVERS = {
   image: ((acc, output, { client }) => {
+    if (output === null || output === undefined) {
+      return acc;
+    }
+
     const output_images: {
       filename?: string;
       subfolder?: string;
       type: string;
-    }[] = (output.images || []) as any;
+    }[] = (output?.images || []) as any;
 
     const images_url = output_images
       .map((image) => {
