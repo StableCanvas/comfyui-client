@@ -133,3 +133,5 @@ docs
 outputs
 
 .vscode
+
+comfyui.node.types.ts
