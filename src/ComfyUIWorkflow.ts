@@ -175,7 +175,13 @@ export class ComfyUIWorkflow {
       }
     }
 
-    return outputs();
+    const gen = outputs() as any;
+
+    for (let index = 0; index < 24; index++) {
+      gen[index] = [id, index] as NodeOutput;
+    }
+
+    return gen;
   }
 
   /**
