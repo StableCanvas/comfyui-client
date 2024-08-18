@@ -131,28 +131,51 @@ export class ComfyUIWorkflow {
   };
   protected _last_node_id = 0;
 
-  public classes = this._createClassesProxy();
+  public classes = this._createClassesProxy() as BuiltinNodeClasses &
+    Record<string, ComfyUINodeClass>;
 
   protected _createClassesProxy() {
-    const source = {} as BuiltinNodeClasses & Record<string, ComfyUINodeClass>;
+    const source = {};
     return new Proxy(source, {
       get: (target, p, receiver) => {
         if (p in target) {
           return (target as any)[p];
         }
         return (inputs: Record<string, any>) => {
-          const node: WorkflowPromptNode = {
-            class_type: p.toString(),
-            inputs,
-          };
-          const id = (++this._last_node_id).toString();
-          this._workflow.prompt[id] = node;
-          return Array.from({ length: 10 }, (_, i) => {
-            return [id, i];
-          });
+          return this.node(p as any, inputs);
         };
       },
     });
+  }
+
+  public node<
+    T extends keyof ComfyUINodeTypes.NodeTypes | (string & {}),
+    C extends T extends keyof ComfyUINodeTypes.NodeTypes
+      ? Required<Required<ComfyUINodeTypes.NodeTypes>[T]>
+      : unknown,
+  >(
+    node_name: T,
+    inputs: C extends { inputs: infer INP } ? INP : Record<string, unknown>
+  ): Iterable<NodeOutput>;
+  public node(
+    node_name: string,
+    inputs: Record<string, unknown>
+  ): Iterable<NodeOutput> {
+    const node: WorkflowPromptNode = {
+      class_type: node_name,
+      inputs,
+    } as any;
+    const id = (++this._last_node_id).toString();
+    this._workflow.prompt[id] = node;
+
+    function* outputs() {
+      let i = 0;
+      while (true) {
+        yield [id, i++] as NodeOutput;
+      }
+    }
+
+    return outputs();
   }
 
   /**

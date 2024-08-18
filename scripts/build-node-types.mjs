@@ -32,6 +32,12 @@ function addInterface(nodeName, nodeSchema, namespace) {
         },
       ],
     });
+  } else {
+    nodeInterface.addProperty({
+      name: "inputs",
+      type: "{ [k: string]: unknown }",
+      hasQuestionToken: true,
+    });
   }
 
   let output_types = "";
