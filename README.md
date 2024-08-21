@@ -250,6 +250,10 @@ const wf1 = createWorkflow();
 // { prompt: {...}, workflow: {...} }
 ```
 
+> QA: How to invoke workflow?
+> 
+> If you need to refer to complete example code, you can check out the [./examples/nodejs/main*.ts](./examples/nodejs/src) entry files. These contain fully executable code examples ranging from the simplest to slightly more complex workflows.
+
 ### type support
 
 - builtin node types
