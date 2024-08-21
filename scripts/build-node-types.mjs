@@ -82,15 +82,19 @@ function generateTypes(inputSchema) {
     isExported: true,
   });
 
-  for (let [nodeName, nodeSchema] of Object.entries(inputSchema.properties)) {
-    // NOTE: 这里有个问题，就是如果改成这样的话，最终创建的节点可能不对...
-    // NOTE: 不太好解决，就这样算了...至少能提供类型，名字不标准的自定义节点也只是少数
-    nodeName = nodeName.replace(/[ \-+=|:{}\(\)\]\[\/\\><@#%,'.?!]/g, "_");
+  for (const [nodeName, nodeSchema] of Object.entries(inputSchema.properties)) {
+    const interfaceName = nodeName.replace(
+      /[ \-+=|:{}\(\)\]\[\/\\><@#%,'.?!]/g,
+      "_"
+    );
 
     try {
       nodeTypesInterface.addProperty({
-        name: nodeName,
-        type: nodeName,
+        name: INVALID_VARIABLE_NAME.test(nodeName)
+          ? `["${nodeName}"]`
+          : nodeName,
+        type: `ComfyUINodeTypes["${interfaceName}"]`,
+        type: interfaceName,
         hasQuestionToken: true,
       });
     } catch (error) {
@@ -100,7 +104,7 @@ function generateTypes(inputSchema) {
     }
 
     try {
-      addInterface(nodeName, nodeSchema, namespace);
+      addInterface(interfaceName, nodeSchema, namespace);
     } catch (error) {
       console.error(error);
       console.log(nodeName, nodeSchema);

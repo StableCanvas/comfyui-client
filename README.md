@@ -507,6 +507,24 @@ const result = await workflow.invoke(client, { resolver });
 console.log(result.data); // "hi, I'm phi3"
 ```
 
+## Handling Non-Standard Node Names
+
+ComfyUI does not enforce strict naming conventions for nodes, which can lead to custom nodes with names containing spaces or special characters. These names, such as `Efficient Loader`, `DSINE-NormalMapPreprocessor`, or `Robust Video Matting`, are challenging to use directly as variable names in code.
+
+To address this issue, we provide the `workflow.node` interface. This interface allows you to create nodes using string-based names, regardless of whether they conform to standard variable naming rules.
+
+```typescript
+const workflow = new ComfyUIWorkflow();
+
+// ❌Incorrect: Cannot destructure directly
+// const { Efficient Loader } = workflow.classes;
+
+// ✅Correct: Use the workflow.node method to create nodes
+const [output1, output2] = workflow.node("Efficient Loader", {
+  // Node parameters
+});
+```
+
 ## Roadmap
 
 - [x] workflow to code: Transpiler workflow to code
