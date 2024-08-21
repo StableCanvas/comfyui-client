@@ -161,7 +161,11 @@ cls.SaveImage({
 ```
 
 ### Programable case
-Both implementation and usage are extremely simple and human-readable. Below is a simple example of creating a workflow:
+Both implementation and usage are extremely simple and human-readable. This programmable approach allows for dynamic workflow creation, enabling loops, conditionals, and reusable functions. It's particularly useful for batch processing, experimenting with different models or prompts, and creating more complex, flexible workflows.
+
+This specific workflow demonstrates the generation of multiple images using two different AI models ("lofi_v5" and "case-h-beta") and four different dress styles. It showcases how to create a reusable image generation pipeline and apply it across various prompts and models efficiently.
+
+Below is a simple example of creating a workflow:
 
 ```ts
 const createWorkflow = () => {
