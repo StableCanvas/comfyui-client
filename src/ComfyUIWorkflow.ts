@@ -41,6 +41,7 @@ type BuiltinNodeClasses = {
 type InvokeOptions<T> = {
   resolver?: WorkflowOutputResolver<T>;
   progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
+  polling_ms?: number;
 };
 
 /**
@@ -293,6 +294,7 @@ export class ComfyUIWorkflow {
     return client.enqueue_polling(prompt, {
       workflow,
       resolver: options?.resolver,
+      polling_ms: options?.polling_ms,
     });
   }
 }
