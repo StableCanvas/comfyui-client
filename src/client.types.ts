@@ -16,4 +16,5 @@ export type EnqueueOptions<T = unknown> = {
   disable_random_seed?: boolean;
   progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
   resolver?: WorkflowOutputResolver<T>;
+  polling_ms?: number;
 };

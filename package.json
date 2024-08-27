@@ -33,6 +33,7 @@
   "scripts": {
     "build-dts": "rollup -c rollup.dts.config.js",
     "build-js": "microbundle --define process.env.NODE_ENV=production,PKG_VERSION=$npm_package_version",
+    "build-types": "node scripts/build-node-types.mjs",
     "build": "pnpm build-js && pnpm build-dts",
     "watch": "microbundle watch --define process.env.NODE_ENV=development,PKG_VERSION=$npm_package_version --compress false",
     "dev": "pnpm watch",

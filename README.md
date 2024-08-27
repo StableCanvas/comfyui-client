@@ -541,9 +541,18 @@ const [output1, output2] = workflow.node("Efficient Loader", {
 - [ ] code to workflow: Output a json file that can be imported into the web front end
 - [ ] Output type hints
 
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a pull request.
+
+## Building
+
+```zsh
+# Prior to the first build: `npm run build-types` to generate types for Comfy nodes.
+npm run build-types
+npm run build
+```
 
 ## License
 
