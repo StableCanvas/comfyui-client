@@ -7,7 +7,11 @@ import fs from "fs";
 import path from "path";
 import { save_url_to_file, save_wf_outputs } from "./utils";
 
-const createWorkflow = () => {
+const createWorkflow = ({
+  use_ws_send_image = false,
+}: {
+  use_ws_send_image?: boolean;
+}) => {
   const workflow = new ComfyUIWorkflow();
   const {
     KSampler,
@@ -66,26 +70,27 @@ const createWorkflow = () => {
     return image;
   };
 
+  const save_image = (image, filename_prefix) => {
+    if (use_ws_send_image) {
+      ETN_SendImageWebSocket({
+        images: image,
+      });
+    } else {
+      SaveImage({
+        images: image,
+        filename_prefix,
+      });
+    }
+  };
+
   for (const cloth of dress_case) {
     const input_pos = `${pos}, ${cloth} dress`;
-    const image = generate_pipeline(model1, clip1, vae1, input_pos, neg);
-    SaveImage({
-      images: image,
-      filename_prefix: `${cloth}-lofi-v5`,
-    });
-    // ETN_SendImageWebSocket({
-    //   images: image,
-    // });
-
+    const image1 = generate_pipeline(model1, clip1, vae1, input_pos, neg);
     const input_pos2 = `${pos}, ${cloth} dress`;
     const image2 = generate_pipeline(model2, clip2, vae2, input_pos2, neg);
-    SaveImage({
-      images: image2,
-      filename_prefix: `${cloth}-case-h-beta`,
-    });
-    // ETN_SendImageWebSocket({
-    //   images: image,
-    // });
+
+    save_image(image1, `${cloth}-lofi-v5`);
+    save_image(image2, `${cloth}-case-h-beta`);
   }
 
   return workflow;
@@ -102,7 +107,9 @@ const main = async () => {
     fetch: fetch as any,
   });
   client.connect();
-  const wk1 = createWorkflow();
+  const wk1 = createWorkflow({
+    use_ws_send_image: true,
+  });
   fs.writeFileSync(
     path.join(__dirname, "../outputs/workflow-wf-loop.json"),
     JSON.stringify(wk1.workflow(), null, 2)
