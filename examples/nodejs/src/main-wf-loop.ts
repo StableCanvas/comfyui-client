@@ -8,9 +8,11 @@ import path from "path";
 import { save_url_to_file, save_wf_outputs } from "./utils";
 
 const createWorkflow = ({
-  use_ws_send_image = false,
+  out_from_ws_m1 = false,
+  out_from_ws_m2 = false,
 }: {
-  use_ws_send_image?: boolean;
+  out_from_ws_m1?: boolean;
+  out_from_ws_m2?: boolean;
 }) => {
   const workflow = new ComfyUIWorkflow();
   const {
@@ -70,8 +72,9 @@ const createWorkflow = ({
     return image;
   };
 
-  const save_image = (image, filename_prefix) => {
-    if (use_ws_send_image) {
+  // NOTE: This distinction serves two purposes: firstly, to demonstrate the workflow, and secondly, to test the mixed use of WebSocket and REST
+  const save_image = (image, filename_prefix, by_ws = false) => {
+    if (by_ws) {
       ETN_SendImageWebSocket({
         images: image,
       });
@@ -89,8 +92,8 @@ const createWorkflow = ({
     const input_pos2 = `${pos}, ${cloth} dress`;
     const image2 = generate_pipeline(model2, clip2, vae2, input_pos2, neg);
 
-    save_image(image1, `${cloth}-lofi-v5`);
-    save_image(image2, `${cloth}-case-h-beta`);
+    save_image(image1, `${cloth}-lofi-v5`, out_from_ws_m1);
+    save_image(image2, `${cloth}-case-h-beta`, out_from_ws_m2);
   }
 
   return workflow;
@@ -108,7 +111,8 @@ const main = async () => {
   });
   client.connect();
   const wk1 = createWorkflow({
-    use_ws_send_image: true,
+    out_from_ws_m1: true,
+    out_from_ws_m2: false,
   });
   fs.writeFileSync(
     path.join(__dirname, "../outputs/workflow-wf-loop.json"),

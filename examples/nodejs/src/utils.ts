@@ -41,7 +41,7 @@ export const save_wf_outputs = async (outputs: WorkflowOutput) => {
         break;
       }
       case "buff": {
-        const filename = `image-${Date.now()}.png`;
+        const filename = `image-${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
         const filepath = path.join(__dirname, "../outputs", filename);
         fs.writeFileSync(filepath, Buffer.from(image.data));
         break;
