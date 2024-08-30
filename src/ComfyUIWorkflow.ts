@@ -229,12 +229,12 @@ export class ComfyUIWorkflow {
     client: ComfyUIApiClient,
     options?: InvokeOptions<unknown>
   ): Promise<WorkflowOutput<unknown>>;
-  public invoke(
+  public async invoke(
     client: ComfyUIApiClient,
     options?: InvokeOptions<unknown>
   ): Promise<WorkflowOutput<unknown>> {
     const invoked = this.instance(client, options);
-    invoked.enqueue();
+    await invoked.enqueue();
     const result = invoked.wait();
     return result;
   }
