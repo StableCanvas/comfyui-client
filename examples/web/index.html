@@ -26,11 +26,14 @@
     body {
       font-family: sans-serif;
       padding: 1rem;
+
+      background-color: #1f1f1f;
+      color: #fff;
     }
 
     .payload-panel {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 1rem;
     }
 
@@ -39,6 +42,8 @@
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+
+      width: 500px;
     }
 
     .images-container {
@@ -94,6 +99,10 @@
       gap: 1rem;
       align-items: center;
       padding: 1rem;
+    }
+
+    .app-root {
+      display: flex;
     }
   </style>
 </head>
@@ -206,9 +215,13 @@
           batch_size,
         })[0],
       });
-      cls.SaveImage({
-        filename_prefix: "from-sc-comfy-ui-client",
-        images: cls.VAEDecode({ samples, vae })[0],
+      const image = cls.VAEDecode({ samples, vae })[0];
+      // cls.SaveImage({
+      //   filename_prefix: "from-sc-comfy-ui-client",
+      //   images: image,
+      // });
+      cls.ETN_SendImageWebSocket({
+        images: image,
       });
       return workflow;
     };
@@ -250,11 +263,11 @@
         sd_models,
       } = useStore();
 
-      const handleStart = async () => {
-        startLoading();
-        const workflow = build_workflow();
-        const { images } = await workflow.invoke(client);
-        console.log(images);
+      /**
+       * append image
+       * @param {({type: 'url', data: string}|{type: 'buff', data: , mime: string})[]} images
+       */
+      const load_images = async (images) => {
         for (const image of images) {
           switch (image.type) {
             case "url": {
@@ -267,25 +280,39 @@
               reader.readAsDataURL(blob);
               break;
             }
-            // arraybuffer
             case "buff": {
               const reader = new FileReader();
               reader.onload = () => {
                 appendImage(reader.result);
               };
-              reader.readAsDataURL(new Blob([image.buff]));
+              reader.readAsDataURL(new Blob([image.data], {
+                type: image.mime
+              }));
               break;
             }
           }
         }
-        stopLoading();
-        setTimeout(() => {
-          setProgress({ current: 0, total: 0 });
-        });
+      }
+
+      const handleStart = async () => {
+        startLoading();
+        try {
+          const workflow = build_workflow();
+          const { images } = await workflow.invoke(client);
+          console.log(images);
+          load_images(images)
+        } catch (error) {
+          console.error(error)
+        } finally {
+          stopLoading();
+          setTimeout(() => {
+            setProgress({ current: 0, total: 0 });
+          });
+        }
       };
 
       return html`
-          <div>
+          <div className="app-root">
             <fieldset>
               <legend>Settings</legend>
               <div class="payload-panel">
@@ -452,6 +479,7 @@
                     </div>`
         }
             </fieldset>
+          </div>
           </div>
         `;
     }

@@ -25,10 +25,9 @@ export const save_url_to_file = async (url: string, filepath: string) => {
 
 export const save_wf_outputs = async (outputs: WorkflowOutput) => {
   for (const image of outputs.images) {
-    const url = image;
     switch (image.type) {
       case "url": {
-        const url = image.data;
+        const { data: url } = image;
         const filename = new URLSearchParams(new URL(url).search).get(
           "filename"
         );
@@ -41,9 +40,11 @@ export const save_wf_outputs = async (outputs: WorkflowOutput) => {
         break;
       }
       case "buff": {
-        const filename = `image-${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
+        const { mime, data } = image;
+        const ext = mime.split("/")[1] ?? "png";
+        const filename = `image-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
         const filepath = path.join(__dirname, "../outputs", filename);
-        fs.writeFileSync(filepath, Buffer.from(image.data));
+        fs.writeFileSync(filepath, Buffer.from(data));
         break;
       }
     }

@@ -22,7 +22,12 @@ type ComfyUIClientEvents = {
   /**
    * load image data from websocket
    */
-  image_data: [ArrayBuffer];
+  image_data: [
+    {
+      image: ArrayBuffer;
+      mime: string;
+    },
+  ];
 
   /**
    * get all messages
@@ -71,27 +76,21 @@ export class ComfyUIWsClient {
   static loadImageData(buf: ArrayBuffer) {
     const view = new DataView(buf);
     const eventType = view.getUint32(0);
-    switch (eventType) {
-      case 1:
-        const view2 = new DataView(buf);
-        const imageType = view2.getUint32(0);
-        let imageMime;
-        switch (imageType) {
-          case 1:
-          default:
-            imageMime = "image/jpeg";
-            break;
-          case 2:
-            imageMime = "image/png";
-        }
-        const image_buffer = buf.slice(8);
-        return image_buffer;
-        break;
-      default:
-        throw new Error(
-          `Unknown binary websocket message of type ${eventType}`
-        );
+    const imageType = view.getUint32(1);
+
+    if (eventType !== 1) {
+      throw new Error(`Unknown binary websocket message of type ${eventType}`);
     }
+
+    const mimeTypes = {
+      1: "image/jpeg",
+      2: "image/png",
+    } as any;
+
+    const mime = mimeTypes[imageType] || "image/png";
+    const image = buf.slice(8);
+
+    return { image, mime };
   }
 
   api_host: string;
@@ -356,9 +355,6 @@ export class ComfyUIWsClient {
       if (typeof event.data === "string") {
         return false;
       }
-      if (ComfyUIWsClient.IS_BROWSER) {
-        return event.data instanceof Blob;
-      }
       if (ArrayBuffer && event.data instanceof ArrayBuffer) {
         return true;
       }
@@ -411,6 +407,7 @@ export class ComfyUIWsClient {
         }
 
         const is_unhandled_message =
+          msg.type !== "message" &&
           this.registered.includes(msg.type) === false;
         if (is_unhandled_message) {
           this.events.emit("unhandled", msg);

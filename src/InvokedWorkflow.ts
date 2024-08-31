@@ -119,12 +119,15 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     const { client } = this;
 
     const off_event = client.on("image_data", (data) => {
+      // NOTE: Actually, it is impossible to determine whether it is the image of the current workflow, so the internal value is_done is used to determine, because comfyui is non-concurrent by default
+      // TODO: Use message judgment, that is, use the last `executed` message to determine which workflow result it is
       if (this.is_done) {
         return;
       }
       this._result.images.push({
         type: "buff",
-        data,
+        data: data.image,
+        mime: data.mime,
       });
     });
 
@@ -185,6 +188,19 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     return this._result;
   }
 
+  protected when_interrupted(
+    cb: (data: ComfyUiWsTypes.Messages.ExecutionInterrupted) => any
+  ) {
+    const task_id = this._task_id_guard();
+    this._connect(
+      this.client.on("execution_interrupted", (data) => {
+        if (data.prompt_id === task_id) {
+          cb(data);
+        }
+      })
+    );
+  }
+
   /**
    * Waits for the workflow to complete and returns the result.
    *
@@ -199,15 +215,26 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     const task_id = this._task_id_guard();
 
     const { client } = this;
-    try {
-      await client.waitForPrompt(task_id, polling_ms ?? 1000);
-      return await this.collect_result();
-    } catch (error) {
-      throw error;
-    } finally {
-      this.is_done = true;
-      this.dispose();
-    }
+    return new Promise<WorkflowOutput>(async (resolve, reject) => {
+      const done = () => {
+        this.is_done = true;
+        this.dispose();
+      };
+      this.when_interrupted((data) => {
+        reject(new Error("Execution Interrupted"));
+        done();
+      });
+
+      try {
+        await client.waitForPrompt(task_id, polling_ms ?? 1000);
+        const result = await this.collect_result();
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      } finally {
+        done();
+      }
+    });
   }
 
   /**
@@ -224,29 +251,25 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
         this.is_done = true;
         this.dispose();
       };
-      this._connect(
-        this.client.on("execution_interrupted", (data) => {
-          if (data.prompt_id === task_id) {
-            reject(new Error("Execution Interrupted"));
-            done();
-          }
-        })
-      );
+      this.when_interrupted((data) => {
+        reject(new Error("Execution Interrupted"));
+        done();
+      });
       this._connect(
         this.client.on("executed", async (data) => {
           if (data.prompt_id !== task_id) {
             return;
           }
           this.resolve_to_result(data);
-          const status = await this.query();
-          if (!status.done) {
-            return;
-          }
           try {
-            resolve(await this.collect_result());
+            const status = await this.query();
+            if (!status.done) {
+              return;
+            }
+            resolve(this._result);
+            done();
           } catch (error) {
             reject(error);
-          } finally {
             done();
           }
         })

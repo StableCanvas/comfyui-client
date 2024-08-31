@@ -56,6 +56,7 @@ export type WorkflowOutput<D = unknown> = {
     | {
         type: "buff";
         data: ArrayBuffer;
+        mime: string;
       }
     | {
         type: "url";

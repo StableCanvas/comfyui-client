@@ -579,7 +579,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     return new Promise<WorkflowOutput<T>>((resolve, reject) => {
       const offEvent2 = this.on("image_data", (data) => {
         // TODO: should hook web-socket resolver ?
-        output.images.push({ type: "buff", data });
+        output.images.push({ type: "buff", data: data.image, mime: data.mime });
       });
       const offEvent = this.on("executed", (data) => {
         const {
