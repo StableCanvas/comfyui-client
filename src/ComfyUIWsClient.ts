@@ -216,10 +216,17 @@ export class ComfyUIWsClient {
       throw new Error("Client is closed");
     }
     const url = this.apiURL(route);
-    return this.fetch(url, {
+    const res = await this.fetch(url, {
       ...options,
       headers: this.apiHeaders(options),
     });
+
+    // 404 check because fetch doesn't consider a 404 an error
+    if (res.status === 404) {
+      throw new Error(`ComfyUI API Endpoint not found (404): ${url}`);
+    }
+
+    return res;
   }
 
   /**
