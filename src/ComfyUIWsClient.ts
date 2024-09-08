@@ -34,6 +34,9 @@ type ComfyUIClientEvents = {
    */
   close: any;
 
+  // network connection errors
+  connection_error: { type: string; message: string };
+
   /**
    * unhandled event message
    */
@@ -345,14 +348,15 @@ export class ComfyUIWsClient {
       // Expose websocket errors as unhandled events
       // Allows for catching 404 and other network errors
       const err = ev as ErrorEvent;
-      this.events.emit("unhandled", {
-        type: "WebSocket Error",
-        data: err.message,
+      const is404Error = err.message?.includes("404");
+
+      this.events.emit("connection_error", {
+        type: "404",
+        message: err.message,
       });
 
       if (this.socket) this.socket.close();
 
-      const is404Error = err.message?.includes("404");
       if (!is404Error && !isReconnect && !opened) {
         this.startPollingQueue();
       }
