@@ -341,9 +341,19 @@ export class ComfyUIWsClient {
       }
     });
 
-    this.addSocketCallback(this.socket, "error", () => {
+    this.addSocketCallback(this.socket, "error", (ev: Event) => {
+      // Expose websocket errors as unhandled events
+      // Allows for catching 404 and other network errors
+      const err = ev as ErrorEvent;
+      this.events.emit("unhandled", {
+        type: "WebSocket Error",
+        data: err.message,
+      });
+
       if (this.socket) this.socket.close();
-      if (!isReconnect && !opened) {
+
+      const is404Error = err.message?.includes("404");
+      if (!is404Error && !isReconnect && !opened) {
         this.startPollingQueue();
       }
     });
