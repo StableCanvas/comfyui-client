@@ -10,9 +10,9 @@ const deepClone: <T>(obj: T) => T = globalThis.structuredClone
   ? globalThis.structuredClone
   : (x) => JSON.parse(JSON.stringify(x));
 
-type NodeOutput = [string, number];
+export type NodeOutput = [string, number];
 
-type NodeClassInputs = Record<
+export type NodeClassInputs = Record<
   string,
   string | boolean | number | null | undefined | NodeOutput
 >;
@@ -24,11 +24,13 @@ type InputsFormat<T> = {
     : T[K] | NodeOutput;
 };
 
-interface ComfyUINodeClass<INP extends NodeClassInputs = NodeClassInputs> {
+export interface ComfyUINodeClass<
+  INP extends NodeClassInputs = NodeClassInputs,
+> {
   (inputs: INP): NodeOutput[];
 }
 
-type BuiltinNodeClasses = {
+export type BuiltinNodeClasses = {
   [K in keyof Required<ComfyUINodeTypes.NodeTypes>]: Required<
     Required<ComfyUINodeTypes.NodeTypes>[K]
   > extends {
@@ -38,7 +40,7 @@ type BuiltinNodeClasses = {
     : ComfyUINodeClass<NodeClassInputs>;
 };
 
-type InvokeOptions<T> = {
+export type InvokeOptions<T> = {
   resolver?: WorkflowOutputResolver<T>;
   progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
   polling_ms?: number;
