@@ -102,7 +102,7 @@ const invoked = your_workflow.instance();
 running
 ```ts
 // job enqueue
-invoked.enqueue();
+await invoked.enqueue();
 // job result promise
 const job_promise = invoked.wait();
 // if you want interrupt it

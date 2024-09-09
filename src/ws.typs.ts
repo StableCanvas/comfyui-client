@@ -2,6 +2,7 @@ export namespace ComfyUiWsTypes {
   export namespace Messages {
     export interface Executed {
       node: string;
+      display_node: string;
       output: Record<string, any>;
       prompt_id: string;
     }

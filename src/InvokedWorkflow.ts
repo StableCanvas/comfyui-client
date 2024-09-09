@@ -5,16 +5,39 @@ import type { WorkflowOutput, IWorkflow } from "./types";
 import { RESOLVERS } from "./builtins";
 import { ComfyUiWsTypes } from "./ws.typs";
 
-export class InvokedWorkflow<T = unknown> {
-  protected _task_id?: Promise<string>;
-  protected _enqueue_req?: ReturnType<ComfyUIApiClient["_enqueue_prompt"]>;
+class Disposable {
+  protected _disposed = false;
+  protected _disposed_cbs = [] as any[];
+  public dispose() {
+    if (this._disposed) {
+      return;
+    }
+    this._disposed = true;
+
+    this._disposed_cbs.forEach((cb) => {
+      if (typeof cb === "function") {
+        cb();
+      }
+    });
+  }
+  public _connect(cb: () => void) {
+    if (this._disposed) {
+      cb();
+      return;
+    }
+    this._disposed_cbs.push(cb);
+  }
+}
+
+export class InvokedWorkflow<T = unknown> extends Disposable {
+  protected task_id?: string;
 
   protected _result: WorkflowOutput<T> = {
     images: [],
     prompt_id: "",
   };
 
-  executed = false;
+  is_done = false;
   enqueued = false;
 
   workflow: IWorkflow;
@@ -29,47 +52,86 @@ export class InvokedWorkflow<T = unknown> {
       progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
     }
   ) {
+    super();
     const { workflow, client, resolver } = options;
     this.workflow = workflow;
     this.client = client;
     this.resolver = resolver || (RESOLVERS.image as any);
   }
 
-  public enqueue() {
+  protected _enqueue_guard() {
     if (this.enqueued) {
       throw new Error("This workflow is already enqueued");
     }
-
     this.enqueued = true;
+  }
+
+  protected _task_id_guard() {
+    if (!this.task_id) {
+      throw new Error(
+        "This workflow is not enqueued and the execution status cannot be interrupt"
+      );
+    }
+    return this.task_id;
+  }
+
+  protected _done_guard() {
+    if (this._disposed || this.is_done) {
+      throw new Error("This workflow has been disposed");
+    }
+  }
+
+  /**
+   * Initiates the workflow by enqueuing the prompt and setting up the task ID.
+   *
+   * @return {void}
+   */
+  public async enqueue() {
+    this._enqueue_guard();
 
     const { client, workflow } = this;
     const { prompt, workflow: wf } = workflow;
 
-    this._enqueue_req = client._enqueue_prompt(prompt, { workflow: wf });
-    this._task_id = this._enqueue_req.then((data) => data.prompt_id);
-
-    this._enqueue_req.then((data) => {
-      this._result.prompt_id = data.prompt_id;
+    const { prompt_id } = await client._enqueue_prompt(prompt, {
+      workflow: wf,
     });
+    this.task_id = prompt_id;
 
     this.hook_progress();
+    this.hook_image_data();
   }
 
   protected async hook_progress() {
     const { progress } = this.options;
-    const { _task_id } = this;
+    const { task_id: _task_id } = this;
     if (!progress) return;
     if (typeof progress !== "function") {
       throw new Error("progress hook must be a function");
     }
-    const task_id = await _task_id;
-    if (typeof task_id !== "string" || this._enqueue_req === undefined) {
+    if (typeof _task_id !== "string") {
       throw new Error("this workflow is not enqueued");
     }
-    const off_progress = this.client.on_progress(progress, task_id);
-    this._enqueue_req.finally(() => {
-      off_progress();
+    const off_progress = this.client.on_progress(progress, _task_id);
+    this._connect(off_progress);
+  }
+
+  protected async hook_image_data() {
+    const { client } = this;
+
+    const off_event = client.on("image_data", (data) => {
+      // NOTE: Actually, it is impossible to determine whether it is the image of the current workflow, so the internal value is_done is used to determine, because comfyui is non-concurrent by default
+      // TODO: Use message judgment, that is, use the last `executed` message to determine which workflow result it is
+      if (this.is_done) {
+        return;
+      }
+      this._result.images.push({
+        type: "buff",
+        data: data.image,
+        mime: data.mime,
+      });
     });
+
+    this._connect(off_event);
   }
 
   protected resolve_to_result(data: ComfyUiWsTypes.Messages.Executed) {
@@ -83,22 +145,25 @@ export class InvokedWorkflow<T = unknown> {
     });
   }
 
+  /**
+   * Retrieves the execution status of the workflow.
+   *
+   * @return {Promise<status>} A promise that resolves with the execution status of the workflow.
+   */
   public async query() {
-    if (!this._task_id) {
-      throw new Error(
-        "This workflow is not enqueued and the execution status cannot be queried"
-      );
-    }
-    return this.client.getPromptStatus(await this._task_id);
+    const task_id = this._task_id_guard();
+    return this.client.getPromptStatus(task_id);
   }
 
+  /**
+   * Interrupts the execution of the workflow if it is currently enqueued.
+   * Throws an error if the workflow is not enqueued or if the execution status cannot be interrupted.
+   *
+   * @return {Promise<void>} A promise that resolves when the interrupt is successful or rejects with an error.
+   * @throws {Error} If the workflow is not enqueued or if the execution status cannot be interrupted.
+   */
   public async interrupt() {
-    if (!this._task_id) {
-      throw new Error(
-        "This workflow is not enqueued and the execution status cannot be interrupt"
-      );
-    }
-    const id = await this._task_id;
+    const id = this._task_id_guard();
     const { pending, running, done } = await this.query();
     if (done) return;
     if (pending) {
@@ -111,50 +176,104 @@ export class InvokedWorkflow<T = unknown> {
     throw new Error(`wrong task status, id: ${id}`);
   }
 
-  public async wait() {
-    if (!this._task_id) {
-      throw new Error(
-        "This workflow is not enqueued and the execution status cannot be wait"
-      );
-    }
-    const task_id = await this._task_id;
-    return new Promise<WorkflowOutput>((resolve, reject) => {
-      const zone = (fn: (done: () => void) => any[]) => {
-        let offs: any[] = [];
-        const done = () =>
-          offs.forEach((cb) => (typeof cb === "function" ? cb() : null));
-        offs = fn(done);
+  protected async collect_result() {
+    const { client, resolver } = this;
+    const task_id = this._task_id_guard();
+    const result = await client.getPromptResult(
+      task_id,
+      resolver ?? RESOLVERS.image
+    );
+    this._result.images = [...this._result.images, ...result.images];
+    this._result.data = this._result.data ?? result.data;
+    return this._result;
+  }
+
+  protected when_interrupted(
+    cb: (data: ComfyUiWsTypes.Messages.ExecutionInterrupted) => any
+  ) {
+    const task_id = this._task_id_guard();
+    this._connect(
+      this.client.on("execution_interrupted", (data) => {
+        if (data.prompt_id === task_id) {
+          cb(data);
+        }
+      })
+    );
+  }
+
+  /**
+   * Waits for the workflow to complete and returns the result.
+   *
+   * *This function does not rely on WebSocket Events, so it will lose events output by WebSocket node
+   *
+   * @param {Object} options - options for waiting
+   * @param {number} [options.polling_ms=1000] - polling interval in milliseconds
+   * @return {Promise} promise that resolves with the result of the workflow
+   */
+  public async wait_polling({ polling_ms }: { polling_ms?: number } = {}) {
+    this._done_guard();
+    const task_id = this._task_id_guard();
+
+    const { client } = this;
+    return new Promise<WorkflowOutput>(async (resolve, reject) => {
+      const done = () => {
+        this.is_done = true;
+        this.dispose();
       };
-      zone((done) => [
-        this.client.on("execution_interrupted", (data) => {
-          if (data.prompt_id === task_id) {
-            reject(new Error("Execution Interrupted"));
-            done();
-          }
-        }),
-        this.client.on("image_data", (data) => {
-          if (this.executed) {
-            return;
-          }
-          this._result.images.push({
-            type: "buff",
-            data,
-          });
-        }),
-        this.client.on("executed", (data) => {
+      this.when_interrupted((data) => {
+        reject(new Error("Execution Interrupted"));
+        done();
+      });
+
+      try {
+        await client.waitForPrompt(task_id, polling_ms ?? 1000);
+        const result = await this.collect_result();
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      } finally {
+        done();
+      }
+    });
+  }
+
+  /**
+   * Waits for the workflow to complete and returns the result.
+   *
+   * @return {Promise<WorkflowOutput>} promise that resolves with the result of the workflow
+   */
+  public async wait() {
+    this._done_guard();
+    const task_id = this._task_id_guard();
+
+    return new Promise<WorkflowOutput>((resolve, reject) => {
+      const done = () => {
+        this.is_done = true;
+        this.dispose();
+      };
+      this.when_interrupted((data) => {
+        reject(new Error("Execution Interrupted"));
+        done();
+      });
+      this._connect(
+        this.client.on("executed", async (data) => {
           if (data.prompt_id !== task_id) {
             return;
           }
           this.resolve_to_result(data);
-          this.executed = true;
-          resolve(this._result);
-          done();
-        }),
-        this._enqueue_req?.catch((error) => {
-          reject(error);
-          setTimeout(done, 0);
-        }),
-      ]);
+          try {
+            const status = await this.query();
+            if (!status.done) {
+              return;
+            }
+            resolve(this._result);
+            done();
+          } catch (error) {
+            reject(error);
+            done();
+          }
+        })
+      );
     });
   }
 }
