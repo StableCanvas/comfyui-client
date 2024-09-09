@@ -39,6 +39,9 @@ type ComfyUIClientEvents = {
    */
   close: any;
 
+  // network connection errors
+  connection_error: { type: string; message: string };
+
   /**
    * unhandled event message
    */
@@ -215,10 +218,17 @@ export class ComfyUIWsClient {
       throw new Error("Client is closed");
     }
     const url = this.apiURL(route);
-    return this.fetch(url, {
+    const res = await this.fetch(url, {
       ...options,
       headers: this.apiHeaders(options),
     });
+
+    // 404 check because fetch doesn't consider a 404 an error
+    if (res.status === 404) {
+      throw new Error(`ComfyUI API Endpoint not found (404): ${url}`);
+    }
+
+    return res;
   }
 
   /**
@@ -333,9 +343,20 @@ export class ComfyUIWsClient {
       }
     });
 
-    this.addSocketCallback(this.socket, "error", () => {
+    this.addSocketCallback(this.socket, "error", (ev: Event) => {
+      // Expose websocket errors as unhandled events
+      // Allows for catching 404 and other network errors
+      const err = ev as ErrorEvent;
+      const is404Error = err.message?.includes("404");
+
+      this.events.emit("connection_error", {
+        type: "404",
+        message: err.message,
+      });
+
       if (this.socket) this.socket.close();
-      if (!isReconnect && !opened) {
+
+      if (!is404Error && !isReconnect && !opened) {
         this.startPollingQueue();
       }
     });
