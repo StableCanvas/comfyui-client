@@ -1,52 +1,7 @@
 import { IComfyApiConfig } from "./types";
 import { EventEmitter } from "eventemitter3";
-import { ComfyUiWsTypes } from "./ws.typs";
-import { uuidv4 } from "./misc";
-
-type ComfyUIClientEvents = {
-  status: [ComfyUiWsTypes.Messages.Status["status"] | null];
-  progress: [ComfyUiWsTypes.Messages.Progress];
-  executing: [ComfyUiWsTypes.Messages.Executing];
-  executed: [ComfyUiWsTypes.Messages.Executed];
-  execution_interrupted: [ComfyUiWsTypes.Messages.ExecutionInterrupted];
-
-  // this group events
-  execution_start: any;
-  execution_error: any;
-  execution_cached: any;
-
-  // this web client events
-  reconnected: any;
-  reconnecting: any;
-
-  /**
-   * load image data from websocket
-   */
-  image_data: [
-    {
-      image: ArrayBuffer;
-      mime: string;
-    },
-  ];
-
-  /**
-   * get all messages
-   */
-  message: any;
-
-  /**
-   * close client
-   */
-  close: any;
-
-  // network connection errors
-  connection_error: { type: string; message: string };
-
-  /**
-   * unhandled event message
-   */
-  unhandled: [{ type: string; data: any }];
-};
+import { ComfyUIClientEvents } from "./ws.typs";
+import { Errors, uuidv4 } from "./misc";
 
 /**
  * A client for interacting with the ComfyUI API server using WebSockets.
@@ -222,10 +177,14 @@ export class ComfyUIWsClient {
       ...options,
       headers: this.apiHeaders(options),
     });
+    const { status, statusText } = res;
 
-    // 404 check because fetch doesn't consider a 404 an error
-    if (res.status === 404) {
-      throw new Error(`ComfyUI API Endpoint not found (404): ${url}`);
+    if (status < 200 || status >= 400) {
+      throw new Errors.HttpError(
+        `Endpoint Bad Request (${status} ${statusText}): ${url}`,
+        status,
+        await res.json()
+      );
     }
 
     return res;
@@ -244,10 +203,10 @@ export class ComfyUIWsClient {
     callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
     options?: any
   ) {
-    this.events.on(type as any, callback, options);
+    this.events.on(type as any, callback as any, options);
 
     return () => {
-      this.events.off(type as any, callback);
+      this.events.off(type as any, callback as any);
     };
   }
 
@@ -265,6 +224,26 @@ export class ComfyUIWsClient {
     options?: any
   ) {
     return this.addEventListener(type, callback, options);
+  }
+
+  /**
+   * Adds an event listener for the specified event type.
+   *
+   * @param {keyof ComfyUIClientEvents | (string & {})} type - The type of event to listen for.
+   * @param {(...args: any) => void} callback - The callback function to be executed when the event is triggered.
+   * @param {any} options - (Optional) Additional options for the event listener.
+   * @return {() => void} A function that removes the event listener when called.
+   */
+  once<T extends EventEmitter.EventNames<ComfyUIClientEvents>>(
+    type: T,
+    callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
+    options?: any
+  ) {
+    this.events.once(type as any, callback as any, options);
+
+    return () => {
+      this.events.off(type as any, callback as any);
+    };
   }
 
   protected _polling_timer: any = null;

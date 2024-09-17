@@ -1,9 +1,9 @@
 import { ComfyUIApiClient } from "./ComfyUIApiClient";
 import { WorkflowOutputResolver } from "./client.types";
-import { isNone } from "./misc";
 import type { WorkflowOutput, IWorkflow } from "./types";
 import { RESOLVERS } from "./builtins";
-import { ComfyUiWsTypes } from "./ws.typs";
+import { ComfyUIClientEvents, ComfyUiWsTypes } from "./ws.typs";
+import EventEmitter from "eventemitter3";
 
 class Disposable {
   protected _disposed = false;
@@ -79,6 +79,49 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     if (this._disposed || this.is_done) {
       throw new Error("This workflow has been disposed");
     }
+  }
+
+  protected is_owner_event(...args: any[]) {
+    const [data] = (args as any[]) || [];
+    const { task_id } = this;
+    if (!task_id) return false;
+    if (typeof data !== "object" || data === null) return false;
+    if (!("prompt_id" in data) || data.prompt_id !== task_id) return false;
+    return true;
+  }
+
+  /**
+   * Adds an event listener for the specified event type.
+   */
+  on<T extends EventEmitter.EventNames<ComfyUIClientEvents>>(
+    type: T,
+    callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
+    options?: any
+  ) {
+    this._done_guard();
+    const { client } = this;
+    return client.on(type, (...args) => {
+      if (!this.is_owner_event(...args)) return;
+      callback(...args);
+    });
+  }
+
+  /**
+   * Adds an once event listener for the specified event type.
+   */
+  once<T extends EventEmitter.EventNames<ComfyUIClientEvents>>(
+    type: T,
+    callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
+    options?: any
+  ) {
+    this._done_guard();
+    const { client } = this;
+    const off = client.on(type, (...args) => {
+      if (!this.is_owner_event(...args)) return;
+      callback(...args);
+      off();
+    });
+    return off;
   }
 
   /**
