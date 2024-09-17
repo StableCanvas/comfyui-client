@@ -245,14 +245,17 @@ const createWorkflow = () => {
 
   return workflow;
 };
-
-const wf1 = createWorkflow();
-// { prompt: {...}, workflow: {...} }
 ```
 
-> QA: How to invoke workflow?
+#### Invoke workflow
+```ts
+const wf1 = createWorkflow();
+const result = await wf1.invoke(client);
+```
+
+> Q: What is the relationship between workflow and client? ?
 > 
-> If you need to refer to complete example code, you can check out the [./examples/nodejs/main*.ts](./examples/nodejs/src) entry files. These contain fully executable code examples ranging from the simplest to slightly more complex workflows.
+> A: If you need to refer to complete example code, you can check out the [./examples/nodejs/main*.ts](./examples/nodejs/src) entry files. These contain fully executable code examples ranging from the simplest to slightly more complex workflows.
 
 ### type support
 
@@ -268,11 +271,149 @@ const wf1 = createWorkflow();
 
 ![other node](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/anynode.png)
 
-### Invoke workflow
+
+## Client Plugin
+We provide ClientPlugin to expand Client capabilities.
+
+simple example
 ```ts
-const wf1 = createWorkflow();
-const result = await wf1.invoke(client);
+import { ClientPlugin } from "@stable-canvas/comfy"
+export class LoggingPlugin extends ClientPlugin {
+  constructor() {
+    super();
+
+    this.addHook({
+      type: "function",
+      name: "fetch",
+      fn: async (original, ...args) => {
+        console.log("fetch args", args);
+        const resp = await original(...args);
+        console.log("fetch resp", resp);
+        return resp;
+      },
+    });
+  }
+}
 ```
+
+### ComfyUI Login Auth
+For example, sometimes you may need to provide node authentication capabilities, and you may have many solutions to implement your ComfyUI permission management
+
+If you use the [ComfyUI-Login](https://github.com/liusida/ComfyUI-Login/tree/main) extension, you can use the built-in `plugins.LoginAuthPlugin` to configure the Client to support authentication
+```ts
+import { ComfyUIApiClient, plugins } from "@stable-canvas/comfyui-client";
+const client = new ComfyUIApiClient()
+client.use(
+  new plugins.LoginAuthPlugin({
+    token: "MY_TOP_SECRET"
+  })
+);
+```
+
+## Events
+
+### Subscribing to Custom Events
+
+If your ComfyUI instance emits custom WebSocket events, you can subscribe to them as follows:
+
+```ts
+client.events.on('your_custom_event_type', (data) => {
+  // 'data' contains the event payload object
+  console.log('Received custom event:', data);
+});
+```
+
+### Handling Unsubscribed Events
+
+To capture and process events that haven't been explicitly subscribed to, use the `unhandled` event listener:
+
+```ts
+client.events.on('unhandled', ({ type, data }) => {
+  // 'type' is the event type
+  // 'data' is the event payload object
+  console.log(`Received unhandled event of type '${type}':`, data);
+});
+```
+
+### Handling All Event Messages
+
+Register the `message` event to subscribe to all WebSocket messages pushed from ComfyUI
+
+```ts
+client.events.on('message', (event) => {
+  if (typeof event.data !== 'string') return;
+  const { type, data } = JSON.parse(event.data);
+  // ...
+});
+```
+
+### Handling Workflow Events
+
+If you've created a workflow instance, you can also subscribe to events emitted by that instance:
+
+```ts
+const workflow = create1Workflow();
+const instance1 = workflow.instance(client);
+
+instance1.on("execution_interrupted", () => {
+  console.log("Workflow execution interrupted");
+});
+```
+
+## Custom Resolver
+
+Sometimes, you might use ComfyUI to generate non-image outputs, such as music, text, object detection results, etc. In these cases, you'll need a custom resolver, as the default behavior of this library primarily focuses on handling image generation.
+
+Here's how to define a custom resolver:
+
+> Suppose you have a final output node is custom non-image node, and its output might be `{ "result": "hi, I'm phi3" }`.
+
+```ts
+const resolver = (resp, node_output, ctx) => {
+  // const { client, prompt_id, node_id } = ctx;
+  return {
+    ...resp,
+    data: resp.data ?? node_output.result,
+  };
+};
+```
+
+You can then use this resolver with `client.enqueue`:
+
+```ts
+const prompt = { ... };
+const resp = await client.enqueue<string>(prompt, { resolver });
+
+console.log(resp.data); // "hi, I'm phi3"
+```
+
+You can also apply the same resolver to a workflow using `workflow.invoke`:
+
+```ts
+const workflow = /* class ComfyUIWorkflow */;
+const result = await workflow.invoke(client, { resolver });
+
+console.log(result.data); // "hi, I'm phi3"
+```
+
+## Handling Non-Standard Node Names
+
+ComfyUI does not enforce strict naming conventions for nodes, which can lead to custom nodes with names containing spaces or special characters. These names, such as `Efficient Loader`, `DSINE-NormalMapPreprocessor`, or `Robust Video Matting`, are challenging to use directly as variable names in code.
+
+To address this issue, we provide the `workflow.node` interface. This interface allows you to create nodes using string-based names, regardless of whether they conform to standard variable naming rules.
+
+```typescript
+const workflow = new ComfyUIWorkflow();
+
+// ❌Incorrect: Cannot destructure directly
+// const { Efficient Loader } = workflow.classes;
+
+// ✅Correct: Use the workflow.node method to create nodes
+const [output1, output2] = workflow.node("Efficient Loader", {
+  // Node parameters
+});
+```
+
 
 ## CLI
 
@@ -404,134 +545,6 @@ const [] = cls.SaveImage({
 
 > Since the order of widgets may change at any time, the function from .png to code may be unstable. It is recommended to use .json to code
 
-## Client Plugin
-We provide ClientPlugin to expand Client capabilities.
-
-simple example
-```ts
-import { ClientPlugin } from "@stable-canvas/comfy"
-export class LoggingPlugin extends ClientPlugin {
-  constructor() {
-    super();
-
-    this.addHook({
-      type: "function",
-      name: "fetch",
-      fn: async (original, ...args) => {
-        console.log("fetch args", args);
-        const resp = await original(...args);
-        console.log("fetch resp", resp);
-        return resp;
-      },
-    });
-  }
-}
-```
-
-### ComfyUI Login Auth
-For example, sometimes you may need to provide node authentication capabilities, and you may have many solutions to implement your ComfyUI permission management
-
-If you use the [ComfyUI-Login](https://github.com/liusida/ComfyUI-Login/tree/main) extension, you can use the built-in `plugins.LoginAuthPlugin` to configure the Client to support authentication
-```ts
-import { ComfyUIApiClient, plugins } from "@stable-canvas/comfyui-client";
-const client = new ComfyUIApiClient()
-client.use(
-  new plugins.LoginAuthPlugin({
-    token: "MY_TOP_SECRET"
-  })
-);
-```
-
-## Custom Events
-
-### Subscribing to Custom Events
-
-If your ComfyUI instance emits custom WebSocket events, you can subscribe to them as follows:
-
-```ts
-client.events.on('your_custom_event_type', (data) => {
-  // 'data' contains the event payload object
-  console.log('Received custom event:', data);
-});
-```
-
-### Handling Unsubscribed Events
-
-To capture and process events that haven't been explicitly subscribed to, use the `unhandled` event listener:
-
-```ts
-client.events.on('unhandled', ({ type, data }) => {
-  // 'type' is the event type
-  // 'data' is the event payload object
-  console.log(`Received unhandled event of type '${type}':`, data);
-});
-```
-
-### Handling All Event Messages
-
-Register the `message` event to subscribe to all WebSocket messages pushed from ComfyUI
-
-```ts
-client.events.on('message', (event) => {
-  if (typeof event.data !== 'string') return;
-  const { type, data } = JSON.parse(event.data);
-  // ...
-});
-```
-
-## Custom Resolver
-
-Sometimes, you might use ComfyUI to generate non-image outputs, such as music, text, object detection results, etc. In these cases, you'll need a custom resolver, as the default behavior of this library primarily focuses on handling image generation.
-
-Here's how to define a custom resolver:
-
-> Suppose you have a final output node is custom non-image node, and its output might be `{ "result": "hi, I'm phi3" }`.
-
-```ts
-const resolver = (resp, node_output, ctx) => {
-  // const { client, prompt_id, node_id } = ctx;
-  return {
-    ...resp,
-    data: resp.data ?? node_output.result,
-  };
-};
-```
-
-You can then use this resolver with `client.enqueue`:
-
-```ts
-const prompt = { ... };
-const resp = await client.enqueue<string>(prompt, { resolver });
-
-console.log(resp.data); // "hi, I'm phi3"
-```
-
-You can also apply the same resolver to a workflow using `workflow.invoke`:
-
-```ts
-const workflow = /* class ComfyUIWorkflow */;
-const result = await workflow.invoke(client, { resolver });
-
-console.log(result.data); // "hi, I'm phi3"
-```
-
-## Handling Non-Standard Node Names
-
-ComfyUI does not enforce strict naming conventions for nodes, which can lead to custom nodes with names containing spaces or special characters. These names, such as `Efficient Loader`, `DSINE-NormalMapPreprocessor`, or `Robust Video Matting`, are challenging to use directly as variable names in code.
-
-To address this issue, we provide the `workflow.node` interface. This interface allows you to create nodes using string-based names, regardless of whether they conform to standard variable naming rules.
-
-```typescript
-const workflow = new ComfyUIWorkflow();
-
-// ❌Incorrect: Cannot destructure directly
-// const { Efficient Loader } = workflow.classes;
-
-// ✅Correct: Use the workflow.node method to create nodes
-const [output1, output2] = workflow.node("Efficient Loader", {
-  // Node parameters
-});
-```
 
 ## Roadmap
 
