@@ -99,16 +99,14 @@ const createWorkflow = ({
   return workflow;
 };
 
+const client = new ComfyUIApiClient({
+  api_host: "127.0.0.1:8188",
+  api_base: "",
+  sessionName: "",
+  WebSocket: WebSocket as any,
+  fetch: fetch as any,
+});
 const main = async () => {
-  const client = new ComfyUIApiClient({
-    api_host: "127.0.0.1:8188",
-    api_base: "",
-    sessionName: "",
-    // user: "comfy-client",
-    user: "undefined",
-    WebSocket: WebSocket as any,
-    fetch: fetch as any,
-  });
   client.connect();
   const wk1 = createWorkflow({
     out_from_ws_m1: true,
@@ -119,12 +117,10 @@ const main = async () => {
     JSON.stringify(wk1.workflow(), null, 2)
   );
   const resp = await wk1.invoke(client);
-  client.close();
-  console.log(resp);
-
   await save_wf_outputs(resp);
 };
 
 main()
   .then(() => console.log("done"))
-  .catch((e) => console.error(e));
+  .catch((e) => console.error(e))
+  .finally(() => client.close());

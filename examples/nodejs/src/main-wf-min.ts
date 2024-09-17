@@ -41,45 +41,19 @@ const createWorkflow = () => {
   return workflow;
 };
 
+const client = new ComfyUIApiClient({
+  api_host: "127.0.0.1:8188",
+  WebSocket: WebSocket as any,
+  fetch: fetch as any,
+});
 const main = async () => {
-  const client = new ComfyUIApiClient({
-    api_host: "127.0.0.1:8188",
-    WebSocket: WebSocket as any,
-    fetch: fetch as any,
-  });
   client.connect();
-
-  client.on("message", (event) => {
-    const { data } = event;
-    if (data instanceof Buffer || data instanceof ArrayBuffer) {
-      console.log("Received image data");
-    } else {
-      console.log(data);
-    }
-  });
-
-  // test for interrupt
-  // setTimeout(() => {
-  //   client.interrupt();
-  // }, 2000);
-
   const wk1 = createWorkflow();
-
-  fs.writeFileSync(
-    path.join(__dirname, "../outputs", "workflow-min.json"),
-    JSON.stringify(wk1.workflow(), null, 2)
-  );
-
-  try {
-    const resp = await wk1.invoke(client);
-    await save_wf_outputs(resp);
-  } catch (error) {
-    console.error(error);
-  } finally {
-    client.close();
-  }
+  const resp = await wk1.invoke(client);
+  await save_wf_outputs(resp);
 };
 
 main()
   .then(() => console.log("done"))
-  .catch((e) => console.error(e));
+  .catch((e) => console.error(e))
+  .finally(() => client.close());

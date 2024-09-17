@@ -72,15 +72,15 @@ const createWorkflow = () => {
   return workflow;
 };
 
+const client = new ComfyUIApiClient({
+  api_host: "127.0.0.1:8188",
+  clientId: "comfy-ui-client-nodejs-test-id",
+  // user: "comfy-client",
+  user: "undefined",
+  WebSocket: WebSocket as any,
+  fetch: fetch as any,
+});
 const main = async () => {
-  const client = new ComfyUIApiClient({
-    api_host: "127.0.0.1:8188",
-    clientId: "comfy-ui-client-nodejs-test-id",
-    // user: "comfy-client",
-    user: "undefined",
-    WebSocket: WebSocket as any,
-    fetch: fetch as any,
-  });
   client.connect();
 
   client.on("message", (event) => {
@@ -96,7 +96,6 @@ const main = async () => {
 
   const wk1 = createWorkflow();
   const resp = await wk1.invoke(client);
-  client.close();
   // console.log(resp);
 
   await save_wf_outputs(resp);
@@ -104,4 +103,5 @@ const main = async () => {
 
 main()
   .then(() => console.log("done"))
-  .catch((e) => console.error(e));
+  .catch((e) => console.error(e))
+  .finally(() => client.close());

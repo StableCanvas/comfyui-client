@@ -66,15 +66,14 @@ const createWorkflow = () => {
   return workflow;
 };
 
+const client = new ComfyUIApiClient({
+  api_host: "xxxx-xxx-xxx-xxxx.proxy.runpod.net",
+  api_base: "",
+  sessionName: "rbt-comfy-client",
+  fetch: fetch as any,
+  ssl: true, // must have when using with runpod
+});
 const main = async () => {
-  const client = new ComfyUIApiClient({
-    api_host: "gfmhv9ieie2uwy-3001.proxy.runpod.net",
-    api_base: "",
-    sessionName: "rbt-comfy-client",
-    fetch: fetch as any,
-    ssl: true, // must have when using with runpod
-  });
-
   const wk1 = createWorkflow();
   console.time("invoke_polling");
 
@@ -89,4 +88,5 @@ const main = async () => {
 
 main()
   .then(() => console.log("done"))
-  .catch((e) => console.error(e));
+  .catch((e) => console.error(e))
+  .finally(() => client.close());

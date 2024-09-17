@@ -202,25 +202,23 @@ const payload = {
   },
 };
 
+const client = new ComfyUIApiClient({
+  api_host: "127.0.0.1:8188",
+  api_base: "",
+  sessionName: "",
+  WebSocket: WebSocket as any,
+  fetch: fetch as any,
+});
 const main = async () => {
-  const client = new ComfyUIApiClient({
-    api_host: "127.0.0.1:8188",
-    api_base: "",
-    sessionName: "",
-    // user: "comfy-client",
-    user: "undefined",
-    WebSocket: WebSocket as any,
-    fetch: fetch as any,
-  });
-  client.init();
+  client.connect();
   const resp = await client.runPrompt(payload.prompt, {
     workflow: payload.workflow,
     disable_random_seed: false,
   });
-  client.close();
   console.log(resp);
 };
 
 main()
   .then(() => console.log("done"))
-  .catch((e) => console.error(e));
+  .catch((e) => console.error(e))
+  .finally(() => client.close());
