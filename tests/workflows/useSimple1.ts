@@ -2,17 +2,22 @@ import type { ComfyUIWorkflow } from "../../src/ComfyUIWorkflow";
 
 export const useSimple1 = (
   workflow: ComfyUIWorkflow,
-  options = {
+  { steps = 1, cfg = 4, denoise = 1, seed = 42, width = 512, height = 512 } = {
     steps: 1,
     cfg: 4,
     denoise: 1,
     seed: 42,
     width: 512,
     height: 512,
+  } as {
+    steps?: number;
+    cfg?: number;
+    denoise?: number;
+    seed?: number;
+    width?: number;
+    height?: number;
   }
 ) => {
-  const { steps, cfg, denoise, seed, width, height } = options;
-
   const cls = workflow.classes;
   const [model, clip, vae] = cls.CheckpointLoaderSimple({
     ckpt_name: "LOFI_V5.fp16.safetensors",

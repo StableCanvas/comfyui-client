@@ -4,6 +4,7 @@ import { ComfyUiWsTypes } from "../src/ws.typs";
 import { create_s1_prompt } from "./test_utils";
 
 import { WebSocket } from "ws";
+import { useSimple1 } from "./workflows/useSimple1";
 
 const collect_events = (client: ComfyUIApiClient, ignore = [] as string[]) => {
   const event_queue = [] as string[];
@@ -93,5 +94,27 @@ describe("WS", () => {
     expect(progress0.value).toBe(1);
     // START_NOTE id
     expect(progress0.node).toBe("3");
+  });
+
+  it("should be able to stop after calling workflow.interrupt()", async () => {
+    useSimple1(workflow, {
+      steps: 35,
+    });
+
+    const wk1 = workflow.instance(client);
+
+    await wk1.enqueue();
+    try {
+      wk1.once("execution_start", () => {
+        wk1.interrupt();
+      });
+      await wk1.wait();
+      // NOTE: never will running here
+      expect(true).toBe(false);
+    } catch (_error) {
+      let error: any = _error;
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe("Execution Interrupted");
+    }
   });
 });

@@ -143,4 +143,23 @@ describe("Client", () => {
     expect(Array.isArray(result.data)).toBe(true);
     expect(result.data?.[0].type).toBe("output");
   });
+
+  it("should be able to stop after calling client.interrupt()", async () => {
+    useSimple1(workflow, {
+      steps: 100,
+    });
+
+    try {
+      client.once("execution_start", () => {
+        client.interrupt();
+      });
+      await workflow.invoke<any[]>(client);
+      // NOTE: never will running here
+      expect(true).toBe(false);
+    } catch (_error) {
+      let error: any = _error;
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe("Execution Interrupted");
+    }
+  });
 });
