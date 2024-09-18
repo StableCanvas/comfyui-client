@@ -150,7 +150,7 @@ describe("Client", () => {
     });
 
     try {
-      client.once("execution_start", () => {
+      client.once("progress", () => {
         client.interrupt();
       });
       await workflow.invoke<any[]>(client);

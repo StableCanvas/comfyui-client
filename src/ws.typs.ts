@@ -14,13 +14,13 @@ export namespace ComfyUiWsTypes {
     }
     export interface Executing {
       node: string;
+      display_node: string;
       prompt_id: string;
     }
     export interface Progress {
       value: number;
       max: number;
       prompt_id: string;
-      last_prompt_id: string;
       node: string;
     }
     export interface Status {
@@ -32,6 +32,7 @@ export namespace ComfyUiWsTypes {
     }
     export interface ExecutionStart {
       prompt_id: string;
+      timestamp: number;
     }
     export interface ExecutionError {
       prompt_id: string;
@@ -47,6 +48,7 @@ export namespace ComfyUiWsTypes {
     export interface ExecutionCached {
       nodes: string[];
       prompt_id: string;
+      timestamp: number;
     }
     export interface ExecutionSuccess {
       prompt_id: string;

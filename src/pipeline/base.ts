@@ -256,7 +256,7 @@ export class BasePipe<
     return { samples, vae, cls };
   }
 
-  _save(filename_prefix?: string) {
+  protected _save(filename_prefix?: string) {
     const { samples, vae, cls } = this.build();
 
     const images = cls.VAEDecode({ samples, vae })[0];

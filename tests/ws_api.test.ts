@@ -45,7 +45,17 @@ describe("WS", () => {
     client.close();
   });
 
+  async function ping() {
+    try {
+      await client.getQueue();
+    } catch (error) {
+      // do nothing
+    }
+  }
+
   it("should create a image from ws api", async () => {
+    await ping();
+
     const prompt = create_s1_prompt();
     const resp = await client.enqueue(prompt);
     expect(resp.images.length).toBe(1);
@@ -54,16 +64,20 @@ describe("WS", () => {
   });
 
   it("should get history when create task done", async () => {
+    await ping();
+
     const prompt = create_s1_prompt();
     const resp = await client.enqueue(prompt);
     const history = await client.getHistory();
     const history_prompt = history.History.find(
-      (x) => x.prompt[1] === resp.prompt_id
+      (x) => x.prompt[1] === resp.prompt_id,
     );
     expect(history_prompt).toBeDefined();
   });
 
   it("should subscribe to the correct event stream", async () => {
+    await ping();
+
     const events_arr = collect_events(client, [
       "status",
       "execution_cached",
@@ -71,16 +85,18 @@ describe("WS", () => {
     ]);
     const prompt = create_s1_prompt();
     const resp = await client.enqueue(prompt);
-
     expect(events_arr).toEqual([
       "execution_start",
       // Because only 1 step is executed, there is only one progress
       "progress",
       "executed",
+      // "execution_success",
     ]);
   });
 
   it("should listen on progress event when enqueue()", async () => {
+    await ping();
+
     const prompt1 = create_s1_prompt();
     const logs = [] as ComfyUiWsTypes.Messages.Progress[];
     await client.enqueue(prompt1, {
@@ -97,6 +113,8 @@ describe("WS", () => {
   });
 
   it("should be able to stop after calling workflow.interrupt()", async () => {
+    await ping();
+
     useSimple1(workflow, {
       steps: 35,
     });
@@ -105,7 +123,7 @@ describe("WS", () => {
 
     await wk1.enqueue();
     try {
-      wk1.once("execution_start", () => {
+      wk1.once("progress", () => {
         wk1.interrupt();
       });
       await wk1.wait();

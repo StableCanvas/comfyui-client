@@ -609,27 +609,11 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   }
 
   /**
-   * Randomizes the seed value of nodes with class type "KSampler" in the prompt.
-   *
-   * @param {Record<string, unknown>} prompt - The prompt object to randomize.
-   * @return {void}
-   */
-  randomizePrompt(prompt: Record<string, unknown>) {
-    for (const node of Object.values(prompt) as any[]) {
-      if (node.class_type === "KSampler") {
-        // python random seed is 32 bit
-        node.inputs.seed = Math.floor(Math.random() * (2 ** 32 - 1));
-      }
-    }
-  }
-
-  /**
    * Asynchronously enqueues a prompt with optional workflow and random seed.
    *
    * @param {Record<string, unknown>} prompt - The prompt to enqueue.
    * @param {Object} [options] - The options for enqueueing the prompt.
    * @param {Record<string, unknown>} [options.workflow] - The workflow for the prompt.
-   * @param {boolean} [options.disable_random_seed=false] - Whether to disable random seed.
    * @return {Promise<{ prompt_id: string; number: number; node_errors: any; }>} A promise that resolves with the enqueued prompt response.
    * @throws {Error} If there is an error in the response.
    */
@@ -637,12 +621,8 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     prompt: Record<string, unknown>,
     options?: {
       workflow?: Record<string, unknown>;
-      disable_random_seed?: boolean;
     },
   ) {
-    if (!options?.disable_random_seed) {
-      this.randomizePrompt(prompt);
-    }
     const resp = await this.queuePrompt(0, {
       prompt,
       workflow: options?.workflow,
