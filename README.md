@@ -89,28 +89,6 @@ Sometimes you may need to check some configurations of ComfyUI, such as whether 
 
 `getSamplers` `getSchedulers` `getSDModels` `getCNetModels` `getUpscaleModels` `getHyperNetworks` `getLoRAs` `getVAEs`
 
-#### InvokedWorkflow
-If you need to manage the life cycle of your request, then this class can be very convenient
-
-instance
-```ts
-// You can instantiate manually
-const invoked = new InvokedWorkflow({ /* workflow */ }, client);
-// or use the workflow api to instantiate
-const invoked = your_workflow.instance();
-```
-running
-```ts
-// job enqueue
-await invoked.enqueue();
-// job result promise
-const job_promise = invoked.wait();
-// if you want interrupt it
-invoked.interrupt();
-// query job status
-invoked.query();
-```
-
 ## Pipeline Usage
 
 The pipeline is a simple DSL implementation in this library that allows for easy creation of simple workflows and immediate results.
@@ -314,6 +292,28 @@ const result = await wf1.invoke(client);
 > Q: What is the relationship between workflow and client? ?
 > 
 > A: If you need to refer to complete example code, you can check out the [./examples/nodejs/main*.ts](./examples/nodejs/src) entry files. These contain fully executable code examples ranging from the simplest to slightly more complex workflows.
+
+#### InvokedWorkflow
+If you need to manage the life cycle of your request, then this class can be very convenient
+
+instance
+```ts
+// You can instantiate manually
+const invoked = new InvokedWorkflow({ /* workflow */ }, client);
+// or use the workflow api to instantiate
+const invoked = your_workflow.instance();
+```
+running
+```ts
+// job enqueue
+await invoked.enqueue();
+// job result promise
+const job_promise = invoked.wait();
+// if you want interrupt it
+invoked.interrupt();
+// query job status
+invoked.query();
+```
 
 ### type support
 
