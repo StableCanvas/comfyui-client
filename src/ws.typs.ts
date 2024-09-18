@@ -48,6 +48,10 @@ export namespace ComfyUiWsTypes {
       nodes: string[];
       prompt_id: string;
     }
+    export interface ExecutionSuccess {
+      prompt_id: string;
+      timestamp: number;
+    }
   }
 }
 
@@ -61,6 +65,7 @@ export type ComfyUIClientEvents = {
   execution_start: [ComfyUiWsTypes.Messages.ExecutionStart];
   execution_error: [ComfyUiWsTypes.Messages.ExecutionError];
   execution_cached: [ComfyUiWsTypes.Messages.ExecutionCached];
+  execution_success: [ComfyUiWsTypes.Messages.ExecutionSuccess];
 
   // WS events (Events sent by the client itself)
   reconnected: [];

@@ -50,7 +50,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
       client: ComfyUIApiClient;
       resolver?: WorkflowOutputResolver<T>;
       progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
-    }
+    },
   ) {
     super();
     const { workflow, client, resolver } = options;
@@ -69,7 +69,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
   protected _task_id_guard() {
     if (!this.task_id) {
       throw new Error(
-        "This workflow is not enqueued and the execution status cannot be interrupt"
+        "This workflow is not enqueued and the execution status cannot be interrupt",
       );
     }
     return this.task_id;
@@ -78,6 +78,12 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
   protected _done_guard() {
     if (this._disposed || this.is_done) {
       throw new Error("This workflow has been disposed");
+    }
+  }
+
+  protected _ws_guard() {
+    if (this.client.socket === null) {
+      throw new Error("WebSocket is not connected");
     }
   }
 
@@ -96,7 +102,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
   on<T extends EventEmitter.EventNames<ComfyUIClientEvents>>(
     type: T,
     callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
-    options?: any
+    options?: any,
   ) {
     this._done_guard();
     const { client } = this;
@@ -112,7 +118,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
   once<T extends EventEmitter.EventNames<ComfyUIClientEvents>>(
     type: T,
     callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
-    options?: any
+    options?: any,
   ) {
     this._done_guard();
     const { client } = this;
@@ -224,7 +230,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     const task_id = this._task_id_guard();
     const result = await client.getPromptResult(
       task_id,
-      resolver ?? RESOLVERS.image
+      resolver ?? RESOLVERS.image,
     );
     this._result.images = [...this._result.images, ...result.images];
     this._result.data = this._result.data ?? result.data;
@@ -232,7 +238,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
   }
 
   protected when_interrupted(
-    cb: (data: ComfyUiWsTypes.Messages.ExecutionInterrupted) => any
+    cb: (data: ComfyUiWsTypes.Messages.ExecutionInterrupted) => any,
   ) {
     const task_id = this._task_id_guard();
     this._connect(
@@ -240,7 +246,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
         if (data.prompt_id === task_id) {
           cb(data);
         }
-      })
+      }),
     );
   }
 
@@ -287,12 +293,27 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
    */
   public async wait() {
     this._done_guard();
+    this._ws_guard();
+
     const task_id = this._task_id_guard();
 
     return new Promise<WorkflowOutput>((resolve, reject) => {
       const done = () => {
         this.is_done = true;
         this.dispose();
+      };
+      const maybe_done = async () => {
+        try {
+          const status = await this.query();
+          if (!status.done) {
+            return;
+          }
+          resolve(this._result);
+          done();
+        } catch (error) {
+          reject(error);
+          done();
+        }
       };
       this.when_interrupted((data) => {
         reject(new Error("Execution Interrupted"));
@@ -304,18 +325,16 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
             return;
           }
           this.resolve_to_result(data);
-          try {
-            const status = await this.query();
-            if (!status.done) {
-              return;
-            }
-            resolve(this._result);
-            done();
-          } catch (error) {
-            reject(error);
-            done();
+          maybe_done();
+        }),
+      );
+      this._connect(
+        this.client.on("execution_success", async (data) => {
+          if (data.prompt_id !== task_id) {
+            return;
           }
-        })
+          maybe_done();
+        }),
       );
     });
   }
