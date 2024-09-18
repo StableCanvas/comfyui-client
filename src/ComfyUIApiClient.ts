@@ -28,7 +28,13 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   // NOTE: useless ... just for debug
   private _plugins = [] as ClientPlugin[];
 
-  constructor(config: IComfyApiConfig) {
+  constructor(
+    config: Omit<IComfyApiConfig, "fetch" | "WebSocket"> & {
+      // NOTE: This is written to reduce type issues... because sometimes `as any` is unavoidable
+      fetch?: any;
+      WebSocket?: any;
+    },
+  ) {
     super(config);
 
     const cache_ns = `${config.api_host}`;
@@ -102,7 +108,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    */
   async queuePrompt(
     queue_index: number,
-    { prompt, workflow }: { prompt: any; workflow: any }
+    { prompt, workflow }: { prompt: any; workflow: any },
   ): Promise<ComfyUIClientResponseTypes.QueuePrompt> {
     const body: Record<string, unknown> = {
       client_id: this.clientId,
@@ -342,7 +348,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   async storeUserData(
     file: string,
     data: any,
-    options?: RequestInit & { stringify?: boolean; throwOnError?: boolean }
+    options?: RequestInit & { stringify?: boolean; throwOnError?: boolean },
   ): Promise<void> {
     const resp = await this.fetchApi(`/userdata/${encodeURIComponent(file)}`, {
       method: "POST",
@@ -352,7 +358,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     if (resp.status !== 200) {
       const error = await resp.text();
       throw new Error(
-        `Error storing user data file '${file}': ${resp.status} ${error}`
+        `Error storing user data file '${file}': ${resp.status} ${error}`,
       );
     }
   }
@@ -474,10 +480,10 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   async getPromptStatus(prompt_id: string) {
     const { Running, Pending } = await this.getQueue();
     const running = Running.some(
-      (task: any) => task?.prompt?.[1] === prompt_id
+      (task: any) => task?.prompt?.[1] === prompt_id,
     );
     const pending = Pending.some(
-      (task: any) => task?.prompt?.[1] === prompt_id
+      (task: any) => task?.prompt?.[1] === prompt_id,
     );
     const done = !running && !pending;
     return {
@@ -518,12 +524,12 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    */
   async getPromptResult<T>(
     prompt_id: string,
-    resolver: WorkflowOutputResolver<T>
+    resolver: WorkflowOutputResolver<T>,
   ): Promise<WorkflowOutput<T>>;
   async getPromptResult(prompt_id: string): Promise<WorkflowOutput>;
   async getPromptResult(
     prompt_id: string,
-    resolver?: any
+    resolver?: any,
   ): Promise<WorkflowOutput> {
     const outputs = await this.getPromptOutputs(prompt_id);
     if (typeof resolver !== "function") {
@@ -540,7 +546,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
         images: [],
         prompt_id,
         data: null,
-      } as WorkflowOutput
+      } as WorkflowOutput,
     );
   }
 
@@ -569,7 +575,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    */
   async waitForPromptWebSocket<T>(
     prompt_id: string,
-    resolver: WorkflowOutputResolver<T>
+    resolver: WorkflowOutputResolver<T>,
   ) {
     const output: WorkflowOutput<T> = {
       images: [],
@@ -632,7 +638,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     options?: {
       workflow?: Record<string, unknown>;
       disable_random_seed?: boolean;
-    }
+    },
   ) {
     if (!options?.disable_random_seed) {
       this.randomizePrompt(prompt);
@@ -669,7 +675,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
       workflow?: Record<string, unknown>;
       disable_random_seed?: boolean;
       polling_ms?: number;
-    }
+    },
   ) {
     const resp = await this._enqueue_prompt(prompt, options);
     const prompt_id = resp.prompt_id;
@@ -689,15 +695,15 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    */
   async enqueue_polling<T>(
     prompt: Record<string, unknown>,
-    options?: EnqueueOptions<T>
+    options?: EnqueueOptions<T>,
   ): Promise<WorkflowOutput<T>>;
   async enqueue_polling(
     prompt: Record<string, unknown>,
-    options?: EnqueueOptions
+    options?: EnqueueOptions,
   ): Promise<WorkflowOutput>;
   async enqueue_polling(
     prompt: Record<string, unknown>,
-    options?: any
+    options?: any,
   ): Promise<WorkflowOutput> {
     if (typeof options?.progress === "function") {
       throw new Error("progress option is not supported in polling mode");
@@ -708,7 +714,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     await this.waitForPrompt(prompt_id, options?.polling_ms);
     return await this.getPromptResult(
       prompt_id,
-      options?.resolver ?? RESOLVERS.image
+      options?.resolver ?? RESOLVERS.image,
     );
   }
 
@@ -723,11 +729,11 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    */
   async enqueue<T>(
     prompt: Record<string, unknown>,
-    options?: EnqueueOptions<T>
+    options?: EnqueueOptions<T>,
   ): Promise<WorkflowOutput<T>>;
   async enqueue(
     prompt: Record<string, unknown>,
-    options?: EnqueueOptions
+    options?: EnqueueOptions,
   ): Promise<WorkflowOutput>;
   async enqueue(prompt: Record<string, unknown>, options?: any) {
     const resp = await this._enqueue_prompt(prompt, options);
@@ -737,7 +743,7 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
     try {
       return await this.waitForPromptWebSocket(
         prompt_id,
-        options?.resolver ?? RESOLVERS.image
+        options?.resolver ?? RESOLVERS.image,
       );
     } finally {
       off_progress();
