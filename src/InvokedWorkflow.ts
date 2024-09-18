@@ -4,30 +4,7 @@ import type { WorkflowOutput, IWorkflow } from "./types";
 import { RESOLVERS } from "./builtins";
 import { ComfyUIClientEvents, ComfyUiWsTypes } from "./ws.typs";
 import EventEmitter from "eventemitter3";
-
-class Disposable {
-  protected _disposed = false;
-  protected _disposed_cbs = [] as any[];
-  public dispose() {
-    if (this._disposed) {
-      return;
-    }
-    this._disposed = true;
-
-    this._disposed_cbs.forEach((cb) => {
-      if (typeof cb === "function") {
-        cb();
-      }
-    });
-  }
-  public _connect(cb: () => void) {
-    if (this._disposed) {
-      cb();
-      return;
-    }
-    this._disposed_cbs.push(cb);
-  }
-}
+import { Disposable } from "./Disposable";
 
 export class InvokedWorkflow<T = unknown> extends Disposable {
   protected task_id?: string;
@@ -106,10 +83,12 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
   ) {
     this._done_guard();
     const { client } = this;
-    return client.on(type, (...args) => {
+    const off = client.on(type, (...args) => {
       if (!this.is_owner_event(...args)) return;
       callback(...args);
     });
+    this._connect(off);
+    return off;
   }
 
   /**
@@ -127,6 +106,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
       callback(...args);
       off();
     });
+    this._connect(off);
     return off;
   }
 

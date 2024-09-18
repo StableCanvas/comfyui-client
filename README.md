@@ -111,6 +111,64 @@ invoked.interrupt();
 invoked.query();
 ```
 
+## Pipeline Usage
+
+The pipeline is a simple DSL implementation in this library that allows for easy creation of simple workflows and immediate results.
+
+### Text to Image
+
+```typescript
+import { BasePipe } from "@stable-canvas/comfyui-client";
+
+const client = /* client instance */;
+
+new BasePipe()
+  .with(client)
+  .model("sdxl.safetensors")
+  .prompt("A beautiful sunset over the mountains")
+  .negative("Low quality, blurry")
+  .size(1024, 768)
+  .steps(35)
+  .cfg(5)
+  .save()
+  .wait() // call wait() to start the promise chain
+  .then(({ images }) => {
+    // process images array
+  })
+  .finally(() => client.close());
+```
+
+### Image to Image with Task Status Monitoring
+
+```typescript
+import { BasePipe } from "@stable-canvas/comfyui-client";
+import fs from 'fs';
+
+const client = /* client instance */;
+
+new BasePipe()
+  .with(client)
+  .model("sdxl.safetensors")
+  .image(
+    fs.readFileSync("path-to-your-input-image.jpg")
+  )
+  // .mask(maskImage) // call mask() to add a mask
+  .prompt("A husky with pearls, oil painting style")
+  .negative("Low quality, blurry")
+  .size(640, 960)
+  .steps(35)
+  .cfg(7)
+  .denoise(0.5)
+  .save()
+  .on("progress", console.log)
+  .wait()
+  .then(({ images }) => {
+    // Process generated images
+  })
+  .finally(() => client.close());
+```
+
+> For complete example code, refer to the files `./examples/nodejs/src/main-pipe-*.ts` in the project repository.
 
 ## Workflow Usage
 ### Programmable/Human-readable pattern
