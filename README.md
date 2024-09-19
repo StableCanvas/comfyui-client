@@ -37,6 +37,17 @@ Use npm or yarn to install the `@stable-canvas/comfyui-client` package.
 pnpm add @stable-canvas/comfyui-client
 ```
 
+### Dependencies (optional)
+
+To fully utilize the features of this library, your ComfyUI installation needs to support custom nodes for external extensions.
+
+> These nodes are used to accept base64 encoded input and forward WebSocket requests.
+>
+> **Note**: If you don't need functionalities like `returning images via WebSocket`, `image to image`, or `inpainting`, you don't need to install these nodes.
+
+- [comfyui-tooling-nodes](https://github.com/Acly/comfyui-tooling-nodes): A crucial extension that provides the ability to handle base64 API transmissions; `image to image` and `inpainting` functionalities depend on it.
+- [efficiency-nodes-comfyui](https://github.com/jags111/efficiency-nodes-comfyui): This library provides a convenient LoRA manager, which is required in the `src/pipeline/efficient` module.
+
 ## Client Usage
 
 First, import the `ComfyUIApiClient` class from the package.
@@ -293,6 +304,22 @@ const result = await wf1.invoke(client);
 > 
 > A: If you need to refer to complete example code, you can check out the [./examples/nodejs/main*.ts](./examples/nodejs/src) entry files. These contain fully executable code examples ranging from the simplest to slightly more complex workflows.
 
+
+### type support
+
+- builtin node types
+ 
+![node types](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/type_hints.png)
+
+- builtin node params
+
+![node params](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/params.png)
+
+- any other node
+
+![other node](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/anynode.png)
+
+
 #### InvokedWorkflow
 If you need to manage the life cycle of your request, then this class can be very convenient
 
@@ -314,20 +341,6 @@ invoked.interrupt();
 // query job status
 invoked.query();
 ```
-
-### type support
-
-- builtin node types
- 
-![node types](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/type_hints.png)
-
-- builtin node params
-
-![node params](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/params.png)
-
-- any other node
-
-![other node](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/anynode.png)
 
 
 ## Client Plugin
