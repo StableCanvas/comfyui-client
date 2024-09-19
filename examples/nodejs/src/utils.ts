@@ -3,7 +3,8 @@ import fetch from "node-fetch";
 import fs from "fs";
 import { WorkflowOutput } from "../../../src/types";
 import path from "path";
-import { isNone } from "../../../src/misc";
+import { Errors, isNone } from "../../../src/misc";
+import { ComfyUIApiClient } from "../../../src/ComfyUIApiClient";
 
 export const save_url_to_file = async (url: string, filepath: string) => {
   const res = await fetch(url);
@@ -29,7 +30,7 @@ export const save_wf_outputs = async (outputs: WorkflowOutput) => {
       case "url": {
         const { data: url } = image;
         const filename = new URLSearchParams(new URL(url).search).get(
-          "filename"
+          "filename",
         );
         if (isNone(filename)) {
           console.error("No filename in URL");
@@ -50,3 +51,18 @@ export const save_wf_outputs = async (outputs: WorkflowOutput) => {
     }
   }
 };
+
+export function runDemo(main: () => Promise<void>, client: ComfyUIApiClient) {
+  return main()
+    .then(() => console.log("done"))
+    .catch((err) => {
+      if (err instanceof Errors.HttpError) {
+        console.log(`[Errors.HttpError]`);
+        console.log(JSON.stringify(err.json));
+        console.log(err.message);
+      } else {
+        console.error(err);
+      }
+    })
+    .finally(() => client.close());
+}
