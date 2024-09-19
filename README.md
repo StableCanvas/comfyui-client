@@ -16,7 +16,10 @@ documentations:
 examples:
 - nodejs
   - [client api](examples/nodejs/src/main.ts)
-  - [workflow factory api](examples/nodejs/src/main-wf.ts)
+  - [workflow factory](examples/nodejs/src/main-wf.ts)
+  - [polling](examples/nodejs/src/main-poll.ts)
+  - [pipe: image to image](examples/nodejs/src/main-pipe-i2i.ts)
+  - [pipe: text to image](examples/nodejs/src/main-pipe-t2i.ts)
 - [Web](examples/web/index.html)
 
 ## Features
@@ -26,8 +29,7 @@ examples:
 - **TypeScript Typings**: Comes with built-in TypeScript support for type safety and better development experience.
 - **Programmable Workflows**: Introduces a human-readable and highly customizable workflow interface inspired by [this issue](https://github.com/comfyanonymous/ComfyUI/issues/612) and [this library](https://github.com/Chaoses-Ib/ComfyScript).
 - **Ease of Use**: Both implementation and usage are designed to be intuitive and user-friendly.
-
-By incorporating these features, `@stable-canvas/comfyui-client` provides a robust and versatile solution for integrating ComfyUI capabilities into your projects effortlessly.
+- **Zero Dependencies**: This library is designed to minimize the introduction of external dependencies and is currently dependency-free.
 
 ## Installation
 
