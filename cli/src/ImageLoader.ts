@@ -36,20 +36,20 @@ export class ImageLoader {
             node.widgets_values?.map((value, index) => {
               const widget_name = widgets_name[index] || `unknown_${index}`;
               return [widget_name, value];
-            }) || []
+            }) || [],
           ),
           ...(node.inputs?.reduce(
             (acc, cur) => {
               const link = root.links.find((x) => x[0] === cur.link);
               if (!link) {
-                console.warn("No link found for input", cur);
+                // console.warn("No link found for input", cur);
                 return acc;
               }
               // [input_node_id, input_slot_id]
               acc[cur.name] = [link[1], link[2]];
               return acc;
             },
-            {} as Record<string, any>
+            {} as Record<string, any>,
           ) || {}),
         },
       };

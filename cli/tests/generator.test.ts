@@ -1,5 +1,8 @@
 import { WorkflowCodeGenerator } from "../src/Generator";
+import { ImageLoader } from "../src/ImageLoader";
 import { CUIWorkflow } from "../src/Workflow";
+import * as path from "path";
+import * as fs from "fs";
 
 import * as WorkflowMinNodes from "./test-inputs/workflow-min.png.workflow.json";
 
@@ -51,7 +54,26 @@ const [] = cls.SaveImage({
   "filename_prefix": "ComfyUI",
   "images": IMAGE_1
 });
-    `.trim()
+    `.trim(),
     );
+  });
+
+  it("should to generate code from HiResfix_workflow.png", async () => {
+    const loader = new ImageLoader();
+    const json = await loader.loadFromFile(
+      path.join(__dirname, "../tests/test-inputs/HiResfix_workflow.png"),
+    );
+    const workflow = await loader.imageWkToWorkflow(json);
+    const generator = new WorkflowCodeGenerator();
+    const code = await generator.generate(workflow);
+    const expected_code = fs
+      .readFileSync(
+        path.join(
+          __dirname,
+          "../tests/test-inputs/HiResfix_workflow.png.expected.txt",
+        ),
+      )
+      .toString("utf-8");
+    expect(code.trim()).toEqual(expected_code.trim());
   });
 });

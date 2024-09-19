@@ -10,12 +10,16 @@ interface WkNodeGraphNode {
   children: WkNodeGraphNode[];
 }
 
+const INVALID_VARIABLE_NAME = /^a-zA-Z|[\. \-*/+~]/;
+const IS_INVALID_VAR = (name: string) => INVALID_VARIABLE_NAME.test(name);
+const VAR = (name: string) => (IS_INVALID_VAR(name) ? `["${name}"]` : name);
+
 export class WorkflowCodeGenerator {
   constructor() {}
 
   private collectionDependencies(wk: CUIWorkflow) {
     const all_refs = wk.nodes.map((x) =>
-      Object.values(x.data.inputs).filter((x) => Array.isArray(x))
+      Object.values(x.data.inputs).filter((x) => Array.isArray(x)),
     ) as WorkflowNodeInputRef[][];
 
     // node_index -> [output_index]
@@ -27,7 +31,7 @@ export class WorkflowCodeGenerator {
         });
         return acc;
       },
-      {} as Record<number, number[]>
+      {} as Record<number, number[]>,
     );
   }
 
@@ -39,7 +43,7 @@ export class WorkflowCodeGenerator {
         acc[node_index] = Math.max(...args_index) + 1;
         return acc;
       },
-      {} as Record<number | string, number>
+      {} as Record<number | string, number>,
     );
 
     const nodes = wk.nodes;
@@ -156,7 +160,7 @@ export class WorkflowCodeGenerator {
 
             return types.objectProperty(
               types.stringLiteral(inputKey),
-              types.identifier(refVarName)
+              types.identifier(refVarName),
             );
           } else {
             let val;
@@ -186,7 +190,7 @@ export class WorkflowCodeGenerator {
             }
             return types.objectProperty(types.stringLiteral(inputKey), val);
           }
-        }
+        },
       );
 
       const inputObjectExpression = types.objectExpression(inputExpressions);
@@ -199,16 +203,23 @@ export class WorkflowCodeGenerator {
       const leftArrayPattern = types.arrayPattern(outputIdentifiers);
 
       const callExpression = types.callExpression(
-        types.memberExpression(
-          types.identifier("cls"),
-          types.identifier(nodeData.class_type)
-        ),
-        [inputObjectExpression]
+        IS_INVALID_VAR(nodeData.class_type)
+          ? types.memberExpression(
+              types.identifier("cls"),
+              types.identifier(`"${nodeData.class_type}"`),
+              true,
+            )
+          : types.memberExpression(
+              types.identifier("cls"),
+              types.identifier(nodeData.class_type),
+              false,
+            ),
+        [inputObjectExpression],
       );
 
       const variableDeclarator = types.variableDeclarator(
         leftArrayPattern,
-        callExpression
+        callExpression,
       );
       const variableDeclaration = types.variableDeclaration("const", [
         variableDeclarator,

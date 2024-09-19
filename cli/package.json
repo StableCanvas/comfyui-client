@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/comfyui-client-cli",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "cli tools for @stable-canvas/comfyui-client",
   "bin": {
     "cuc-w2c": "./dist/main-cli.js"
