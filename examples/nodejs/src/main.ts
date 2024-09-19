@@ -213,7 +213,6 @@ const main = async () => {
   client.connect();
   const resp = await client.runPrompt(payload.prompt, {
     workflow: payload.workflow,
-    disable_random_seed: false,
   });
   console.log(resp);
 };
