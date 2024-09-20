@@ -1,11 +1,25 @@
-import { Project, Writers } from "ts-morph";
+import { Project } from "ts-morph";
 import fs from "fs";
 import path from "path";
 import url from "url";
 
-// 非法变量名
 const INVALID_VARIABLE_NAME = /^a-zA-Z|[\. \-*/+~]/;
 const VAR = (name) => (INVALID_VARIABLE_NAME.test(name) ? `["${name}"]` : name);
+
+function getTypeFromSchema(schema) {
+  switch (schema.type) {
+    case "string":
+      return "string";
+    case "number":
+      return "number";
+    case "boolean":
+      return "boolean";
+    case "object":
+      return "{ [k: string]: unknown }";
+    default:
+      return "unknown";
+  }
+}
 
 function addInterface(nodeName, nodeSchema, namespace) {
   const nodeInterface = namespace.addInterface({
@@ -20,7 +34,7 @@ function addInterface(nodeName, nodeSchema, namespace) {
             ${Object.entries(nodeSchema.properties.inputs.properties)
               .map(
                 ([inputName, inputSchema]) =>
-                  `${INVALID_VARIABLE_NAME.test(inputName) ? `["${inputName}"]` : inputName}: ${getTypeFromSchema(inputSchema)};`
+                  `${INVALID_VARIABLE_NAME.test(inputName) ? `["${inputName}"]` : inputName}: ${getTypeFromSchema(inputSchema)};`,
               )
               .join("\n")}
             [k: string]: unknown;
@@ -85,14 +99,12 @@ function generateTypes(inputSchema) {
   for (const [nodeName, nodeSchema] of Object.entries(inputSchema.properties)) {
     const interfaceName = nodeName.replace(
       /[ \-+=|:{}\(\)\]\[\/\\><@#%,'.?!]/g,
-      "_"
+      "_",
     );
 
     try {
       nodeTypesInterface.addProperty({
-        name: INVALID_VARIABLE_NAME.test(nodeName)
-          ? `["${nodeName}"]`
-          : nodeName,
+        name: VAR(nodeName),
         type: `ComfyUINodeTypes["${interfaceName}"]`,
         type: interfaceName,
         hasQuestionToken: true,
@@ -115,20 +127,7 @@ function generateTypes(inputSchema) {
   return sourceFile.getFullText();
 }
 
-function getTypeFromSchema(schema) {
-  switch (schema.type) {
-    case "string":
-      return "string";
-    case "number":
-      return "number";
-    case "boolean":
-      return "boolean";
-    case "object":
-      return "{ [k: string]: unknown }";
-    default:
-      return "unknown";
-  }
-}
+// 👇 ------------- SCRIPT START ------------- 👇
 
 const [
   input_node_types_json_file_path = "./scripts/data/comfyui.node.types.json",
@@ -140,7 +139,7 @@ if (!fs.existsSync(input_node_types_json_file_path)) {
 }
 
 const inputSchema = JSON.parse(
-  fs.readFileSync(input_node_types_json_file_path, "utf-8")
+  fs.readFileSync(input_node_types_json_file_path, "utf-8"),
 );
 
 try {
@@ -151,10 +150,10 @@ try {
     globalThis.__dirname || path.dirname(url.fileURLToPath(import.meta.url));
   fs.writeFileSync(
     path.resolve(__dirname, "../src/schema/comfyui.node.types.ts"),
-    generatedCode
+    generatedCode,
   );
   console.log(
-    "Types generated successfully. Check ./src/schema/comfyui.node.types.ts"
+    "Types generated successfully. Check ./src/schema/comfyui.node.types.ts",
   );
 } catch (error) {
   console.error(error);
