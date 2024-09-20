@@ -1,5 +1,5 @@
 import "esm-hook";
-import { ComfyUIApiClient, ComfyUIWorkflow } from "../../../src/main";
+import { Client, Workflow } from "../../../src/main";
 import WebSocket from "ws";
 import fetch from "node-fetch";
 
@@ -7,7 +7,7 @@ import fs from "fs";
 import { save_wf_outputs } from "./utils";
 
 const createWorkflow = () => {
-  const workflow = new ComfyUIWorkflow();
+  const workflow = new Workflow();
   const {
     KSampler,
     CheckpointLoaderSimple,
@@ -39,7 +39,7 @@ const createWorkflow = () => {
   const { positive, negative } = text_prompt(
     "best quality, 1girl",
     "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
-    clip
+    clip,
   );
 
   const [samples] = KSampler({
@@ -72,7 +72,7 @@ const createWorkflow = () => {
   return workflow;
 };
 
-const client = new ComfyUIApiClient({
+const client = new Client({
   api_host: "127.0.0.1:8188",
   clientId: "comfy-ui-client-nodejs-test-id",
   // user: "comfy-client",

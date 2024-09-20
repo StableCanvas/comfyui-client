@@ -155,8 +155,8 @@
     //   ComfyUIWorkflow,
     // } from "@stable-canvas/comfyui-client";
     import {
-      ComfyUIApiClient,
-      ComfyUIWorkflow,
+      Client,
+      Workflow,
     } from "../../dist/main.module.mjs";
 
     const html = htm.bind(h);
@@ -188,7 +188,7 @@
       // base64[]
       images: [],
 
-      alert_messages: ["test messages \n\n 👋👋👋"],
+      alert_messages: [],
 
       setProgress: (progress) => {
         set({ progress });
@@ -228,7 +228,7 @@
           ckpt_name,
         },
       } = useStore.get();
-      const workflow = new ComfyUIWorkflow();
+      const workflow = new Workflow();
       const cls = workflow.classes;
       const [model, clip, vae] = cls.CheckpointLoaderSimple({
         ckpt_name,
@@ -261,7 +261,7 @@
       return workflow;
     };
 
-    const client = new ComfyUIApiClient({
+    const client = new Client({
       api_host: "localhost:8188",
     });
     client.connect();

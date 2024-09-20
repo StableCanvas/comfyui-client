@@ -1,9 +1,7 @@
 import "esm-hook";
-import { ComfyUIApiClient } from "../../../src/main";
+import { Client } from "../../../src/main";
 import WebSocket from "ws";
 import fetch from "node-fetch";
-
-import fs from "fs";
 
 const payload = {
   prompt: {
@@ -202,7 +200,7 @@ const payload = {
   },
 };
 
-const client = new ComfyUIApiClient({
+const client = new Client({
   api_host: "127.0.0.1:8188",
   api_base: "",
   sessionName: "",
@@ -211,7 +209,7 @@ const client = new ComfyUIApiClient({
 });
 const main = async () => {
   client.connect();
-  const resp = await client.runPrompt(payload.prompt, {
+  const resp = await client.enqueue_polling(payload.prompt, {
     workflow: payload.workflow,
   });
   console.log(resp);

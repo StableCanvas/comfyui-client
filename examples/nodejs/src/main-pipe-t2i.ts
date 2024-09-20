@@ -1,9 +1,9 @@
-import { BasePipe, ComfyUIApiClient } from "../../../src/main";
+import { BasePipe, Client } from "../../../src/main";
 import { WebSocket } from "ws";
 import { promises as fs } from "fs";
 import path from "path";
 
-const client = new ComfyUIApiClient({
+const client = new Client({
   WebSocket,
 });
 

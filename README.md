@@ -9,9 +9,9 @@ Javascript api Client for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) t
 This client provides comprehensive support for all available RESTful and WebSocket APIs, with built-in TypeScript typings for enhanced development experience. Additionally, it introduces a programmable workflow interface, making it easy to create and manage workflows in a human-readable format.
 
 documentations:
-- [Rest API](https://stablecanvas.github.io/comfyui-client/classes/ComfyUIApiClient.html)
-- [WebSocket API](https://stablecanvas.github.io/comfyui-client/classes/ComfyUIWsClient.html)
-- [Workflow API](https://stablecanvas.github.io/comfyui-client/classes/ComfyUIWorkflow.html)
+- [Rest API](https://stablecanvas.github.io/comfyui-client/classes/Client.html)
+- [WebSocket API](https://stablecanvas.github.io/comfyui-client/classes/WsClient.html)
+- [Workflow API](https://stablecanvas.github.io/comfyui-client/classes/Workflow.html)
 
 examples:
 - nodejs
@@ -59,15 +59,15 @@ If you plan to use the `pipeline` feature in a browser environment, you'll need 
 
 ## Client Usage
 
-First, import the `ComfyUIApiClient` class from the package.
+First, import the `Client` class from the package.
 
 ```javascript
-import { ComfyUIApiClient } from "@stable-canvas/comfyui-client";
+import { Client } from "@stable-canvas/comfyui-client";
 ```
 
 Client instance, in Browser
 ```js
-const client = new ComfyUIApiClient({
+const client = new Client({
     api_host: "127.0.0.1:8188",
 })
 // connect ws client
@@ -78,7 +78,7 @@ Client instance, in NodeJs
 import WebSocket from "ws";
 import fetch from "node-fetch";
 
-const client = new ComfyUIApiClient({
+const client = new Client({
     //...
     WebSocket,
     fetch,
@@ -118,10 +118,8 @@ The pipeline is a simple DSL implementation in this library that allows for easy
 ```typescript
 import { BasePipe } from "@stable-canvas/comfyui-client";
 
-const client = /* client instance */;
-
 new BasePipe()
-  .with(client)
+  .with(/* client instance */)
   .model("sdxl.safetensors")
   .prompt("A beautiful sunset over the mountains")
   .negative("Low quality, blurry")
@@ -142,10 +140,8 @@ new BasePipe()
 import { BasePipe } from "@stable-canvas/comfyui-client";
 import fs from 'fs';
 
-const client = /* client instance */;
-
 new BasePipe()
-  .with(client)
+  .with(/* client instance */)
   .model("sdxl.safetensors")
   .image(
     fs.readFileSync("path-to-your-input-image.jpg")
@@ -166,7 +162,33 @@ new BasePipe()
   .finally(() => client.close());
 ```
 
-> For complete example code, refer to the files `./examples/nodejs/src/main-pipe-*.ts` in the project repository.
+### LoRAs and CNets with Efficient
+
+`EfficientPipe` is based on the `Efficient` series nodes provided by `efficiency-nodes-comfyui` to expand lora/cnet features.
+
+```ts
+import { EfficientPipe } from "@stable-canvas/comfyui-client";
+const input_image = /* image data Buffer() */;
+const { images } = await new EfficientPipe()
+  .with(client)
+  .model("sd15.safetensors")
+  .seed()
+  .image(input_image)
+  .prompt("furry, A husky girl with pearls, oil painting style")
+  .negative("low quality, blurry")
+  .size(640, 960)
+  .steps(35)
+  .cfg(5)
+  .denoise(0.6)
+  .cnet("control_v11p_sd15_openpose.pth", input_image)
+  .lora("LowRA.safetensors")
+  .lora("add_detail.safetensors")
+  .save()
+  .wait();
+```
+
+### more examples
+For complete example code, refer to the files [`./examples/nodejs/src/main-pipe-*.ts`](./examples/nodejs/src/) in the project repository.
 
 ## Workflow Usage
 ### Programmable/Human-readable pattern
@@ -186,10 +208,11 @@ It has the following use cases:
 Here is a minimal example demonstrating how to create and execute a simple workflow using this library.
 
 ```ts
-const workflow = new ComfyUIWorkflow();
+import { Workflow } from "@stable-canvas/comfyui-client";
+const workflow = new Workflow();
 const cls = workflow.classes;
 const [model, clip, vae] = cls.CheckpointLoaderSimple({
-  ckpt_name: "lofi_v5.baked.fp16.safetensors",
+  ckpt_name: "sdxl.safetensors",
 });
 const enc = (text: string) => cls.CLIPTextEncode({ text, clip })[0];
 const [samples] = cls.KSampler({
@@ -214,9 +237,13 @@ cls.SaveImage({
   filename_prefix: "from-sc-comfy-ui-client",
   images: cls.VAEDecode({ samples, vae })[0],
 });
+console.log(
+  // This call will return a JSON object that can be used for ComfyUI API calls, primarily for demonstration or debugging purposes
+  workflow.workflow()
+)
 ```
 
-### Programable case
+### Programable real world case
 Both implementation and usage are extremely simple and human-readable. This programmable approach allows for dynamic workflow creation, enabling loops, conditionals, and reusable functions. It's particularly useful for batch processing, experimenting with different models or prompts, and creating more complex, flexible workflows.
 
 This specific workflow demonstrates the generation of multiple images using two different AI models ("lofi_v5" and "case-h-beta") and four different dress styles. It showcases how to create a reusable image generation pipeline and apply it across various prompts and models efficiently.
@@ -225,7 +252,7 @@ Below is a simple example of creating a workflow:
 
 ```ts
 const createWorkflow = () => {
-  const workflow = new ComfyUIWorkflow();
+  const workflow = new Workflow();
   const {
     KSampler,
     CheckpointLoaderSimple,
@@ -236,6 +263,9 @@ const createWorkflow = () => {
     NODE1,
   } = workflow.classes;
 
+  const width = 640;
+  const height = 960;
+  const batch_size = 1;
   const seed = Math.floor(Math.random() * 2 ** 32);
   const pos = "best quality, 1girl";
   const neg = "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T";
@@ -264,11 +294,11 @@ const createWorkflow = () => {
     "cosplay",
   ];
 
-  const generate_pipeline = (model, clip, vae, pos, neg) => {
+  const generate = (model, clip, vae, pos, neg) => {
     const [latent_image] = EmptyLatentImage({
-      width: 640,
-      height: 960,
-      batch_size: 1,
+      width,
+      height,
+      batch_size,
     });
     const [positive] = CLIPTextEncode({ text: pos, clip });
     const [negative] = CLIPTextEncode({ text: neg, clip });
@@ -282,25 +312,50 @@ const createWorkflow = () => {
     const [image] = VAEDecode({ samples, vae });
     return image;
   };
-
-  for (const cloth of dress_case) {
-    const input_pos = `${pos}, ${cloth} dress`;
-    const image = generate_pipeline(model1, clip1, vae1, input_pos, neg);
+  const save = (image, filename_prefix) =>
     SaveImage({
       images: image,
-      filename_prefix: `${cloth}-lofi-v5`,
+      filename_prefix,
     });
 
+  for (const cloth of dress_case) {
+    const input_pos1 = `${pos}, ${cloth} dress`;
+    const image1 = generate(model1, clip1, vae1, input_pos1, neg);
     const input_pos2 = `${pos}, ${cloth} dress`;
-    const image2 = generate_pipeline(model2, clip2, vae2, input_pos2, neg);
-    SaveImage({
-      images: image2,
-      filename_prefix: `${cloth}-case-h-beta`,
-    });
+    const image2 = generate(model2, clip2, vae2, input_pos2, neg);
+
+    save(image1, `${cloth}-lofi-v5`);
+    save(image2, `${cloth}-case-h-beta`);
   }
 
   return workflow;
 };
+```
+
+Yes, you read that right—we will repeatedly create some nodes, which might seem counterintuitive, but it's perfectly fine because the workflow will not be rendered within the ComfyUI server. Instead, it will execute each node sequentially, so even if creating a workflow with thousands of nodes is executable and correct.
+
+Notably, you can also leverage all your JavaScript programming knowledge, such as `recursion`, `functional programming`, `currying`, etc. For example, you can do something like this:
+
+```ts
+const generator = model => clip => vae => pos => neg => {
+  const [latent_image] = EmptyLatentImage({
+    width,
+    height,
+    batch_size,
+  });
+  const [positive] = CLIPTextEncode({ text: pos, clip });
+  const [negative] = CLIPTextEncode({ text: neg, clip });
+  const [samples] = KSampler({
+    ...sampler_settings,
+    model,
+    positive,
+    negative,
+    latent_image,
+  });
+  const [image] = VAEDecode({ samples, vae });
+  return image;
+};
+const model1_gen = generator(model1)(clip1)(vae1);
 ```
 
 #### Invoke workflow
@@ -335,7 +390,7 @@ If you need to manage the life cycle of your request, then this class can be ver
 instance
 ```ts
 // You can instantiate manually
-const invoked = new InvokedWorkflow({ /* workflow */ }, client);
+const invoked = new InvokedWorkflow({ /* workflow payload */ }, client);
 // or use the workflow api to instantiate
 const invoked = your_workflow.instance();
 ```
@@ -353,12 +408,12 @@ invoked.query();
 
 
 ## Client Plugin
-We provide ClientPlugin to expand Client capabilities.
+We provide `Plugin` to expand Client capabilities.
 
 simple example
 ```ts
-import { ClientPlugin } from "@stable-canvas/comfy"
-export class LoggingPlugin extends ClientPlugin {
+import { Plugin } from "@stable-canvas/comfy"
+export class LoggingPlugin extends Plugin {
   constructor() {
     super();
 
@@ -381,8 +436,8 @@ For example, sometimes you may need to provide node authentication capabilities,
 
 If you use the [ComfyUI-Login](https://github.com/liusida/ComfyUI-Login/tree/main) extension, you can use the built-in `plugins.LoginAuthPlugin` to configure the Client to support authentication
 ```ts
-import { ComfyUIApiClient, plugins } from "@stable-canvas/comfyui-client";
-const client = new ComfyUIApiClient()
+import { Client, plugins } from "@stable-canvas/comfyui-client";
+const client = /* client instance */;
 client.use(
   new plugins.LoginAuthPlugin({
     token: "MY_TOP_SECRET"
@@ -432,10 +487,10 @@ client.events.on('message', (event) => {
 If you've created a workflow instance, you can also subscribe to events emitted by that instance:
 
 ```ts
-const workflow = create1Workflow();
-const instance1 = workflow.instance(client);
+const invoked_wk = workflow.instance(client);
+const invoked_wk = /* or new InvokedWorkflow() */;
 
-instance1.on("execution_interrupted", () => {
+invoked_wk.on("execution_interrupted", () => {
   console.log("Workflow execution interrupted");
 });
 ```
@@ -470,7 +525,7 @@ console.log(resp.data); // "hi, I'm phi3"
 You can also apply the same resolver to a workflow using `workflow.invoke`:
 
 ```ts
-const workflow = /* class ComfyUIWorkflow */;
+const workflow = /* class Workflow */;
 const result = await workflow.invoke(client, { resolver });
 
 console.log(result.data); // "hi, I'm phi3"
@@ -483,7 +538,7 @@ ComfyUI does not enforce strict naming conventions for nodes, which can lead to 
 To address this issue, we provide the `workflow.node` interface. This interface allows you to create nodes using string-based names, regardless of whether they conform to standard variable naming rules.
 
 ```typescript
-const workflow = new ComfyUIWorkflow();
+const workflow = new Workflow();
 
 // ❌Incorrect: Cannot destructure directly
 // const { Efficient Loader } = workflow.classes;

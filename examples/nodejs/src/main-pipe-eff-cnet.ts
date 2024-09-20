@@ -1,10 +1,10 @@
-import { EfficientPipe, ComfyUIApiClient } from "../../../src/main";
+import { EfficientPipe, Client } from "../../../src/main";
 import { WebSocket } from "ws";
 import { promises as fs } from "fs";
 import path from "path";
 import { runDemo } from "./utils";
 
-const client = new ComfyUIApiClient({
+const client = new Client({
   WebSocket,
 });
 

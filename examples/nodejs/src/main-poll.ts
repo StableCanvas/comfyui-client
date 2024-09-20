@@ -1,10 +1,10 @@
 // Polling example with optional polling time config
 import "esm-hook";
-import { ComfyUIApiClient, ComfyUIWorkflow } from "../../../src/main";
+import { Client, Workflow } from "../../../src/main";
 import fetch from "node-fetch";
 
 const createWorkflow = () => {
-  const workflow = new ComfyUIWorkflow();
+  const workflow = new Workflow();
   const {
     KSampler,
     CheckpointLoaderSimple,
@@ -31,13 +31,13 @@ const createWorkflow = () => {
   };
 
   const [model, clip, vae] = load_model(
-    "WildCardX-XL TURBO/wildcardxXLTURBO_wildcardxXLTURBOV10-mid_293331-vid_329685.safetensors"
+    "WildCardX-XL TURBO/wildcardxXLTURBO_wildcardxXLTURBOV10-mid_293331-vid_329685.safetensors",
   );
   const latent_image = empty_latent(512, 512);
   const { positive, negative } = text_prompt(
     "best quality, 1girl",
     "worst quality, bad anatomy",
-    clip
+    clip,
   );
 
   const [samples] = KSampler({
@@ -66,7 +66,7 @@ const createWorkflow = () => {
   return workflow;
 };
 
-const client = new ComfyUIApiClient({
+const client = new Client({
   api_host: "xxxx-xxx-xxx-xxxx.proxy.runpod.net",
   api_base: "",
   sessionName: "rbt-comfy-client",

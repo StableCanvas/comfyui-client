@@ -1,5 +1,5 @@
 import "esm-hook";
-import { ComfyUIApiClient, ComfyUIWorkflow } from "../../../src/main";
+import { Client, Workflow } from "../../../src/main";
 import WebSocket from "ws";
 import fetch from "node-fetch";
 
@@ -14,7 +14,7 @@ const createWorkflow = ({
   out_from_ws_m1?: boolean;
   out_from_ws_m2?: boolean;
 }) => {
-  const workflow = new ComfyUIWorkflow();
+  const workflow = new Workflow();
   const {
     KSampler,
     CheckpointLoaderSimple,
@@ -99,7 +99,7 @@ const createWorkflow = ({
   return workflow;
 };
 
-const client = new ComfyUIApiClient({
+const client = new Client({
   api_host: "127.0.0.1:8188",
   api_base: "",
   sessionName: "",
@@ -114,7 +114,7 @@ const main = async () => {
   });
   fs.writeFileSync(
     path.join(__dirname, "../outputs/workflow-wf-loop.json"),
-    JSON.stringify(wk1.workflow(), null, 2)
+    JSON.stringify(wk1.workflow(), null, 2),
   );
   const resp = await wk1.invoke(client);
   await save_wf_outputs(resp);

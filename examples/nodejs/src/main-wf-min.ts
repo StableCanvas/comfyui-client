@@ -1,5 +1,5 @@
 import "esm-hook";
-import { ComfyUIApiClient, ComfyUIWorkflow } from "../../../src/main";
+import { Client, Workflow } from "../../../src/main";
 import WebSocket from "ws";
 import fetch from "node-fetch";
 
@@ -9,7 +9,7 @@ import fs from "fs";
 import path from "path";
 
 const createWorkflow = () => {
-  const workflow = new ComfyUIWorkflow();
+  const workflow = new Workflow();
   const cls = workflow.classes;
   const [model, clip, vae] = cls.CheckpointLoaderSimple({
     ckpt_name: "LOFI_V5.fp16.safetensors",
@@ -25,7 +25,7 @@ const createWorkflow = () => {
     model,
     positive: enc("best quality, 1girl"),
     negative: enc(
-      "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T"
+      "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
     ),
     latent_image: cls.EmptyLatentImage({
       width: 512,
@@ -41,7 +41,7 @@ const createWorkflow = () => {
   return workflow;
 };
 
-const client = new ComfyUIApiClient({
+const client = new Client({
   api_host: "127.0.0.1:8188",
   WebSocket: WebSocket as any,
   fetch: fetch as any,
