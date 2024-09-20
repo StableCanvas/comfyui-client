@@ -1,7 +1,7 @@
-import type { ComfyUIWorkflow } from "../../src/ComfyUIWorkflow";
+import type { Workflow } from "../../src/workflow/Workflow";
 
 export const useSimple1 = (
-  workflow: ComfyUIWorkflow,
+  workflow: Workflow,
   { steps = 1, cfg = 4, denoise = 1, seed = 42, width = 512, height = 512 } = {
     steps: 1,
     cfg: 4,
@@ -16,7 +16,7 @@ export const useSimple1 = (
     seed?: number;
     width?: number;
     height?: number;
-  }
+  },
 ) => {
   const cls = workflow.classes;
   const [model, clip, vae] = cls.CheckpointLoaderSimple({
@@ -33,7 +33,7 @@ export const useSimple1 = (
     model,
     positive: enc("best quality, 1girl"),
     negative: enc(
-      "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T"
+      "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T",
     ),
     latent_image: cls.EmptyLatentImage({
       width,

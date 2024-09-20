@@ -2,7 +2,7 @@ import { Client } from "../client/Client";
 import { WorkflowOutputResolver } from "../client/types";
 import type { WorkflowOutput, IWorkflow } from "./types";
 import { RESOLVERS } from "../builtins";
-import { ComfyUIClientEvents, ComfyUiWsTypes } from "../client/ws.typs";
+import { ComfyUIClientEvents, ComfyUiWsTypes } from "../client/ws.types";
 import EventEmitter from "eventemitter3";
 import { Disposable } from "../utils/Disposable";
 

@@ -1,5 +1,5 @@
-import { ComfyUIApiClient } from "../src/ComfyUIApiClient";
-import { ComfyUIWorkflow } from "../src/ComfyUIWorkflow";
+import { Client } from "../src/client/Client";
+import { Workflow } from "../src/workflow/Workflow";
 
 import { WebSocket } from "ws";
 import { create_s1_prompt } from "./test_utils";
@@ -7,15 +7,15 @@ import { create_s1_prompt } from "./test_utils";
 describe("API", () => {
   const client_id = "test_client_id";
 
-  let workflow: ComfyUIWorkflow;
-  let client: ComfyUIApiClient;
+  let workflow: Workflow;
+  let client: Client;
 
   beforeEach(() => {
-    workflow = new ComfyUIWorkflow();
+    workflow = new Workflow();
     /**
      * 需要启动本地 ComfyUI 服务才可测试
      */
-    client = new ComfyUIApiClient({
+    client = new Client({
       clientId: client_id,
       WebSocket: WebSocket as any,
     });
@@ -42,7 +42,7 @@ describe("API", () => {
     const resp = await client.enqueue_polling(prompt);
     const history = await client.getHistory();
     const history_prompt = history.History.find(
-      (x) => x.prompt[1] === resp.prompt_id
+      (x) => x.prompt[1] === resp.prompt_id,
     );
     expect(history_prompt).toBeDefined();
   });

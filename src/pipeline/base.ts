@@ -3,7 +3,7 @@ import { Client } from "../client/Client";
 import { Workflow } from "../workflow/Workflow";
 import { WorkflowOutput } from "../workflow/types";
 import { NSPipeline } from "./types";
-import { ComfyUIClientEvents } from "../client/ws.typs";
+import { ComfyUIClientEvents } from "../client/ws.types";
 import { Disposable } from "../utils/Disposable";
 import { InvokedWorkflow } from "../workflow/InvokedWorkflow";
 

@@ -1,15 +1,15 @@
-import { ComfyUIWorkflow } from "../src/ComfyUIWorkflow";
-import { ComfyUIApiClient } from "../src/ComfyUIApiClient";
+import { Client } from "../src/client/Client";
+import { Workflow } from "../src/workflow/Workflow";
 
-jest.mock("../src/ComfyUIApiClient");
+jest.mock("../src/client/Client");
 
 describe("ComfyUIWorkflow", () => {
-  let workflow: ComfyUIWorkflow;
-  let client: ComfyUIApiClient;
+  let workflow: Workflow;
+  let client: Client;
 
   beforeEach(() => {
-    workflow = new ComfyUIWorkflow();
-    client = new ComfyUIApiClient({});
+    workflow = new Workflow();
+    client = new Client({});
   });
 
   afterEach(() => {

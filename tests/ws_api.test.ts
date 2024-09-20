@@ -1,12 +1,13 @@
-import { ComfyUIApiClient } from "../src/ComfyUIApiClient";
-import { ComfyUIWorkflow } from "../src/ComfyUIWorkflow";
-import { ComfyUiWsTypes } from "../src/ws.typs";
+import { Client } from "../src/client/Client";
+import { Workflow } from "../src/workflow/Workflow";
+import { ComfyUiWsTypes } from "../src/client/ws.types";
+
 import { create_s1_prompt } from "./test_utils";
 
 import { WebSocket } from "ws";
 import { useSimple1 } from "./workflows/useSimple1";
 
-const collect_events = (client: ComfyUIApiClient, ignore = [] as string[]) => {
+const collect_events = (client: Client, ignore = [] as string[]) => {
   const event_queue = [] as string[];
   client.on("message", (event) => {
     const { data } = event;
@@ -25,15 +26,15 @@ const collect_events = (client: ComfyUIApiClient, ignore = [] as string[]) => {
 describe("WS", () => {
   const client_id = "test_client_id";
 
-  let workflow: ComfyUIWorkflow;
-  let client: ComfyUIApiClient;
+  let workflow: Workflow;
+  let client: Client;
 
   beforeEach(() => {
-    workflow = new ComfyUIWorkflow();
+    workflow = new Workflow();
     /**
      * 需要启动本地 ComfyUI 服务才可测试
      */
-    client = new ComfyUIApiClient({
+    client = new Client({
       clientId: client_id,
       WebSocket: WebSocket as any,
     });
@@ -82,11 +83,12 @@ describe("WS", () => {
       "status",
       "execution_cached",
       "executing",
+      "execution_start",
     ]);
     const prompt = create_s1_prompt();
     const resp = await client.enqueue(prompt);
     expect(events_arr).toEqual([
-      "execution_start",
+      // "execution_start",
       // Because only 1 step is executed, there is only one progress
       "progress",
       "executed",

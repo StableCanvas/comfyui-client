@@ -1,5 +1,5 @@
-import { ComfyUIApiClient } from "../src/ComfyUIApiClient";
-import { ComfyUIWorkflow } from "../src/ComfyUIWorkflow";
+import { Client } from "../src/client/Client";
+import { Workflow } from "../src/workflow/Workflow";
 
 import { WebSocket } from "ws";
 import { create_s1_prompt } from "./test_utils";
@@ -8,15 +8,15 @@ import { useSimple1 } from "./workflows/useSimple1";
 describe("Client", () => {
   const client_id = "test_client_id";
 
-  let workflow: ComfyUIWorkflow;
-  let client: ComfyUIApiClient;
+  let workflow: Workflow;
+  let client: Client;
 
   beforeEach(() => {
-    workflow = new ComfyUIWorkflow();
+    workflow = new Workflow();
     /**
      * NOTE: 需要启动本地 ComfyUI 服务才可测试
      */
-    client = new ComfyUIApiClient({
+    client = new Client({
       clientId: client_id,
       WebSocket: WebSocket as any,
     });

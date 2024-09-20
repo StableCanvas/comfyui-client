@@ -1,5 +1,5 @@
 import { EventEmitter } from "eventemitter3";
-import { ComfyUIClientEvents } from "./ws.typs";
+import { ComfyUIClientEvents } from "./ws.types";
 import { uuidv4 } from "../utils/misc";
 import { Errors } from "../utils/Errors";
 import { IComfyApiConfig } from "./types";

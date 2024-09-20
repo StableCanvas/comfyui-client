@@ -4,7 +4,7 @@ import { WorkflowOutputResolver } from "../client/types";
 import { ComfyUINodeTypes } from "../schema/comfyui.node.types";
 import { WorkflowOutput, WorkflowPromptNode } from "./types";
 import { IWorkflow } from "./types";
-import { ComfyUiWsTypes } from "../client/ws.typs";
+import { ComfyUiWsTypes } from "../client/ws.types";
 
 const deepClone: <T>(obj: T) => T = globalThis.structuredClone
   ? globalThis.structuredClone

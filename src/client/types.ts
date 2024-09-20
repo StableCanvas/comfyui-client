@@ -1,7 +1,7 @@
 import { Client } from "./Client";
 
 import { WorkflowOutput } from "../workflow/types";
-import { ComfyUiWsTypes } from "./ws.typs";
+import { ComfyUiWsTypes } from "./ws.types";
 import type { CachedFnOptions } from "../utils/CachedFn";
 
 export type WorkflowOutputResolver<T = unknown> = (
