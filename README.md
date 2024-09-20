@@ -50,6 +50,13 @@ To fully utilize the features of this library, your ComfyUI installation needs t
 - [comfyui-tooling-nodes](https://github.com/Acly/comfyui-tooling-nodes): A crucial extension that provides the ability to handle base64 API transmissions; `image to image` and `inpainting` functionalities depend on it.
 - [efficiency-nodes-comfyui](https://github.com/jags111/efficiency-nodes-comfyui): This library provides a convenient LoRA manager, which is required in the `src/pipeline/efficient` module.
 
+### Browser Polyfill (optional)
+
+If you plan to use the `pipeline` feature in a browser environment, you'll need to install the following dependencies and convert `File`/`Image` types to `Buffer` types.
+
+- [Buffer](https://github.com/feross/buffer): buffer polyfill for browser
+- [blob-to-buffer](https://github.com/feross/blob-to-buffer): convert blob to buffer
+
 ## Client Usage
 
 First, import the `ComfyUIApiClient` class from the package.
