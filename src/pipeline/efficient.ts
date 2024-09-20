@@ -27,6 +27,11 @@ interface EfficientPipeContext extends NSPipeline.PipeContext {
   }[];
 }
 
+/**
+ * pipe to create a workflow
+ *
+ * required https://github.com/jags111/efficiency-nodes-comfyui
+ */
 export class EfficientPipe extends BasePipe<EfficientPipeContext> {
   static defaultContext: EfficientPipeContext = {
     ...BasePipe.defaultContext,
@@ -47,6 +52,16 @@ export class EfficientPipe extends BasePipe<EfficientPipeContext> {
     } as EfficientPipeContext;
   }
 
+  /**
+   * Adds a LoRA (Low-Rank Adaptation) to the EfficientPipe context.
+   *
+   * @param {string} name - The name of the LoRA.
+   * @param {object} options - Optional configuration for the LoRA.
+   * @param {number} [options.weight=1] - The weight of the LoRA.
+   * @param {number} [options.strength=1] - The strength of the LoRA.
+   * @param {number} [options.clip_strength=1] - The clip strength of the LoRA.
+   * @return {EfficientPipe} The EfficientPipe instance for chaining.
+   */
   lora(
     name: string,
     {
@@ -64,6 +79,17 @@ export class EfficientPipe extends BasePipe<EfficientPipeContext> {
     return this;
   }
 
+  /**
+   * Adds a control net block to the EfficientPipe context.
+   *
+   * @param {string} name - The name of the control net block.
+   * @param {Buffer} image - The image data of the control net block.
+   * @param {object} options - Optional configuration for the control net block.
+   * @param {number} [options.strength=1] - The strength of the control net block.
+   * @param {number} [options.start=0] - The start value of the control net block.
+   * @param {number} [options.end=1] - The end value of the control net block.
+   * @return {EfficientPipe} The EfficientPipe instance for chaining.
+   */
   cnet(
     name: string,
     image: Buffer,

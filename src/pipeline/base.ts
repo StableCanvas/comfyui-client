@@ -15,6 +15,11 @@ type PipeContext = NSPipeline.PipeContext;
 export class BasePipe<
   CTX extends PipeContext = PipeContext,
 > extends Disposable {
+  /**
+   * Generates a random seed value.
+   *
+   * @return {number} A random integer seed value between 0 and 2^32 - 1.
+   */
   static nextSeed() {
     return Math.floor(Math.random() * 2 ** 32);
   }
@@ -55,6 +60,12 @@ export class BasePipe<
     Object.assign(this.context, ctx);
   }
 
+  /**
+   * Updates the context with the provided image buffer.
+   *
+   * @param {Buffer} image - The image buffer to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   image(image: Buffer) {
     this.update({
       input_image: image,
@@ -62,6 +73,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided mask buffer.
+   *
+   * @param {Buffer} image - The mask buffer to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   mask(image: Buffer) {
     this.update({
       input_mask: image,
@@ -69,6 +86,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided model checkpoint name.
+   *
+   * @param {string} ckpt_name - The name of the model checkpoint to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   model(ckpt_name: string) {
     this.update({
       ckpt_name,
@@ -76,6 +99,13 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided width and height, and returns the current instance of the class for method chaining.
+   *
+   * @param {number} w - The width to update the context with.
+   * @param {number} h - The height to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   size(w: number, h: number) {
     this.update({
       width: w,
@@ -84,6 +114,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided text as the positive prompt.
+   *
+   * @param {string} text - The text to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   prompt(text: string) {
     this.update({
       positive: text,
@@ -91,6 +127,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided text as the negative prompt.
+   *
+   * @param {string} text - The text to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   negative(text: string) {
     this.update({
       negative: text,
@@ -98,6 +140,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided steps and returns the current instance of the class for method chaining.
+   *
+   * @param {number} steps - The number of steps to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   steps(steps: number) {
     this.update({
       steps,
@@ -105,6 +153,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided cfg value.
+   *
+   * @param {number} cfg - The cfg value to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   cfg(cfg: number) {
     this.update({
       cfg,
@@ -112,6 +166,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided seed value or generates a random seed value if none is provided.
+   *
+   * @param {number} [seed=BasePipe.nextSeed()] - The seed value to update the context with. If not provided, a random seed value will be generated.
+   * @return {this} The current instance of the class for method chaining.
+   */
   seed(seed = BasePipe.nextSeed()) {
     this.update({
       seed,
@@ -119,6 +179,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided denoise value and returns the current instance of the class for method chaining.
+   *
+   * @param {number} denoise - The denoise value to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   denoise(denoise: number) {
     this.update({
       denoise,
@@ -126,6 +192,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided scheduler value and returns the current instance of the class for method chaining.
+   *
+   * @param {PipeContext["scheduler"]} scheduler - The scheduler value to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   scheduler(scheduler: PipeContext["scheduler"]) {
     this.update({
       scheduler,
@@ -133,6 +205,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided sampler name and returns the current instance of the class for method chaining.
+   *
+   * @param {PipeContext["sampler_name"]} sampler_name - The sampler name to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   sampler(sampler_name: PipeContext["sampler_name"]) {
     this.update({
       sampler_name,
@@ -140,6 +218,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided batch size and returns the current instance of the class for method chaining.
+   *
+   * @param {number} batch_size - The batch size to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   batch_size(batch_size: number) {
     this.update({
       batch_size,
@@ -147,6 +231,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Updates the context with the provided client and returns the current instance of the class for method chaining.
+   *
+   * @param {Client} client - The client to update the context with.
+   * @return {this} The current instance of the class for method chaining.
+   */
   with(client: Client) {
     this.update({
       client,
@@ -272,7 +362,7 @@ export class BasePipe<
     }
   }
 
-  async read_response(res: WorkflowOutput<unknown>) {
+  protected async read_response(res: WorkflowOutput<unknown>) {
     const images = [] as {
       data: ArrayBuffer;
       mime: string;
@@ -302,6 +392,13 @@ export class BasePipe<
     return images;
   }
 
+  /**
+   * Saves the workflow by invoking the workflow instance and enqueuing it.
+   *
+   * @param {string} [filename_prefix] - The prefix for the saved filename. if not provided, the workflow will be saved as a websocket connection.
+   * @return {this} - Returns the instance of the class for method chaining.
+   * @throws {Error} - Throws an error if the client is not defined.
+   */
   save(filename_prefix?: string) {
     const {
       context: { client },
@@ -320,6 +417,12 @@ export class BasePipe<
     return this;
   }
 
+  /**
+   * Waits for the workflow to complete and returns the result and the images.
+   *
+   * @return {Promise<{result: WorkflowOutput<unknown>, images: {data: ArrayBuffer, mime: string}[]}>} - A promise that resolves to an object containing the result of the workflow and the images.
+   * @throws {Error} - Throws an error if the workflow has not been invoked.
+   */
   async wait() {
     const { _invoked: invoked } = this;
     if (!invoked) {
@@ -333,6 +436,14 @@ export class BasePipe<
     };
   }
 
+  /**
+   * Waits for the workflow to complete and returns the result and the images.
+   *
+   * *This function does not rely on WebSocket Events, so it maybe will lose events output by WebSocket node
+   *
+   * @return {Promise<{result: WorkflowOutput<unknown>, images: {data: ArrayBuffer, mime: string}[]}>} - A promise that resolves to an object containing the result of the workflow and the images.
+   * @throws {Error} - Throws an error if the workflow has not been invoked.
+   */
   async wait_polling() {
     const { _invoked: invoked } = this;
     if (!invoked) {
