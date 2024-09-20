@@ -1,5 +1,4 @@
-import { Client } from "../src/client/Client";
-import { Workflow } from "../src/workflow/Workflow";
+import { Client, Workflow } from "../src/main";
 import { ComfyUiWsTypes } from "../src/client/ws.types";
 
 import { create_s1_prompt } from "./test_utils";

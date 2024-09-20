@@ -1,5 +1,4 @@
-import { Client } from "../src/client/Client";
-import { Workflow } from "../src/workflow/Workflow";
+import { Client, Workflow } from "../src/main";
 
 jest.mock("../src/client/Client");
 
