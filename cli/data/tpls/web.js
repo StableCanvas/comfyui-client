@@ -1,19 +1,19 @@
 import {
-  ComfyUIApiClient,
-  ComfyUIWorkflow,
+  Client,
+  Workflow,
 } from "https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@1.2.9/+esm";
 
 async function main(envs = {}) {
   const env = (k) => envs[k];
 
-  const client = new ComfyUIApiClient({
+  const client = new Client({
     api_host: env("COMFYUI_CLIENT_API_HOST"),
     api_host: env("COMFYUI_CLIENT_API_BASE"),
     clientId: env("COMFYUI_CLIENT_CLIENT_ID"),
   });
 
   const createWorkflow = () => {
-    const workflow = new ComfyUIWorkflow();
+    const workflow = new Workflow();
     const cls = workflow.classes;
 
     /** CODE INJECTION HERE */

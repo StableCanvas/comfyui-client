@@ -1,14 +1,11 @@
 const WebSocket = require("ws");
 const fetch = require("node-fetch");
-const {
-  ComfyUIApiClient,
-  ComfyUIWorkflow,
-} = require("@stable-canvas/comfyui-client");
+const { Client, Workflow } = require("@stable-canvas/comfyui-client");
 
 async function main(envs = {}) {
   const env = (k) => envs[k];
 
-  const client = new ComfyUIApiClient({
+  const client = new Client({
     api_host: env("COMFYUI_CLIENT_API_HOST"),
     api_host: env("COMFYUI_CLIENT_API_BASE"),
     clientId: env("COMFYUI_CLIENT_CLIENT_ID"),
@@ -17,7 +14,7 @@ async function main(envs = {}) {
   });
 
   const createWorkflow = () => {
-    const workflow = new ComfyUIWorkflow();
+    const workflow = new Workflow();
     const cls = workflow.classes;
 
     /** CODE INJECTION HERE */
