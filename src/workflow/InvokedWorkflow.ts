@@ -1,10 +1,10 @@
-import { ComfyUIApiClient } from "./ComfyUIApiClient";
-import { WorkflowOutputResolver } from "./client.types";
+import { Client } from "../client/Client";
+import { WorkflowOutputResolver } from "../client/types";
 import type { WorkflowOutput, IWorkflow } from "./types";
-import { RESOLVERS } from "./builtins";
-import { ComfyUIClientEvents, ComfyUiWsTypes } from "./ws.typs";
+import { RESOLVERS } from "../builtins";
+import { ComfyUIClientEvents, ComfyUiWsTypes } from "../client/ws.typs";
 import EventEmitter from "eventemitter3";
-import { Disposable } from "./Disposable";
+import { Disposable } from "../utils/Disposable";
 
 export class InvokedWorkflow<T = unknown> extends Disposable {
   protected task_id?: string;
@@ -18,13 +18,13 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
   enqueued = false;
 
   workflow: IWorkflow;
-  client: ComfyUIApiClient;
+  client: Client;
   resolver: WorkflowOutputResolver<T>;
 
   constructor(
     readonly options: {
       workflow: IWorkflow;
-      client: ComfyUIApiClient;
+      client: Client;
       resolver?: WorkflowOutputResolver<T>;
       progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
     },

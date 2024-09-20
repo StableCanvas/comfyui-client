@@ -1,10 +1,10 @@
-import { ComfyUIApiClient } from "./ComfyUIApiClient";
+import { Client } from "../client/Client";
 import { InvokedWorkflow } from "./InvokedWorkflow";
-import { WorkflowOutputResolver } from "./client.types";
-import { ComfyUINodeTypes } from "./schema/comfyui.node.types";
+import { WorkflowOutputResolver } from "../client/types";
+import { ComfyUINodeTypes } from "../schema/comfyui.node.types";
 import { WorkflowOutput, WorkflowPromptNode } from "./types";
 import { IWorkflow } from "./types";
-import { ComfyUiWsTypes } from "./ws.typs";
+import { ComfyUiWsTypes } from "../client/ws.typs";
 
 const deepClone: <T>(obj: T) => T = globalThis.structuredClone
   ? globalThis.structuredClone
@@ -48,10 +48,10 @@ export type InvokeOptions<T> = {
 
 /**
  * A class for creating a workflow using a fluent API.
- * 
+ *
  * @example
  * ```typescript
-  const workflow = new ComfyUIWorkflow();
+  const workflow = new Workflow();
   const {
     KSampler,
     CheckpointLoaderSimple,
@@ -128,7 +128,7 @@ export type InvokeOptions<T> = {
   return workflow;
  * ```
  */
-export class ComfyUIWorkflow {
+export class Workflow {
   protected _workflow: IWorkflow = {
     prompt: {},
   };
@@ -158,11 +158,11 @@ export class ComfyUIWorkflow {
       : unknown,
   >(
     node_name: T,
-    inputs: C extends { inputs: infer INP } ? INP : Record<string, unknown>
+    inputs: C extends { inputs: infer INP } ? INP : Record<string, unknown>,
   ): Iterable<NodeOutput>;
   public node(
     node_name: string,
-    inputs: Record<string, unknown>
+    inputs: Record<string, unknown>,
   ): Iterable<NodeOutput> {
     const node: WorkflowPromptNode = {
       class_type: node_name,
@@ -219,21 +219,21 @@ export class ComfyUIWorkflow {
   /**
    * Invokes the workflow with the provided client and options.
    *
-   * @param {ComfyUIApiClient} client - The client to use for the invocation.
+   * @param {Client} client - The client to use for the invocation.
    * @param {InvokeOptions<T>} [options] - Optional invoke options.
    * @return {Promise<WorkflowOutput<T>>} A promise resolving to the workflow output.
    */
   public invoke<T>(
-    client: ComfyUIApiClient,
-    options?: InvokeOptions<T>
+    client: Client,
+    options?: InvokeOptions<T>,
   ): Promise<WorkflowOutput<T>>;
   public invoke(
-    client: ComfyUIApiClient,
-    options?: InvokeOptions<unknown>
+    client: Client,
+    options?: InvokeOptions<unknown>,
   ): Promise<WorkflowOutput<unknown>>;
   public async invoke(
-    client: ComfyUIApiClient,
-    options?: InvokeOptions<unknown>
+    client: Client,
+    options?: InvokeOptions<unknown>,
   ): Promise<WorkflowOutput<unknown>> {
     const invoked = this.instance(client, options);
     await invoked.enqueue();
@@ -244,21 +244,21 @@ export class ComfyUIWorkflow {
   /**
    * Creates a new invoked workflow instance.
    *
-   * @param {ComfyUIApiClient} client - The client used to run the prompt.
+   * @param {Client} client - The client used to run the prompt.
    * @param {InvokeOptions<T>} [options] - Optional invoke options.
    * @return {InvokedWorkflow<T>} The invoked workflow instance.
    */
   public instance<T>(
-    client: ComfyUIApiClient,
-    options?: InvokeOptions<T>
+    client: Client,
+    options?: InvokeOptions<T>,
   ): InvokedWorkflow<T>;
   public instance(
-    client: ComfyUIApiClient,
-    options?: InvokeOptions<unknown>
+    client: Client,
+    options?: InvokeOptions<unknown>,
   ): InvokedWorkflow;
   public instance(
-    client: ComfyUIApiClient,
-    options?: InvokeOptions<unknown>
+    client: Client,
+    options?: InvokeOptions<unknown>,
   ): InvokedWorkflow {
     const workflow = this.workflow();
     const invoked = new InvokedWorkflow({
@@ -273,22 +273,19 @@ export class ComfyUIWorkflow {
   /**
    * Invokes a workflow using the provided client with polling.
    *
-   * @param {ComfyUIApiClient} client - The client used to run the prompt.
+   * @param {Client} client - The client used to run the prompt.
    * @param {InvokeOptions<T>} [options] - The options for invoking the workflow.
    * @return {Promise<WorkflowOutput<T>>} A promise that resolves with the result of the prompt.
    */
   public invoke_polling<T>(
-    client: ComfyUIApiClient,
-    options?: InvokeOptions<T>
+    client: Client,
+    options?: InvokeOptions<T>,
   ): Promise<WorkflowOutput<T>>;
   public invoke_polling(
-    client: ComfyUIApiClient,
-    options?: InvokeOptions<unknown>
+    client: Client,
+    options?: InvokeOptions<unknown>,
   ): Promise<WorkflowOutput>;
-  public invoke_polling(
-    client: ComfyUIApiClient,
-    options?: InvokeOptions<unknown>
-  ) {
+  public invoke_polling(client: Client, options?: InvokeOptions<unknown>) {
     if (typeof options?.progress === "function") {
       throw new Error("progress option is not supported in polling mode");
     }

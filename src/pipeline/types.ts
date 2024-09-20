@@ -1,4 +1,4 @@
-import { ComfyUIApiClient } from "../ComfyUIApiClient";
+import { Client } from "../client/Client";
 
 export namespace NSPipeline {
   // prettier-ignore
@@ -49,6 +49,6 @@ export namespace NSPipeline {
     input_mask: Buffer | null;
     grow_mask_by: number;
 
-    client: ComfyUIApiClient | null;
+    client: Client | null;
   };
 }

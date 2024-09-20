@@ -1,19 +1,23 @@
-import { CachedFn } from "./CachedFn";
-import type { ClientPlugin } from "./ClientPlugin";
-import { ComfyUIWsClient } from "./ComfyUIWsClient";
-import { RESOLVERS } from "./builtins";
-import { WorkflowOutputResolver, EnqueueOptions } from "./client.types";
+import { CachedFn } from "../utils/CachedFn";
+import type { Plugin } from "../plugins/Plugin";
+import { WsClient } from "./WsClient";
+import { RESOLVERS } from "../builtins";
+import {
+  WorkflowOutputResolver,
+  EnqueueOptions,
+  IComfyApiConfig,
+} from "./types";
 import { ComfyUIClientResponseTypes } from "./response.types";
-import { IComfyApiConfig, WorkflowOutput } from "./types";
+import { WorkflowOutput } from "../workflow/types";
 
 /**
- * The ComfyUIApiClient class provides a high-level interface for interacting with the ComfyUI API.
+ * The Client class provides a high-level interface for interacting with the ComfyUI API.
  *
- * @extends ComfyUIWsClient
+ * @extends WsClient
  *
  * @example
  * ```typescript
- * const client = new ComfyUIApiClient({
+ * const client = new Client({
  *  api_host: "YOUR_API_HOST",
  *  clientId: "YOUR_CLIENT_ID",
  * });
@@ -22,11 +26,11 @@ import { IComfyApiConfig, WorkflowOutput } from "./types";
  * console.log(extensions);
  * ```
  */
-export class ComfyUIApiClient extends ComfyUIWsClient {
+export class Client extends WsClient {
   private _cached_fn: CachedFn;
 
   // NOTE: useless ... just for debug
-  private _plugins = [] as ClientPlugin[];
+  private _plugins = [] as Plugin[];
 
   constructor(
     config: Omit<IComfyApiConfig, "fetch" | "WebSocket"> & {
@@ -44,9 +48,9 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
   /**
    * Use a plugin by calling its install method on this instance.
    *
-   * @param {ClientPlugin} plugin - The plugin to install.
+   * @param {Plugin} plugin - The plugin to install.
    */
-  use(plugin: ClientPlugin) {
+  use(plugin: Plugin) {
     plugin.install(this);
     this._plugins.push(plugin);
   }
@@ -149,8 +153,8 @@ export class ComfyUIApiClient extends ComfyUIWsClient {
    * @param {"queue" | "history"} type The type of items to load, queue or history
    * @returns The items of the specified type grouped by their status
    */
-  async getItems(type: "history"): ReturnType<ComfyUIApiClient["getHistory"]>;
-  async getItems(type: "queue"): ReturnType<ComfyUIApiClient["getQueue"]>;
+  async getItems(type: "history"): ReturnType<Client["getHistory"]>;
+  async getItems(type: "queue"): ReturnType<Client["getQueue"]>;
   async getItems(type: "queue" | "history"): Promise<any> {
     if (type === "queue") {
       return this.getQueue();

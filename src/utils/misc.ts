@@ -7,17 +7,3 @@ export const uuidv4 = () =>
 
 export const isNone = (x: any): x is null | undefined =>
   x === null || x === undefined;
-
-export namespace Errors {
-  export class HttpError extends Error {
-    status: number;
-    json: any;
-
-    constructor(message: string, status: number, json?: any) {
-      super(message);
-      this.name = "HttpError";
-      this.status = status;
-      this.json = json;
-    }
-  }
-}

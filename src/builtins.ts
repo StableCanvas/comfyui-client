@@ -1,6 +1,6 @@
-import { WorkflowOutputResolver } from "./client.types";
-import { isNone } from "./misc";
-import { WorkflowOutput } from "./types";
+import { WorkflowOutputResolver } from "./client/types";
+import { isNone } from "./utils/misc";
+import { WorkflowOutput } from "./workflow/types";
 
 export const RESOLVERS = {
   image: ((acc, output, { client }) => {

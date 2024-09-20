@@ -1,13 +1,13 @@
-import { ClientPlugin } from "../ClientPlugin";
+import { Plugin } from "./Plugin";
 
 /**
  * Provide api-auth support for this https://github.com/liusida/ComfyUI-Login/tree/main extension
  */
-export class LoginAuthPlugin extends ClientPlugin {
+export class LoginAuthPlugin extends Plugin {
   constructor(
     readonly options: {
       token: string;
-    }
+    },
   ) {
     super();
 

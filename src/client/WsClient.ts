@@ -1,7 +1,8 @@
-import { IComfyApiConfig } from "./types";
 import { EventEmitter } from "eventemitter3";
 import { ComfyUIClientEvents } from "./ws.typs";
-import { Errors, uuidv4 } from "./misc";
+import { uuidv4 } from "../utils/misc";
+import { Errors } from "../utils/Errors";
+import { IComfyApiConfig } from "./types";
 
 /**
  * A client for interacting with the ComfyUI API server using WebSockets.
@@ -10,7 +11,7 @@ import { Errors, uuidv4 } from "./misc";
  *
  * @example
  * ```typescript
- * const client = new ComfyUIWsClient({
+ * const client = new WsClient({
  *  api_host: "YOUR_API_HOST"
  * });
  *
@@ -25,7 +26,7 @@ import { Errors, uuidv4 } from "./misc";
  * // when done, close the client
  * client.close();
  */
-export class ComfyUIWsClient {
+export class WsClient {
   static DEFAULT_API_HOST = "127.0.0.1:8188";
   static DEFAULT_API_BASE = "";
   static DEFAULT_USER = "";
@@ -70,12 +71,12 @@ export class ComfyUIWsClient {
   }
 
   constructor(config: IComfyApiConfig) {
-    this.api_host = config.api_host ?? ComfyUIWsClient.DEFAULT_API_HOST;
-    this.api_base = config.api_base ?? ComfyUIWsClient.DEFAULT_API_BASE;
+    this.api_host = config.api_host ?? WsClient.DEFAULT_API_HOST;
+    this.api_base = config.api_base ?? WsClient.DEFAULT_API_BASE;
     this.clientId = config.clientId ?? uuidv4();
     this.WebSocket = config.WebSocket ?? globalThis.WebSocket;
     this.ssl = config.ssl ?? false;
-    this.user = config.user ?? ComfyUIWsClient.DEFAULT_USER;
+    this.user = config.user ?? WsClient.DEFAULT_USER;
     if (!globalThis.fetch) {
       throw new Error("fetch is not defined");
     }
@@ -183,7 +184,7 @@ export class ComfyUIWsClient {
       throw new Errors.HttpError(
         `Endpoint Bad Request (${status} ${statusText}): ${url}`,
         status,
-        await res.json()
+        await res.json(),
       );
     }
 
@@ -201,7 +202,7 @@ export class ComfyUIWsClient {
   addEventListener<T extends EventEmitter.EventNames<ComfyUIClientEvents>>(
     type: T,
     callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
-    options?: any
+    options?: any,
   ) {
     this.events.on(type as any, callback as any, options);
 
@@ -221,7 +222,7 @@ export class ComfyUIWsClient {
   on<T extends EventEmitter.EventNames<ComfyUIClientEvents>>(
     type: T,
     callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
-    options?: any
+    options?: any,
   ) {
     return this.addEventListener(type, callback, options);
   }
@@ -237,7 +238,7 @@ export class ComfyUIWsClient {
   once<T extends EventEmitter.EventNames<ComfyUIClientEvents>>(
     type: T,
     callback: EventEmitter.EventListener<ComfyUIClientEvents, T>,
-    options?: any
+    options?: any,
   ) {
     this.events.once(type as any, callback as any, options);
 
@@ -270,7 +271,7 @@ export class ComfyUIWsClient {
     socket: WebSocket,
     type: K,
     listener: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
-    options?: boolean | AddEventListenerOptions
+    options?: boolean | AddEventListenerOptions,
   ) {
     this.socket_callbacks[type] = listener;
     socket.addEventListener(type, listener, options);
@@ -303,7 +304,7 @@ export class ComfyUIWsClient {
     }
     if (!this.WebSocket) {
       throw new Error(
-        "WebSocket is not defined, please provide a WebSocket implementation"
+        "WebSocket is not defined, please provide a WebSocket implementation",
       );
     }
     if (this.closed) {
@@ -368,7 +369,7 @@ export class ComfyUIWsClient {
       this.events.emit("message", event);
 
       if (isImageMessage(event)) {
-        const image = ComfyUIWsClient.loadImageData(event.data);
+        const image = WsClient.loadImageData(event.data);
         this.events.emit("image_data", image);
       } else {
         const msg = JSON.parse(event.data);

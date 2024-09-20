@@ -1,8 +1,8 @@
-import { ComfyUIApiClient } from "./ComfyUIApiClient";
+import { Client } from "../client/Client";
 
 type FnHook<
-  N extends keyof ComfyUIApiClient = keyof ComfyUIApiClient,
-  Fn extends ComfyUIApiClient[N] = ComfyUIApiClient[N],
+  N extends keyof Client = keyof Client,
+  Fn extends Client[N] = Client[N],
 > = Fn extends (...args: any) => any
   ? {
       type: "function";
@@ -12,14 +12,14 @@ type FnHook<
   : never;
 
 type PluginHook<
-  N extends keyof ComfyUIApiClient = keyof ComfyUIApiClient,
-  Fn extends ComfyUIApiClient[N] = ComfyUIApiClient[N],
+  N extends keyof Client = keyof Client,
+  Fn extends Client[N] = Client[N],
 > = FnHook<N, Fn>;
 
-export class ClientPlugin {
+export class Plugin {
   private hooks = [] as PluginHook[];
 
-  public install(instance: ComfyUIApiClient) {
+  public install(instance: Client) {
     for (const hook of this.hooks) {
       const ins = instance as any;
       const original = ins[hook.name].bind(instance);
@@ -30,8 +30,8 @@ export class ClientPlugin {
   }
 
   protected addHook<
-    N extends keyof ComfyUIApiClient = keyof ComfyUIApiClient,
-    Fn extends ComfyUIApiClient[N] = ComfyUIApiClient[N],
+    N extends keyof Client = keyof Client,
+    Fn extends Client[N] = Client[N],
   >(hook: PluginHook<N, Fn>) {
     this.hooks.push(hook);
   }

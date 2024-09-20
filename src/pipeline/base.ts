@@ -1,11 +1,11 @@
 import EventEmitter from "eventemitter3";
-import { ComfyUIApiClient } from "../ComfyUIApiClient";
-import { ComfyUIWorkflow } from "../ComfyUIWorkflow";
-import { WorkflowOutput } from "../types";
+import { Client } from "../client/Client";
+import { Workflow } from "../workflow/Workflow";
+import { WorkflowOutput } from "../workflow/types";
 import { NSPipeline } from "./types";
-import { ComfyUIClientEvents } from "../ws.typs";
-import { Disposable } from "../Disposable";
-import { InvokedWorkflow } from "../InvokedWorkflow";
+import { ComfyUIClientEvents } from "../client/ws.typs";
+import { Disposable } from "../utils/Disposable";
+import { InvokedWorkflow } from "../workflow/InvokedWorkflow";
 
 type PipeContext = NSPipeline.PipeContext;
 
@@ -40,7 +40,7 @@ export class BasePipe<
     client: null,
   };
   protected context: CTX;
-  protected _workflow = new ComfyUIWorkflow();
+  protected _workflow = new Workflow();
   protected _invoked?: Promise<InvokedWorkflow>;
 
   constructor(context?: Partial<CTX>) {
@@ -147,7 +147,7 @@ export class BasePipe<
     return this;
   }
 
-  with(client: ComfyUIApiClient) {
+  with(client: Client) {
     this.update({
       client,
     });
