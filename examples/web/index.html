@@ -12,7 +12,7 @@
           "htm": "https://cdn.jsdelivr.net/npm/htm@3.1.1/+esm",
           "preact/hooks": "https://cdn.jsdelivr.net/npm/preact@10.22.0/hooks/dist/hooks.module.js",
           "@quik-fe/stand": "https://cdn.jsdelivr.net/npm/@quik-fe/stand@latest/+esm",
-          "@stable-canvas/comfyui-client": "../../dist/main.module.mjs"
+          "@stable-canvas/comfyui-client": "https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@1.4.1/dist/main.module.mjs"
         }
       }
     </script>
@@ -150,14 +150,10 @@
     import * as React from "preact/hooks";
     import htm from "htm";
     import { bindReact } from "@quik-fe/stand";
-    // import {
-    //   ComfyUIApiClient,
-    //   ComfyUIWorkflow,
-    // } from "@stable-canvas/comfyui-client";
     import {
       Client,
       Workflow,
-    } from "../../dist/main.module.mjs";
+    } from "@stable-canvas/comfyui-client";
 
     const html = htm.bind(h);
     const create = bindReact(React);
