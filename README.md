@@ -39,7 +39,17 @@ Use npm or yarn to install the `@stable-canvas/comfyui-client` package.
 pnpm add @stable-canvas/comfyui-client
 ```
 
-### Dependencies (optional)
+### CDN
+
+| Format | Link |
+|--------|------|
+| ESM    | [jsDelivr](https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@latest/dist/main.module.mjs) |
+|        | [unpkg](https://unpkg.com/@stable-canvas/comfyui-client@latest/dist/main.module.mjs) |
+| UMD    | [jsDelivr](https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@latest) |
+|        | [unpkg](https://unpkg.com/@stable-canvas/comfyui-client@latest) |
+
+
+### ComfyUI Dependencies (optional)
 
 To fully utilize the features of this library, your ComfyUI installation needs to support custom nodes for external extensions.
 
