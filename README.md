@@ -97,6 +97,26 @@ const client = new Client({
 client.connect();
 ```
 
+### Routes  
+This library is built on top of ComfyUI's API routes, so it naturally supports all of its available endpoints. For detailed information about the built-in ComfyUI API endpoints, you can refer to [this page](https://docs.comfy.org/essentials/comms_routes#built-in-routes).
+
+If you need documentation on the `Client` class, you can check out the auto-generated [documentation webpage](https://stablecanvas.github.io/comfyui-client/classes/Client.html).
+
+#### Release Model / Free Memory  
+There are many times when you might need to release memory. You can directly use the encapsulated functions above the `Client` class instance, like this:
+
+```ts
+await client.free({ unload_models: true, free_memory: true });
+```
+
+#### Custom Routes  
+If you have installed a plugin with custom routes, you may want to call specific routes. You can make requests in the following way (assuming the route is `/get_something`):
+
+```ts
+const res = await client.fetchApi("/get_something");
+const data = await res.json();
+```
+
 
 ### Advanced functions
 In addition to the standard API interfaces provided by comfyui, this library also wraps them to provide advanced calls
@@ -558,7 +578,6 @@ const [output1, output2] = workflow.node("Efficient Loader", {
   // Node parameters
 });
 ```
-
 
 ## CLI
 
