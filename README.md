@@ -100,6 +100,20 @@ client.connect();
 ### Routes  
 This library is built on top of ComfyUI's API routes, so it naturally supports all of its available endpoints. For detailed information about the built-in ComfyUI API endpoints, you can refer to [this page](https://docs.comfy.org/essentials/comms_routes#built-in-routes).
 
+| **Function Name**       | **Path**          | **Purpose**                                                                 |
+|--------------------------|----------------------------|-----------------------------------------------------------------------------|
+| `client.getExtensions`         | `GET /extensions`         | Retrieve a list of extension URLs.                                         |
+| `client.getEmbeddings`         | `GET /embeddings`         | Retrieve a list of embedding names.                                        |
+| `client.getNodeDefs`           | `GET /object_info`        | Load node object definitions for the graph.                                |
+| `client.queuePrompt`           | `POST /prompt`            | Queue a prompt with options for prompt data and workflow.                  |
+| `client.getQueue`              | `GET /queue`              | Retrieve the current state of the queue (running and pending items).       |
+| `client.getHistory`            | `GET /history`            | Retrieve the execution history of prompts including node outputs.          |
+| `client.clearItems`            | `POST /queue` / `POST /history` | Clear the specified list (queue or history).                               |
+| `client.deleteItem`            | `POST /queue` / `POST /history` | Delete a specific item from the queue or history.                          |
+| `client.interrupt`             | `POST /interrupt`         | Interrupt the execution of the running prompt.                             |
+| `client.free`                  | `POST /free`              | Free memory by unloading models and clearing resources.                    |
+| `client.getSystemStats`        | `GET /system_stats`       | Retrieve system and device statistics, such as Python version and VRAM.    |
+
 If you need documentation on the `Client` class, you can check out the auto-generated [documentation webpage](https://stablecanvas.github.io/comfyui-client/classes/Client.html).
 
 #### Release Model / Free Memory  
