@@ -1,10 +1,11 @@
 import "esm-hook";
 import fetch from "node-fetch";
 import fs from "fs";
-import { WorkflowOutput } from "../../../src/types";
+import { WorkflowOutput, Client } from "../../../src/main";
 import path from "path";
-import { Errors, isNone } from "../../../src/misc";
-import { ComfyUIApiClient } from "../../../src/ComfyUIApiClient";
+import { isNone } from "../../../src/utils/misc";
+import { Errors } from "../../../src/utils/Errors";
+// import { ComfyUIApiClient } from "../../../src/main";
 
 export const save_url_to_file = async (url: string, filepath: string) => {
   const res = await fetch(url);
@@ -38,6 +39,7 @@ export const save_wf_outputs = async (outputs: WorkflowOutput) => {
         }
         const filepath = path.join(__dirname, "../outputs", filename);
         await save_url_to_file(url, filepath);
+        console.log(`Saved ${url} to ${filepath}`);
         break;
       }
       case "buff": {
@@ -46,13 +48,14 @@ export const save_wf_outputs = async (outputs: WorkflowOutput) => {
         const filename = `image-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
         const filepath = path.join(__dirname, "../outputs", filename);
         fs.writeFileSync(filepath, Buffer.from(data));
+        console.log(`Saved image to ${filepath}`);
         break;
       }
     }
   }
 };
 
-export function runDemo(main: () => Promise<void>, client: ComfyUIApiClient) {
+export function runDemo(main: () => Promise<void>, client: Client) {
   return main()
     .then(() => console.log("done"))
     .catch((err) => {
@@ -64,5 +67,13 @@ export function runDemo(main: () => Promise<void>, client: ComfyUIApiClient) {
         console.error(err);
       }
     })
-    .finally(() => client.close());
+    .finally(() => {
+      console.log(2);
+      return client.free({ unload_models: true, free_memory: true });
+    })
+    .finally(() => {
+      console.log(2);
+      client.close();
+      // setTimeout(() => process.exit());
+    });
 }
