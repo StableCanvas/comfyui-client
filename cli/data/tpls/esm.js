@@ -9,6 +9,8 @@ async function main(envs = {}) {
     clientId: env("COMFYUI_CLIENT_CLIENT_ID"),
   });
 
+  await client.connect();
+
   const createWorkflow = () => {
     const workflow = new Workflow();
     const cls = workflow.classes;
@@ -27,6 +29,7 @@ async function main(envs = {}) {
     throw error;
   } finally {
     console.timeEnd("enqueue workflow");
+    client.disconnect();
   }
 }
 

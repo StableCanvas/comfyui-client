@@ -1,7 +1,7 @@
 import {
   Client,
   Workflow,
-} from "https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@1.2.9/+esm";
+} from "https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@latest/+esm";
 
 async function main(envs = {}) {
   const env = (k) => envs[k];
@@ -11,6 +11,8 @@ async function main(envs = {}) {
     api_host: env("COMFYUI_CLIENT_API_BASE"),
     clientId: env("COMFYUI_CLIENT_CLIENT_ID"),
   });
+
+  await client.connect();
 
   const createWorkflow = () => {
     const workflow = new Workflow();
@@ -30,6 +32,7 @@ async function main(envs = {}) {
     throw error;
   } finally {
     console.timeEnd("enqueue workflow");
+    client.disconnect();
   }
 }
 

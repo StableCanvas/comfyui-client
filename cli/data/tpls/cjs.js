@@ -4,7 +4,6 @@ const { Client, Workflow } = require("@stable-canvas/comfyui-client");
 
 async function main(envs = {}) {
   const env = (k) => envs[k];
-
   const client = new Client({
     api_host: env("COMFYUI_CLIENT_API_HOST"),
     api_host: env("COMFYUI_CLIENT_API_BASE"),
@@ -12,6 +11,7 @@ async function main(envs = {}) {
     WebSocket,
     fetch,
   });
+  await client.connect();
 
   const createWorkflow = () => {
     const workflow = new Workflow();
@@ -31,6 +31,7 @@ async function main(envs = {}) {
     throw error;
   } finally {
     console.timeEnd("enqueue workflow");
+    client.disconnect();
   }
 }
 
