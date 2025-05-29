@@ -9,11 +9,13 @@ Javascript api Client for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) t
 This client provides comprehensive support for all available RESTful and WebSocket APIs, with built-in TypeScript typings for enhanced development experience. Additionally, it introduces a programmable workflow interface, making it easy to create and manage workflows in a human-readable format.
 
 documentations:
+
 - [Rest API](https://stablecanvas.github.io/comfyui-client/classes/Client.html)
 - [WebSocket API](https://stablecanvas.github.io/comfyui-client/classes/WsClient.html)
 - [Workflow API](https://stablecanvas.github.io/comfyui-client/classes/Workflow.html)
 
 examples:
+
 - nodejs
   - [client api](examples/nodejs/src/main.ts)
   - [workflow factory](examples/nodejs/src/main-wf.ts)
@@ -41,13 +43,12 @@ pnpm add @stable-canvas/comfyui-client
 
 ### CDN
 
-| Format | Link |
-|--------|------|
+| Format | Link                                                                                               |
+| ------ | -------------------------------------------------------------------------------------------------- |
 | ESM    | [jsDelivr](https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@latest/dist/main.module.mjs) |
-|        | [unpkg](https://unpkg.com/@stable-canvas/comfyui-client@latest/dist/main.module.mjs) |
-| UMD    | [jsDelivr](https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@latest) |
-|        | [unpkg](https://unpkg.com/@stable-canvas/comfyui-client@latest) |
-
+|        | [unpkg](https://unpkg.com/@stable-canvas/comfyui-client@latest/dist/main.module.mjs)               |
+| UMD    | [jsDelivr](https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@latest)                      |
+|        | [unpkg](https://unpkg.com/@stable-canvas/comfyui-client@latest)                                    |
 
 ### ComfyUI Dependencies (optional)
 
@@ -76,54 +77,60 @@ import { Client } from "@stable-canvas/comfyui-client";
 ```
 
 Client instance, in Browser
-```js
-const client = new Client({
-    api_host: "127.0.0.1:8188",
-})
-// connect ws client
-client.connect();
-```
-Client instance, in NodeJs
-```js
-import WebSocket from "ws";
-import fetch from "node-fetch";
 
+```js
 const client = new Client({
-    //...
-    WebSocket,
-    fetch,
+  api_host: "127.0.0.1:8188",
 });
 // connect ws client
 client.connect();
 ```
 
-### Routes  
-This library is built on top of ComfyUI's API routes, so it naturally supports all of its available endpoints. For detailed information about the built-in ComfyUI API endpoints, you can refer to [this page](https://docs.comfy.org/essentials/comms_routes#built-in-routes).
+Client instance, in NodeJs
 
-| **Function Name**       | **Path**          | **Purpose**                                                                 |
-|--------------------------|----------------------------|-----------------------------------------------------------------------------|
-| `client.getExtensions`         | `GET /extensions`         | Retrieve a list of extension URLs.                                         |
-| `client.getEmbeddings`         | `GET /embeddings`         | Retrieve a list of embedding names.                                        |
-| `client.getNodeDefs`           | `GET /object_info`        | Load node object definitions for the graph.                                |
-| `client.queuePrompt`           | `POST /prompt`            | Queue a prompt with options for prompt data and workflow.                  |
-| `client.getQueue`              | `GET /queue`              | Retrieve the current state of the queue (running and pending items).       |
-| `client.getHistory`            | `GET /history`            | Retrieve the execution history of prompts including node outputs.          |
-| `client.clearItems`            | `POST /queue` / `POST /history` | Clear the specified list (queue or history).                               |
-| `client.deleteItem`            | `POST /queue` / `POST /history` | Delete a specific item from the queue or history.                          |
-| `client.interrupt`             | `POST /interrupt`         | Interrupt the execution of the running prompt.                             |
-| `client.free`                  | `POST /free`              | Free memory by unloading models and clearing resources.                    |
-| `client.getSystemStats`        | `GET /system_stats`       | Retrieve system and device statistics, such as Python version and VRAM.    |
+```js
+import WebSocket from "ws";
+import fetch from "node-fetch";
+
+const client = new Client({
+  //...
+  WebSocket,
+  fetch,
+});
+// connect ws client
+client.connect();
+```
+
+### Routes
+
+This library is built on top of ComfyUI's API routes, so it naturally supports all of its available endpoints. For detailed information about the built-in ComfyUI API endpoints, you can refer to [this page](https://docs.comfy.org/development/comfyui-server/comms_routes).
+
+| **Function Name**       | **Path**                        | **Purpose**                                                             |
+| ----------------------- | ------------------------------- | ----------------------------------------------------------------------- |
+| `client.getExtensions`  | `GET /extensions`               | Retrieve a list of extension URLs.                                      |
+| `client.getEmbeddings`  | `GET /embeddings`               | Retrieve a list of embedding names.                                     |
+| `client.getNodeDefs`    | `GET /object_info`              | Load node object definitions for the graph.                             |
+| `client.queuePrompt`    | `POST /prompt`                  | Queue a prompt with options for prompt data and workflow.               |
+| `client.getQueue`       | `GET /queue`                    | Retrieve the current state of the queue (running and pending items).    |
+| `client.getHistory`     | `GET /history`                  | Retrieve the execution history of prompts including node outputs.       |
+| `client.clearItems`     | `POST /queue` / `POST /history` | Clear the specified list (queue or history).                            |
+| `client.deleteItem`     | `POST /queue` / `POST /history` | Delete a specific item from the queue or history.                       |
+| `client.interrupt`      | `POST /interrupt`               | Interrupt the execution of the running prompt.                          |
+| `client.free`           | `POST /free`                    | Free memory by unloading models and clearing resources.                 |
+| `client.getSystemStats` | `GET /system_stats`             | Retrieve system and device statistics, such as Python version and VRAM. |
 
 If you need documentation on the `Client` class, you can check out the auto-generated [documentation webpage](https://stablecanvas.github.io/comfyui-client/classes/Client.html).
 
-#### Release Model / Free Memory  
+#### Release Model / Free Memory
+
 There are many times when you might need to release memory. You can directly use the encapsulated functions above the `Client` class instance, like this:
 
 ```ts
 await client.free({ unload_models: true, free_memory: true });
 ```
 
-#### Custom Routes  
+#### Custom Routes
+
 If you have installed a plugin with custom routes, you may want to call specific routes. You can make requests in the following way (assuming the route is `/get_something`):
 
 ```ts
@@ -131,11 +138,12 @@ const res = await client.fetchApi("/get_something");
 const data = await res.json();
 ```
 
-
 ### Advanced functions
+
 In addition to the standard API interfaces provided by comfyui, this library also wraps them to provide advanced calls
 
 #### enqueue
+
 ```ts
 const result = await client.enqueue(
   { /* workflow prompt */ },
@@ -144,11 +152,13 @@ const result = await client.enqueue(
   }
 );
 ```
+
 It's very simple; it includes the entire prompt interface life cycle and waits for and collectively returns the result at the end of the request
 
 > In some cases you might not want to use ws, then you can use `enqueue_polling`, this function will perform similar behavior to `enqueue`, but uses rest http to poll the task status
 
 #### Get XXX
+
 Sometimes you may need to check some configurations of ComfyUI, such as whether a deployment service contains the needed model or lora, then these interfaces will be useful
 
 `getSamplers` `getSchedulers` `getSDModels` `getCNetModels` `getUpscaleModels` `getHyperNetworks` `getLoRAs` `getVAEs`
@@ -182,14 +192,12 @@ new BasePipe()
 
 ```typescript
 import { BasePipe } from "@stable-canvas/comfyui-client";
-import fs from 'fs';
+import fs from "fs";
 
 new BasePipe()
   .with(/* client instance */)
   .model("sdxl.safetensors")
-  .image(
-    fs.readFileSync("path-to-your-input-image.jpg")
-  )
+  .image(fs.readFileSync("path-to-your-input-image.jpg"))
   // .mask(maskImage) // call mask() to add a mask
   .prompt("A husky with pearls, oil painting style")
   .negative("Low quality, blurry")
@@ -232,13 +240,17 @@ const { images } = await new EfficientPipe()
 ```
 
 ### more examples
+
 For complete example code, refer to the files [`./examples/nodejs/src/main-pipe-*.ts`](./examples/nodejs/src/) in the project repository.
 
 ## Workflow Usage
+
 ### Programmable/Human-readable pattern
+
 Inspired by [this issue](https://github.com/comfyanonymous/ComfyUI/issues/612) and [this library](https://github.com/Chaoses-Ib/ComfyScript), this library provides a programmable workflow interface.
 
 It has the following use cases:
+
 - **Interactive GUI Integration**: Offers support for seamless integration with ComfyUI's new GUI, enhancing user interaction possibilities.
 - **LLMs for Workflow Generation**: Leverages the ability of large language models to understand Javascript for creating workflows.
 - **Cross-Project Workflow Reuse**: Enables the sharing and repurposing of workflow components across different projects using ComfyUI.
@@ -249,6 +261,7 @@ It has the following use cases:
 - **Web UI-independent Workflow Deployment**: Enables the creation and deployment of workflows without reliance on a web-based user interface.
 
 ### Minimal case
+
 Here is a minimal example demonstrating how to create and execute a simple workflow using this library.
 
 ```ts
@@ -268,9 +281,7 @@ const [samples] = cls.KSampler({
   denoise: 1,
   model,
   positive: enc("best quality, 1girl"),
-  negative: enc(
-    "worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T"
-  ),
+  negative: enc("worst quality, bad anatomy, embedding:NG_DeepNegative_V1_75T"),
   latent_image: cls.EmptyLatentImage({
     width: 512,
     height: 512,
@@ -283,11 +294,12 @@ cls.SaveImage({
 });
 console.log(
   // This call will return a JSON object that can be used for ComfyUI API calls, primarily for demonstration or debugging purposes
-  workflow.workflow()
-)
+  workflow.workflow(),
+);
 ```
 
 ### Programable real world case
+
 Both implementation and usage are extremely simple and human-readable. This programmable approach allows for dynamic workflow creation, enabling loops, conditionals, and reusable functions. It's particularly useful for batch processing, experimenting with different models or prompts, and creating more complex, flexible workflows.
 
 This specific workflow demonstrates the generation of multiple images using two different AI models ("lofi_v5" and "case-h-beta") and four different dress styles. It showcases how to create a reusable image generation pipeline and apply it across various prompts and models efficiently.
@@ -381,7 +393,7 @@ Yes, you read that right—we will repeatedly create some nodes, which might see
 Notably, you can also leverage all your JavaScript programming knowledge, such as `recursion`, `functional programming`, `currying`, etc. For example, you can do something like this:
 
 ```ts
-const generator = model => clip => vae => pos => neg => {
+const generator = (model) => (clip) => (vae) => (pos) => (neg) => {
   const [latent_image] = EmptyLatentImage({
     width,
     height,
@@ -403,20 +415,20 @@ const model1_gen = generator(model1)(clip1)(vae1);
 ```
 
 #### Invoke workflow
+
 ```ts
 const wf1 = createWorkflow();
 const result = await wf1.invoke(client);
 ```
 
 > Q: What is the relationship between workflow and client? ?
-> 
-> A: If you need to refer to complete example code, you can check out the [./examples/nodejs/main*.ts](./examples/nodejs/src) entry files. These contain fully executable code examples ranging from the simplest to slightly more complex workflows.
-
+>
+> A: If you need to refer to complete example code, you can check out the [./examples/nodejs/main\*.ts](./examples/nodejs/src) entry files. These contain fully executable code examples ranging from the simplest to slightly more complex workflows.
 
 ### type support
 
 - builtin node types
- 
+
 ![node types](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/type_hints.png)
 
 - builtin node params
@@ -427,18 +439,26 @@ const result = await wf1.invoke(client);
 
 ![other node](https://raw.githubusercontent.com/StableCanvas/comfyui-client/main/assets/anynode.png)
 
-
 #### InvokedWorkflow
+
 If you need to manage the life cycle of your request, then this class can be very convenient
 
 instance
+
 ```ts
 // You can instantiate manually
-const invoked = new InvokedWorkflow({ /* workflow payload */ }, client);
+const invoked = new InvokedWorkflow(
+  {
+    /* workflow payload */
+  },
+  client,
+);
 // or use the workflow api to instantiate
 const invoked = your_workflow.instance();
 ```
+
 running
+
 ```ts
 // job enqueue
 await invoked.enqueue();
@@ -450,13 +470,14 @@ invoked.interrupt();
 invoked.query();
 ```
 
-
 ## Client Plugin
+
 We provide `Plugin` to expand Client capabilities.
 
 simple example
+
 ```ts
-import { Plugin } from "@stable-canvas/comfy"
+import { Plugin } from "@stable-canvas/comfy";
 export class LoggingPlugin extends Plugin {
   constructor() {
     super();
@@ -476,9 +497,11 @@ export class LoggingPlugin extends Plugin {
 ```
 
 ### ComfyUI Login Auth
+
 For example, sometimes you may need to provide node authentication capabilities, and you may have many solutions to implement your ComfyUI permission management
 
 If you use the [ComfyUI-Login](https://github.com/liusida/ComfyUI-Login/tree/main) extension, you can use the built-in `plugins.LoginAuthPlugin` to configure the Client to support authentication
+
 ```ts
 import { Client, plugins } from "@stable-canvas/comfyui-client";
 const client = /* client instance */;
@@ -496,9 +519,9 @@ client.use(
 If your ComfyUI instance emits custom WebSocket events, you can subscribe to them as follows:
 
 ```ts
-client.events.on('your_custom_event_type', (data) => {
+client.events.on("your_custom_event_type", (data) => {
   // 'data' contains the event payload object
-  console.log('Received custom event:', data);
+  console.log("Received custom event:", data);
 });
 ```
 
@@ -507,7 +530,7 @@ client.events.on('your_custom_event_type', (data) => {
 To capture and process events that haven't been explicitly subscribed to, use the `unhandled` event listener:
 
 ```ts
-client.events.on('unhandled', ({ type, data }) => {
+client.events.on("unhandled", ({ type, data }) => {
   // 'type' is the event type
   // 'data' is the event payload object
   console.log(`Received unhandled event of type '${type}':`, data);
@@ -519,8 +542,8 @@ client.events.on('unhandled', ({ type, data }) => {
 Register the `message` event to subscribe to all WebSocket messages pushed from ComfyUI
 
 ```ts
-client.events.on('message', (event) => {
-  if (typeof event.data !== 'string') return;
+client.events.on("message", (event) => {
+  if (typeof event.data !== "string") return;
   const { type, data } = JSON.parse(event.data);
   // ...
 });
@@ -596,6 +619,7 @@ const [output1, output2] = workflow.node("Efficient Loader", {
 ## CLI
 
 ### install
+
 ```
 npm install @stable-canvas/comfyui-client-cli
 ```
@@ -611,7 +635,7 @@ Use this tool to generate the corresponding calling code using workflow
 
 Options:
   -V, --version              output the version number
-  -t, --template [template]  Specify the template for generating code, builtin tpl: [esm,cjs,web,none]        
+  -t, --template [template]  Specify the template for generating code, builtin tpl: [esm,cjs,web,none]
                              (default: "esm")
   -o, --out [output]         Specify the output file for the generated code. default to stdout
   -i, --in <input>           Specify the input file, support .json/.png file
@@ -619,6 +643,7 @@ Options:
 ```
 
 #### example: api.json to code
+
 ```
 cuc-w2c -i ./tests/test-inputs/workflow_api.json -t none
 ```
@@ -670,12 +695,12 @@ const [] = cls.SaveImage({
 </details>
 
 #### example: export-png to code
+
 ```
 cuc-w2c -i ./tests/test-inputs/workflow-min.png -t none
 ```
 
 input file: [./cli/tests/test-inputs/workflow-min.png](./cli/tests/test-inputs/workflow-min.png)
-
 
 <details>
 <summary>Output</summary>
@@ -719,10 +744,10 @@ const [] = cls.SaveImage({
   images: IMAGE_1,
 });
 ```
+
 </details>
 
 > Since the order of widgets may change at any time, the function from .png to code may be unstable. It is recommended to use .json to code
-
 
 ## Roadmap
 
@@ -731,7 +756,6 @@ const [] = cls.SaveImage({
   - [x] .png => code
 - [ ] code to workflow: Output a json file that can be imported into the web front end
 - [ ] Output type hints
-
 
 ## Contributing
 
