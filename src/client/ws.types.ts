@@ -70,6 +70,7 @@ export type ComfyUIClientEvents = {
   execution_success: [ComfyUiWsTypes.Messages.ExecutionSuccess];
 
   // WS events (Events sent by the client itself)
+  connected: [];
   reconnected: [];
   reconnecting: [];
 

@@ -217,6 +217,30 @@ export class Workflow {
   }
 
   /**
+   * Guard function to check if the client's WebSocket is connected before attempting to invoke the workflow.
+   *
+   * @throws {Error} If the WebSocket is not connected.
+   *
+   * @param {Client} client - The client to check.
+   *
+   * @private
+   */
+  protected _ws_connected_guard(client: Client) {
+    if (!client.socket || client.socket.readyState !== client.WebSocket.OPEN) {
+      const current_state = {
+        [client.WebSocket.CLOSED]: "CLOSED",
+        [client.WebSocket.CONNECTING]: "CONNECTING",
+        [client.WebSocket.OPEN]: "OPEN",
+        [client.WebSocket.CLOSING]: "CLOSING",
+        [-1]: "UNKNOWN",
+      }[client.socket?.readyState ?? -1];
+      throw new Error(
+        `WebSocket is not connected, cannot invoke workflow. readyState=${current_state}`,
+      );
+    }
+  }
+
+  /**
    * Invokes the workflow with the provided client and options.
    *
    * @param {Client} client - The client to use for the invocation.
@@ -235,6 +259,7 @@ export class Workflow {
     client: Client,
     options?: InvokeOptions<unknown>,
   ): Promise<WorkflowOutput<unknown>> {
+    this._ws_connected_guard(client);
     const invoked = this.instance(client, options);
     await invoked.enqueue();
     const result = invoked.wait();

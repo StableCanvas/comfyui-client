@@ -256,6 +256,8 @@ export class WsClient {
     if (this._polling_timer) {
       return;
     }
+    // FIXME: 优化点
+    // 这里不需要一直 polling ，只有有任务的时候才需要 polling
     this._polling_timer = setInterval(async () => {
       try {
         const resp = await this.fetchApi("/prompt");
@@ -320,6 +322,8 @@ export class WsClient {
       opened = true;
       if (isReconnect) {
         this.events.emit("reconnected");
+      } else {
+        this.events.emit("connected");
       }
     });
 
@@ -450,7 +454,8 @@ export class WsClient {
    * @param {number} [options.polling.interval] - The interval for polling.
    * @param {Object} options.websocket - The options for the WebSocket connection.
    * @param {boolean} options.websocket.enabled - Whether the WebSocket connection is enabled.
-   * @return {this} - The instance of the class.
+   * @param {number} [options.timeout_ms] - The timeout for the connection in milliseconds.
+   * @return {Promise<boolean>} - A promise that resolves to true if the connection was successful, false otherwise.
    */
   connect({
     polling = {
@@ -459,6 +464,7 @@ export class WsClient {
     websocket = {
       enabled: true,
     },
+    timeout_ms = 15 * 1000,
   }: {
     polling?: {
       enabled: boolean;
@@ -467,15 +473,34 @@ export class WsClient {
     websocket?: {
       enabled: boolean;
     };
+    timeout_ms?: number;
   } = {}) {
     if (polling?.enabled) {
       this._polling_interval = polling.interval ?? this._polling_interval;
       this.startPollingQueue();
+      return new Promise(async (resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error("Polling connection timed out"));
+        }, timeout_ms);
+        // ping to ok or fail
+        const resp = await this.fetchApi("/system_stats");
+        resolve(resp.ok && resp.status === 200);
+        clearTimeout(timer);
+      });
     }
     if (websocket?.enabled) {
       this.createSocket();
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error("WebSocket connection timed out"));
+        }, timeout_ms);
+        this.once("connected", () => {
+          resolve(true);
+          clearTimeout(timer);
+        });
+      });
     }
-    return this;
+    throw new Error("You must enable either polling or websocket");
   }
 
   /**

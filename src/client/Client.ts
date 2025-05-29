@@ -223,7 +223,7 @@ export class Client extends WsClient {
 
   /**
    * Sends a POST request to the API
-   * @param {"queue" | "history"} type The endpoint to post to
+   * @param {string} type The endpoint to post to
    * @param {any} body Optional POST data
    */
   private async postApi(type: string, body: any) {

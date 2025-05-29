@@ -299,6 +299,8 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
         reject(new Error("Execution Interrupted"));
         done();
       });
+      // NOTE: 这里的意思是，如果其他地方导致 dispose ，那么也应该调用这个保证 promise resolve
+      this._connect(maybe_done);
       this._connect(
         this.client.on("executed", async (data) => {
           if (data.prompt_id !== task_id) {
