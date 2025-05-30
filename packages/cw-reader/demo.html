@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Workflow Viewer</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #121212;
+      color: #e0e0e0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+      background-color: #1a1a1a;
+      border-bottom: 1px solid #333;
+    }
+
+    .drop-zone {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed #444;
+      margin: 1rem;
+      border-radius: 10px;
+      transition: border-color 0.3s;
+    }
+
+    .drop-zone.dragover {
+      border-color: #00bcd4;
+    }
+
+    input[type="file"] {
+      margin-top: 1rem;
+    }
+
+    pre {
+      margin: 0;
+      padding: 1rem;
+      background-color: #1e1e1e;
+      overflow-x: auto;
+      max-height: 50vh;
+      border-top: 1px solid #333;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "exifr": "https://esm.run/exifr"
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <header>Upload or Drag an Image to Extract Workflow JSON</header>
+  <div class="drop-zone" id="drop-zone">
+    <p>Drag & Drop an image file here</p>
+    <p>or</p>
+    <input type="file" accept="image/*" />
+  </div>
+  <pre><code id="output">// Output will appear here</code></pre>
+
+  <script type="module">
+    import { ImageReader } from "./dist/main.mjs";
+
+    const dropZone = document.getElementById("drop-zone");
+    const fileInput = dropZone.querySelector("input");
+    const output = document.getElementById("output");
+
+    async function handleFile(file) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const reader = new ImageReader(arrayBuffer);
+        const workflow = await reader.getWorkflowJson();
+        output.textContent = JSON.stringify(workflow, null, 2);
+      } catch (err) {
+        output.textContent = `Error: ${err.message}`;
+      }
+    }
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    // Drag & drop
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+  </script>
+</body>
+
+</html>

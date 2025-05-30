@@ -1,7 +1,7 @@
 {
-  "name": "@stable-canvas/comfyui-client-transpiler",
+  "name": "@stable-canvas/cw-reader",
   "version": "1.0.0",
-  "description": "The transpiler can translate ComfyUI's workflows to `@stable-canvas/comfyui-client` format.",
+  "description": "read workflow(comfyui) info from image/json",
   "source": "src/main.ts",
   "main": "dist/main.umd.js",
   "module": "dist/main.module.mjs",
@@ -33,7 +33,6 @@
   "license": "MIT",
   "devDependencies": {
     "@microsoft/api-extractor": "^7.52.8",
-    "@types/babel__generator": "^7.6.8",
     "@types/node": "^20.12.7",
     "tslib": "^2.8.1",
     "tsup": "^8.5.0",
@@ -41,8 +40,6 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@babel/generator": "^7.24.6",
-    "@babel/types": "^7.24.6",
-    "@stable-canvas/cw-reader": "workspace:^"
+    "exifr": "^7.1.3"
   }
 }

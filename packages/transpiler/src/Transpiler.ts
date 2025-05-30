@@ -1,9 +1,11 @@
-import { CUIWorkflow } from "./Workflow";
-
 import * as types from "@babel/types";
 import generator from "@babel/generator";
 
-import { WorkflowNode, WorkflowNodeInputRef } from "./types";
+import {
+  type WorkflowNode,
+  type WorkflowNodeInputRef,
+  type CWorkflow,
+} from "@stable-canvas/cw-reader";
 
 interface WkNodeGraphNode {
   node: WorkflowNode;
@@ -14,10 +16,11 @@ const INVALID_VARIABLE_NAME = /^a-zA-Z|[\. \-*/+~]/;
 const IS_INVALID_VAR = (name: string) => INVALID_VARIABLE_NAME.test(name);
 const VAR = (name: string) => (IS_INVALID_VAR(name) ? `["${name}"]` : name);
 
-export class WorkflowCodeGenerator {
-  constructor() {}
+export class Transpiler {
+  constructor(readonly workflow: CWorkflow) {}
 
-  private collectionDependencies(wk: CUIWorkflow) {
+  private collectionDependencies() {
+    const { workflow: wk } = this;
     const all_refs = wk.nodes.map((x) =>
       Object.values(x.data.inputs).filter((x) => Array.isArray(x)),
     ) as WorkflowNodeInputRef[][];
@@ -35,8 +38,9 @@ export class WorkflowCodeGenerator {
     );
   }
 
-  private collectionOutputMap(wk: CUIWorkflow) {
-    const deps = this.collectionDependencies(wk);
+  private collectionOutputMap() {
+    const { workflow: wk } = this;
+    const deps = this.collectionDependencies();
     // 计算出每个node的最大输出参数个数
     const max_outputs = Object.entries(deps).reduce(
       (acc, [node_index, args_index]) => {
@@ -77,7 +81,8 @@ export class WorkflowCodeGenerator {
     return outputMap;
   }
 
-  wkToGraph(wk: CUIWorkflow): WkNodeGraphNode[] {
+  private wkToGraph(): WkNodeGraphNode[] {
+    const { workflow: wk } = this;
     // 没有依赖任何节点的节点作为根节点
     // 可能有多个根节点
     const nodes = {} as Record<number, WkNodeGraphNode>;
@@ -114,8 +119,8 @@ export class WorkflowCodeGenerator {
 
   // 根据 graph 结构排序
   // 从根节点开始广度优先
-  wkGraphSort(wk: CUIWorkflow) {
-    const graph = this.wkToGraph(wk);
+  private wkGraphSort() {
+    const graph = this.wkToGraph();
     const sorted = [] as WkNodeGraphNode[];
 
     const visited = new Set<WkNodeGraphNode>();
@@ -140,11 +145,9 @@ export class WorkflowCodeGenerator {
     return sorted.reverse();
   }
 
-  generate(wk: CUIWorkflow) {
-    const sortedNodes = this.wkGraphSort(wk);
-
-    const outputMap = this.collectionOutputMap(wk);
-
+  toCode() {
+    const sortedNodes = this.wkGraphSort();
+    const outputMap = this.collectionOutputMap();
     const astNodes: types.VariableDeclaration[] = [];
 
     for (const node of sortedNodes) {
