@@ -1,21 +1,23 @@
 name: Publish Docs
+
 on:
   push:
     branches:
       - main
     paths:
       [
-        "README.md",
-        "src/**/*.js",
-        "src/**/*.css",
-        "src/**/*.html",
-        "src/**/*.svg",
-        "src/**/*.json",
-        "src/**/*.ts",
-        "src/**/*.tsx",
-        "src/**/*.sh",
+        "packages/client/**.md",
+        "packages/client/src/**/*.js",
+        "packages/client/src/**/*.css",
+        "packages/client/src/**/*.html",
+        "packages/client/src/**/*.svg",
+        "packages/client/src/**/*.json",
+        "packages/client/src/**/*.ts",
+        "packages/client/src/**/*.tsx",
+        "packages/client/src/**/*.sh",
       ]
   workflow_dispatch:
+
 jobs:
   build-docs:
     runs-on: ubuntu-latest
@@ -36,10 +38,11 @@ jobs:
 
       - name: Build docs
         run: pnpm build:docs
+        working-directory: ./packages/client
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4.4.1
         with:
           branch: gh-pages
-          folder: ./docs
+          folder: ./packages/client/docs
           single-commit: true
