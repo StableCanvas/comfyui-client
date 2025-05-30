@@ -8,7 +8,15 @@ Javascript api Client for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) t
 
 This client provides comprehensive support for all available RESTful and WebSocket APIs, with built-in TypeScript typings for enhanced development experience. Additionally, it introduces a programmable workflow interface, making it easy to create and manage workflows in a human-readable format.
 
-documentations:
+## Documentations
+
+### Sub README
+
+- [client README](./packages/client/README.md)
+- [cli README](./packages/cli/README.md)
+- [transpiler README](./packages/transpiler/README.md)
+
+### Auto Docs
 
 - [Rest API](https://stablecanvas.github.io/comfyui-client/classes/Client.html)
 - [WebSocket API](https://stablecanvas.github.io/comfyui-client/classes/WsClient.html)
