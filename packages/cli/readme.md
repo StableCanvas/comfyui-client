@@ -4,6 +4,8 @@
 
 ## usage
 
+**Since the order of widgets may change at any time, the function from `.png` to code may be unstable. It is recommended to use `.json`(API Format) to code**
+
 ```
 npm install -g @stable-canvas/comfyui-client-cli
 ```

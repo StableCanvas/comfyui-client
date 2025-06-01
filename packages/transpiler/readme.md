@@ -8,6 +8,8 @@ npm install @stable-canvas/comfyui-client-transpiler
 
 # Usage
 
+**Since the order of widgets may change at any time, the function from `.png` to code may be unstable. It is recommended to use `.json`(API Format) to code**
+
 ```ts
 import { Transpiler } from "@stable-canvas/comfyui-client-transpiler";
 import { ImageReader } from "@stable-canvas/cw-reader";
