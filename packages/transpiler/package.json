@@ -1,16 +1,19 @@
 {
   "name": "@stable-canvas/comfyui-client-transpiler",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "The transpiler can translate ComfyUI's workflows to `@stable-canvas/comfyui-client` format.",
-  "source": "src/main.ts",
-  "main": "dist/main.umd.js",
-  "module": "dist/main.module.mjs",
-  "unpkg": "dist/main.umd.js",
-  "types": "./dist/main.d.ts",
+  "main": "dist/main.js",
+  "module": "dist/main.mjs",
+  "types": "dist/main.d.ts",
   "exports": {
-    "types": "./dist/main.d.ts",
-    "require": "./dist/main.js",
-    "default": "./dist/main.modern.mjs"
+    ".": {
+      "import": "./dist/main.mjs",
+      "require": "./dist/main.js"
+    },
+    "./src/main.ts": {
+      "default": "./src/main.ts"
+    },
+    "./package.json": "./package.json"
   },
   "keywords": [
     "comfyui",
