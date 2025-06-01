@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/cw-reader",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "read workflow(comfyui) info from image/json",
   "main": "dist/main.js",
   "module": "dist/main.mjs",
@@ -44,5 +44,13 @@
   },
   "dependencies": {
     "exifr": "^7.1.3"
+  },
+  "bugs": {
+    "url": "https://github.com/StableCanvas/comfyui-client/issues"
+  },
+  "homepage": "https://github.com/StableCanvas/comfyui-client#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StableCanvas/comfyui-client.git"
   }
 }

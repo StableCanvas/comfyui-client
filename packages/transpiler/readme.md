@@ -6,6 +6,10 @@ The transpiler can translate ComfyUI's workflows to `@stable-canvas/comfyui-clie
 npm install @stable-canvas/comfyui-client-transpiler
 ```
 
+references:
+
+- [comfyui-client](https://github.com/StableCanvas/comfyui-client)
+
 # Usage
 
 **Since the order of widgets may change at any time, the function from `.png` to code may be unstable. It is recommended to use `.json`(API Format) to code**

@@ -6,6 +6,10 @@ ComfyUI Workflow Reader
 npm install @stable-canvas/cw-reader
 ```
 
+references:
+
+- [comfyui-client](https://github.com/StableCanvas/comfyui-client)
+
 # Usage
 
 - NodeJS

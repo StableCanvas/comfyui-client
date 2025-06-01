@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/comfyui-client-transpiler",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "The transpiler can translate ComfyUI's workflows to `@stable-canvas/comfyui-client` format.",
   "main": "dist/main.js",
   "module": "dist/main.mjs",
@@ -47,5 +47,13 @@
     "@babel/generator": "^7.24.6",
     "@babel/types": "^7.24.6",
     "@stable-canvas/cw-reader": "workspace:^"
+  },
+  "bugs": {
+    "url": "https://github.com/StableCanvas/comfyui-client/issues"
+  },
+  "homepage": "https://github.com/StableCanvas/comfyui-client#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StableCanvas/comfyui-client.git"
   }
 }
