@@ -1,5 +1,5 @@
 import * as types from "@babel/types";
-import generator from "@babel/generator";
+import { generate } from "@babel/generator";
 
 import {
   type WorkflowNode,
@@ -231,7 +231,7 @@ export class Transpiler {
       astNodes.push(variableDeclaration);
     }
 
-    const codeFragments = astNodes.map((node) => generator(node).code);
+    const codeFragments = astNodes.map((node) => generate(node).code);
     const generatedCode = codeFragments.join("\n");
 
     return generatedCode;
