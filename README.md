@@ -12,7 +12,7 @@ This client provides comprehensive support for all available RESTful and WebSock
 
 ### Sub README
 
-- [client](./packages/client/README.md): **This is the main readme which contains very detailed instructions and examples**
+- ⭐ [client](./packages/client/README.md): **This is the main readme which contains very detailed instructions and examples**
 - [cli](./packages/cli/README.md)
 - [cw-reader](./packages/cw-reader/readme.md)
 - [transpiler](./packages/transpiler/README.md)
@@ -22,6 +22,10 @@ This client provides comprehensive support for all available RESTful and WebSock
 - [Rest API](https://stablecanvas.github.io/comfyui-client/classes/Client.html)
 - [WebSocket API](https://stablecanvas.github.io/comfyui-client/classes/WsClient.html)
 - [Workflow API](https://stablecanvas.github.io/comfyui-client/classes/Workflow.html)
+
+### Tools
+
+- ⭐ [Online Transpiler](https://stablecanvas.github.io/tool-w2c/): Online convert workflow to code.
 
 ## Features
 
