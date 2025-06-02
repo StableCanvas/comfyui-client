@@ -616,15 +616,25 @@ const [output1, output2] = workflow.node("Efficient Loader", {
 });
 ```
 
-## CLI
+## Workflow to code
 
-### install
+A common user case: You need to convert a workflow into code, modify it, or integrate it into your project.  
+Here, we provide very convenient tools to help you achieve this goal. We offer both an **online Transpiler** and a **CLI**. Using either of these methods, you can input a workflow (PNG or JSON), and it will be converted into code that complies with the requirements of this library.
+
+For relatively simple text-to-image workflows, you can almost use the generated code directly.  
+For more complex workflows, you only need to make minor adjustments to the inputs and outputs to use them.
+
+### 1. Online Transpiler
+
+[https://stablecanvas.github.io/tool-w2c/](https://stablecanvas.github.io/tool-w2c/)
+
+Online convert workflow to code.
+
+### 2. CLI
 
 ```
 npm install @stable-canvas/comfyui-client-cli
 ```
-
-### Workflow to code
 
 This tool converts the input workflow into executable code that uses this library.
 
@@ -642,112 +652,7 @@ Options:
   -h, --help                 display help for command
 ```
 
-#### example: api.json to code
-
-```
-cuc-w2c -i ./tests/test-inputs/workflow_api.json -t none
-```
-
-input file: [./cli/tests/test-inputs/workflow_api.json](./cli/tests/test-inputs/workflow_api.json)
-
-<details>
-<summary>Output</summary>
-
-```ts
-const [LATENT_2] = cls.EmptyLatentImage({
-  width: 512,
-  height: 512,
-  batch_size: 1,
-});
-const [MODEL_1, CLIP_1, VAE_1] = cls.CheckpointLoaderSimple({
-  ckpt_name: "EPIC-la-v1.ckpt",
-});
-const [CONDITIONING_2] = cls.CLIPTextEncode({
-  text: "text, watermark",
-  clip: CLIP_1,
-});
-const [CONDITIONING_1] = cls.CLIPTextEncode({
-  text: "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
-  clip: CLIP_1,
-});
-const [LATENT_1] = cls.KSampler({
-  seed: 156680208700286,
-  steps: 20,
-  cfg: 8,
-  sampler_name: "euler",
-  scheduler: "normal",
-  denoise: 1,
-  model: MODEL_1,
-  positive: CONDITIONING_1,
-  negative: CONDITIONING_2,
-  latent_image: LATENT_2,
-});
-const [IMAGE_1] = cls.VAEDecode({
-  samples: LATENT_1,
-  vae: VAE_1,
-});
-const [] = cls.SaveImage({
-  filename_prefix: "ComfyUI",
-  images: IMAGE_1,
-});
-```
-
-</details>
-
-#### example: export-png to code
-
-```
-cuc-w2c -i ./tests/test-inputs/workflow-min.png -t none
-```
-
-input file: [./cli/tests/test-inputs/workflow-min.png](./cli/tests/test-inputs/workflow-min.png)
-
-<details>
-<summary>Output</summary>
-
-```ts
-const [MODEL_1, CLIP_1, VAE_1] = cls.CheckpointLoaderSimple({
-  ckpt_name: "EPIC-la-v1.ckpt",
-});
-const [CONDITIONING_2] = cls.CLIPTextEncode({
-  text: "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,",
-  clip: CLIP_1,
-});
-const [CONDITIONING_1] = cls.CLIPTextEncode({
-  text: "text, watermark",
-  clip: CLIP_1,
-});
-const [LATENT_1] = cls.EmptyLatentImage({
-  width: 512,
-  height: 512,
-  batch_size: 1,
-});
-const [LATENT_2] = cls.KSampler({
-  seed: 156680208700286,
-  control_after_generate: "randomize",
-  steps: 20,
-  cfg: 8,
-  sampler_name: "euler",
-  scheduler: "normal",
-  denoise: 1,
-  model: MODEL_1,
-  positive: CONDITIONING_2,
-  negative: CONDITIONING_1,
-  latent_image: LATENT_1,
-});
-const [IMAGE_1] = cls.VAEDecode({
-  samples: LATENT_2,
-  vae: VAE_1,
-});
-const [] = cls.SaveImage({
-  filename_prefix: "ComfyUI",
-  images: IMAGE_1,
-});
-```
-
-</details>
-
-> Since the order of widgets may change at any time, the function from `.png` to code may be unstable. It is recommended to use `.json`(API Format) to code
+[more info: https://github.com/StableCanvas/comfyui-client/tree/main/packages/cli](https://github.com/StableCanvas/comfyui-client/tree/main/packages/cli)
 
 ## Roadmap
 
