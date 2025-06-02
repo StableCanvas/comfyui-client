@@ -13,9 +13,9 @@ This client provides comprehensive support for all available RESTful and WebSock
 ### Sub README
 
 - ⭐ [client](./packages/client/README.md): **This is the main readme which contains very detailed instructions and examples**
-- [cli](./packages/cli/README.md)
+- [cli](./packages/cli/readme.md)
 - [cw-reader](./packages/cw-reader/readme.md)
-- [transpiler](./packages/transpiler/README.md)
+- [transpiler](./packages/transpiler/readme.md)
 
 ### Auto Docs
 
