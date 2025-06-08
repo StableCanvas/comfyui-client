@@ -191,7 +191,8 @@ export class Transpiler {
             // value from link
             const refNodeKey = inputValue[0];
             const refOutputIndex = inputValue[1];
-            const refVarName = outputMap[`${refNodeKey}_${refOutputIndex}`];
+            const refVarName =
+              outputMap[`${refNodeKey}_${refOutputIndex}`] ?? "UNKNOWN_LINK";
 
             return types.objectProperty(
               types.stringLiteral(inputKey),
