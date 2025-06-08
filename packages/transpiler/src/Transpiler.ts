@@ -12,7 +12,7 @@ interface WkNodeGraphNode {
   children: WkNodeGraphNode[];
 }
 
-const INVALID_VARIABLE_NAME = /^a-zA-Z|[\. \-*/+~]/;
+const INVALID_VARIABLE_NAME = /^a-zA-Z|[\|\. \-*/+~]/;
 const IS_INVALID_VAR = (name: string) => INVALID_VARIABLE_NAME.test(name);
 const VAR = (name: string) => (IS_INVALID_VAR(name) ? `["${name}"]` : name);
 
@@ -181,14 +181,44 @@ export class Transpiler {
                 break;
               }
               case "object": {
-                if (inputValue !== null) {
-                  throw new Error("Wrong workflow");
+                if (inputValue === null) {
+                  val = types.nullLiteral();
+                } else {
+                  const toAst = (value: any): types.Expression => {
+                    if (value === null) {
+                      return types.nullLiteral();
+                    }
+                    switch (typeof value) {
+                      case "string":
+                        return types.stringLiteral(value);
+                      case "number":
+                        return types.numericLiteral(value);
+                      case "boolean":
+                        return types.booleanLiteral(value);
+                      case "object":
+                        if (Array.isArray(value)) {
+                          return types.arrayExpression(value.map(toAst));
+                        }
+                        const properties = Object.entries(value).map(
+                          ([key, val]) =>
+                            types.objectProperty(
+                              types.stringLiteral(key),
+                              toAst(val),
+                            ),
+                        );
+                        return types.objectExpression(properties);
+                      default:
+                        throw new Error(
+                          `Unsupported nested value type: ${typeof value}`,
+                        );
+                    }
+                  };
+                  val = toAst(inputValue);
                 }
-                val = types.nullLiteral();
                 break;
               }
               default: {
-                throw new Error("Wrong workflow");
+                throw new Error(`Unsupported input type: ${typeof inputValue}`);
               }
             }
             return types.objectProperty(types.stringLiteral(inputKey), val);
