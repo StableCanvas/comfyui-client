@@ -67,6 +67,7 @@ export class JsonReader {
         index: Number(index),
         class_type: node.class_type,
         inputs: node.inputs,
+        _meta: node._meta ?? {},
       });
     }
 

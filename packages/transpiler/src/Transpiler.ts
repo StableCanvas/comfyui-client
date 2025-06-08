@@ -16,6 +16,33 @@ const INVALID_VARIABLE_NAME = /^a-zA-Z|[\|\. \-*/+~]/;
 const IS_INVALID_VAR = (name: string) => INVALID_VARIABLE_NAME.test(name);
 const VAR = (name: string) => (IS_INVALID_VAR(name) ? `["${name}"]` : name);
 
+const toAst = (value: any): types.Expression => {
+  if (value === null) {
+    return types.nullLiteral();
+  }
+  switch (typeof value) {
+    case "string":
+      return types.stringLiteral(value);
+    case "number":
+      return types.numericLiteral(value);
+    case "boolean":
+      return types.booleanLiteral(value);
+    case "object":
+      if (value === null) {
+        return types.nullLiteral();
+      }
+      if (Array.isArray(value)) {
+        return types.arrayExpression(value.map(toAst));
+      }
+      const properties = Object.entries(value).map(([key, val]) =>
+        types.objectProperty(types.stringLiteral(key), toAst(val)),
+      );
+      return types.objectExpression(properties);
+    default:
+      throw new Error(`Unsupported nested value type: ${typeof value}`);
+  }
+};
+
 export class Transpiler {
   constructor(readonly workflow: CWorkflow) {}
 
@@ -154,9 +181,11 @@ export class Transpiler {
       const nodeData = node.node.data;
 
       const inputs = nodeData.inputs;
+
       const inputExpressions = Object.entries(inputs).map(
         ([inputKey, inputValue]) => {
           if (Array.isArray(inputValue)) {
+            // value from link
             const refNodeKey = inputValue[0];
             const refOutputIndex = inputValue[1];
             const refVarName = outputMap[`${refNodeKey}_${refOutputIndex}`];
@@ -166,62 +195,11 @@ export class Transpiler {
               types.identifier(refVarName),
             );
           } else {
-            let val;
-            switch (typeof inputValue) {
-              case "string": {
-                val = types.stringLiteral(inputValue);
-                break;
-              }
-              case "number": {
-                val = types.numericLiteral(inputValue);
-                break;
-              }
-              case "boolean": {
-                val = types.booleanLiteral(inputValue);
-                break;
-              }
-              case "object": {
-                if (inputValue === null) {
-                  val = types.nullLiteral();
-                } else {
-                  const toAst = (value: any): types.Expression => {
-                    if (value === null) {
-                      return types.nullLiteral();
-                    }
-                    switch (typeof value) {
-                      case "string":
-                        return types.stringLiteral(value);
-                      case "number":
-                        return types.numericLiteral(value);
-                      case "boolean":
-                        return types.booleanLiteral(value);
-                      case "object":
-                        if (Array.isArray(value)) {
-                          return types.arrayExpression(value.map(toAst));
-                        }
-                        const properties = Object.entries(value).map(
-                          ([key, val]) =>
-                            types.objectProperty(
-                              types.stringLiteral(key),
-                              toAst(val),
-                            ),
-                        );
-                        return types.objectExpression(properties);
-                      default:
-                        throw new Error(
-                          `Unsupported nested value type: ${typeof value}`,
-                        );
-                    }
-                  };
-                  val = toAst(inputValue);
-                }
-                break;
-              }
-              default: {
-                throw new Error(`Unsupported input type: ${typeof inputValue}`);
-              }
-            }
-            return types.objectProperty(types.stringLiteral(inputKey), val);
+            // value from json
+            return types.objectProperty(
+              types.stringLiteral(inputKey),
+              toAst(inputValue),
+            );
           }
         },
       );
@@ -258,6 +236,10 @@ export class Transpiler {
         variableDeclarator,
       ]);
 
+      if (nodeData._meta?.title) {
+        // 如果有 title 增加作为注释 comment
+        types.addComment(variableDeclaration, "leading", nodeData._meta.title);
+      }
       astNodes.push(variableDeclaration);
     }
 

@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/cw-reader",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "read workflow(comfyui) info from image/json",
   "main": "dist/main.js",
   "module": "dist/main.mjs",

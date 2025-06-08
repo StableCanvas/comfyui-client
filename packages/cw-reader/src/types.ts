@@ -10,6 +10,7 @@ export type WorkflowNodeDefine = {
   index: number | string;
   class_type: string;
   inputs: Record<string, WorkflowNodeInputValue>;
+  _meta?: Record<string, any>;
 };
 export type WorkflowNode = {
   index: number;
@@ -18,5 +19,6 @@ export type WorkflowNode = {
     class_type: string;
     inputs: Record<string, WorkflowNodeInputValue>;
     outputs: string[];
+    _meta?: Record<string, any>;
   };
 };

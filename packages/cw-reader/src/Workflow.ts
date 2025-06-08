@@ -12,12 +12,13 @@ export class CWorkflow {
   }
 
   private append(node: WorkflowNodeDefine) {
-    const ful_node = {
+    const ful_node: WorkflowNode = {
       index: Number(node.index),
       data: {
         class_type: node.class_type,
         inputs: node.inputs,
         outputs: this.prepareOutputs(node.class_type),
+        _meta: node._meta,
       },
     };
     this.nodes.push(ful_node);
