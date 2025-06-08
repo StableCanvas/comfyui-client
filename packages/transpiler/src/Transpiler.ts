@@ -137,6 +137,9 @@ export class Transpiler {
         .map(([node_index, _]: any) => Number(node_index));
 
       for (const dep of deps) {
+        // 某些情况生成的图可能会有找不到的链接，找不到这里就跳过
+        // FIXME: 也许需要一个 warn 机制
+        if (!nodes[dep]) continue;
         nodes[dep].children.push(graph_node);
       }
     }

@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/comfyui-client-transpiler",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "The transpiler can translate ComfyUI's workflows to `@stable-canvas/comfyui-client` format.",
   "main": "dist/main.js",
   "module": "dist/main.mjs",
