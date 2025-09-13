@@ -98,7 +98,7 @@ function generateTypes(inputSchema) {
 
   for (const [nodeName, nodeSchema] of Object.entries(inputSchema.properties)) {
     const interfaceName = nodeName.replace(
-      /[ \-+=|:{}\(\)\]\[\/\\><@#%,'.?!]/g,
+      /[ \-+=|:{}\(\)\]\[\/\\><@#%&,'.?!]/g,
       "_",
     );
 
@@ -143,6 +143,7 @@ const inputSchema = JSON.parse(
 );
 
 try {
+  console.log("Generating types...");
   console.time("generateTypes");
   const generatedCode = generateTypes(inputSchema);
   console.timeEnd("generateTypes");
