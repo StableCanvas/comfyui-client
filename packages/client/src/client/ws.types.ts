@@ -55,6 +55,20 @@ export namespace ComfyUiWsTypes {
       timestamp: number;
     }
   }
+  export namespace BinaryMessages {
+    export interface ProgressText {
+      nodeId: string;
+      text: string;
+    }
+    export interface BinaryPreviewWithMetadata {
+      blob: Blob;
+      nodeId: string;
+      displayNodeId: string;
+      parentNodeId: string;
+      realNodeId: string;
+      promptId: string;
+    }
+  }
 }
 
 export type ComfyUIClientEvents = {
@@ -73,6 +87,23 @@ export type ComfyUIClientEvents = {
   connected: [];
   reconnected: [];
   reconnecting: [];
+
+  /**
+   * binary image preview
+   *
+   * from binary data sent by the server
+   */
+  b_preview: [Blob];
+  b_preview_with_metadata: [
+    ComfyUiWsTypes.BinaryMessages.BinaryPreviewWithMetadata,
+  ];
+
+  /**
+   * progress text
+   *
+   * from binary data sent by the server
+   */
+  progress_text: [ComfyUiWsTypes.BinaryMessages.ProgressText];
 
   /**
    * load image data from websocket
