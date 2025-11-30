@@ -32,24 +32,85 @@ export class WsClient {
   static DEFAULT_USER = "";
   static IS_BROWSER = typeof window !== "undefined";
 
-  static loadImageData(buf: ArrayBuffer) {
+  static readBinaryData(buf: ArrayBuffer) {
     const view = new DataView(buf);
     const eventType = view.getUint32(0);
     const imageType = view.getUint32(1);
 
-    if (eventType !== 1) {
-      throw new Error(`Unknown binary websocket message of type ${eventType}`);
+    switch (eventType) {
+      case 3: {
+        const decoder = new TextDecoder();
+        const data = buf.slice(4);
+        const nodeIdLength = view.getUint32(4);
+        return [
+          {
+            type: "progress_text",
+            data: {
+              nodeId: decoder.decode(data.slice(4, 4 + nodeIdLength)),
+              text: decoder.decode(data.slice(4 + nodeIdLength)),
+            },
+          },
+        ] as const;
+      }
+
+      case 1: {
+        const mimeTypes = {
+          1: "image/jpeg",
+          2: "image/png",
+        } as any;
+
+        const mime = mimeTypes[imageType] || "image/png";
+        const image = buf.slice(8);
+
+        const imageBlob = new Blob([image], {
+          type: mime,
+        });
+
+        return [
+          {
+            type: "b_preview",
+            data: imageBlob,
+          },
+        ] as const;
+      }
+
+      case 4: {
+        // PREVIEW_IMAGE_WITH_METADATA
+        const decoder4 = new TextDecoder();
+        const metadataLength = view.getUint32(4);
+        const metadataBytes = buf.slice(8, 8 + metadataLength);
+        const metadata = JSON.parse(decoder4.decode(metadataBytes));
+        const imageData4 = buf.slice(8 + metadataLength);
+
+        let imageMime4 = metadata.image_type;
+
+        const imageBlob4 = new Blob([imageData4], {
+          type: imageMime4,
+        });
+
+        return [
+          {
+            type: "b_preview_with_metadata",
+            data: {
+              blob: imageBlob4,
+              nodeId: metadata.node_id,
+              displayNodeId: metadata.display_node_id,
+              parentNodeId: metadata.parent_node_id,
+              realNodeId: metadata.real_node_id,
+              promptId: metadata.prompt_id,
+            },
+          },
+          {
+            type: "b_preview",
+            data: imageBlob4,
+          },
+        ] as const;
+      }
+      default:
+        throw new Error(
+          `Unknown binary websocket message of type ${eventType}`,
+        );
     }
-
-    const mimeTypes = {
-      1: "image/jpeg",
-      2: "image/png",
-    } as any;
-
-    const mime = mimeTypes[imageType] || "image/png";
-    const image = buf.slice(8);
-
-    return { image, mime };
   }
 
   api_host: string;
@@ -356,7 +417,7 @@ export class WsClient {
       }
     });
 
-    const isImageMessage = (event: MessageEvent) => {
+    const isBinaryData = (event: MessageEvent) => {
       if (typeof event.data === "string") {
         return false;
       }
@@ -369,12 +430,40 @@ export class WsClient {
       return false;
     };
 
-    this.addSocketCallback(this.socket, "message", (event) => {
+    this.addSocketCallback(this.socket, "message", async (event) => {
       this.events.emit("message", event);
 
-      if (isImageMessage(event)) {
-        const image = WsClient.loadImageData(event.data);
-        this.events.emit("image_data", image);
+      if (isBinaryData(event)) {
+        const binaryEvents = WsClient.readBinaryData(event.data);
+        for (const ev of binaryEvents) {
+          switch (ev.type) {
+            case "b_preview": {
+              // TODO add types
+              this.events.emit("b_preview", ev.data);
+              this.events.emit("image_data", {
+                image: await ev.data.arrayBuffer(),
+                mime: ev.data.type,
+              });
+              break;
+            }
+            case "b_preview_with_metadata": {
+              // TODO add types
+              this.events.emit("b_preview_with_metadata", ev.data);
+              this.events.emit("image_data", {
+                image: await ev.data.blob.arrayBuffer(),
+                mime: ev.data.blob.type,
+              });
+              break;
+            }
+            case "progress_text": {
+              // TODO add types
+              this.events.emit("progress_text", ev.data);
+              break;
+            }
+            default:
+              return;
+          }
+        }
       } else {
         const msg = JSON.parse(event.data);
 
