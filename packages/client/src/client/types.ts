@@ -16,8 +16,10 @@ export type EnqueueOptions<T = unknown> = {
   workflow?: Record<string, unknown>;
   disable_random_seed?: boolean;
   progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
+  on_error?: (err: Error) => void;
   resolver?: WorkflowOutputResolver<T>;
   polling_ms?: number;
+  timeout_ms?: number;
 };
 export interface IComfyApiConfig {
   /**

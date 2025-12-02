@@ -1,8 +1,14 @@
 import { EventEmitter } from "eventemitter3";
 import { ComfyUIClientEvents } from "./ws.types";
 import { uuidv4 } from "../utils/misc";
-import { Errors } from "../utils/Errors";
 import { IComfyApiConfig } from "./types";
+import {
+  ConnectError,
+  HttpError,
+  PollingTimeoutError,
+  WebSocketParseError,
+  WebSocketTimeoutError,
+} from "./errors";
 
 /**
  * A client for interacting with the ComfyUI API server using WebSockets.
@@ -107,7 +113,7 @@ export class WsClient {
         ] as const;
       }
       default:
-        throw new Error(
+        throw new WebSocketParseError(
           `Unknown binary websocket message of type ${eventType}`,
         );
     }
@@ -139,7 +145,7 @@ export class WsClient {
     this.ssl = config.ssl ?? false;
     this.user = config.user ?? WsClient.DEFAULT_USER;
     if (!globalThis.fetch) {
-      throw new Error("fetch is not defined");
+      throw new ConnectError("fetch is not defined");
     }
     this.fetch = config.fetch ?? globalThis.fetch.bind(globalThis);
 
@@ -232,7 +238,7 @@ export class WsClient {
    */
   async fetchApi(route: string, options?: RequestInit): Promise<Response> {
     if (this.closed) {
-      throw new Error("Client is closed");
+      throw new ConnectError("Client is closed");
     }
     const url = this.apiURL(route);
     const res = await this.fetch(url, {
@@ -242,7 +248,7 @@ export class WsClient {
     const { status, statusText } = res;
 
     if (status < 200 || status >= 400) {
-      throw new Errors.HttpError(
+      throw new HttpError(
         `Endpoint Bad Request (${status} ${statusText}): ${url}`,
         status,
         await res.json(),
@@ -366,7 +372,7 @@ export class WsClient {
       return;
     }
     if (!this.WebSocket) {
-      throw new Error(
+      throw new ConnectError(
         "WebSocket is not defined, please provide a WebSocket implementation",
       );
     }
@@ -569,7 +575,7 @@ export class WsClient {
       this.startPollingQueue();
       return new Promise(async (resolve, reject) => {
         const timer = setTimeout(() => {
-          reject(new Error("Polling connection timed out"));
+          reject(new PollingTimeoutError(timeout_ms));
         }, timeout_ms);
         // ping to ok or fail
         const resp = await this.fetchApi("/system_stats");
@@ -581,7 +587,7 @@ export class WsClient {
       this.createSocket();
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
-          reject(new Error("WebSocket connection timed out"));
+          reject(new WebSocketTimeoutError(timeout_ms));
         }, timeout_ms);
         this.once("connected", () => {
           resolve(true);
@@ -589,7 +595,7 @@ export class WsClient {
         });
       });
     }
-    throw new Error("You must enable either polling or websocket");
+    throw new ConnectError("You must enable either polling or websocket");
   }
 
   /**

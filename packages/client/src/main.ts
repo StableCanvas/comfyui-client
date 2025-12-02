@@ -13,6 +13,9 @@ export * from "./client/response.types";
 export * from "./workflow/types";
 export * from "./pipeline/types";
 
+export * from "./client/errors";
+export * from "./workflow/errors";
+
 import { WsClient } from "./client/WsClient";
 import { Client } from "./client/Client";
 import { Workflow } from "./workflow/Workflow";

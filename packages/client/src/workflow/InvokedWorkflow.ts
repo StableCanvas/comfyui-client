@@ -5,9 +5,19 @@ import { RESOLVERS } from "../builtins";
 import { ComfyUIClientEvents, ComfyUiWsTypes } from "../client/ws.types";
 import EventEmitter from "eventemitter3";
 import { Disposable } from "../utils/Disposable";
+import {
+  WorkflowArgumentError,
+  WorkflowDoneError,
+  WorkflowEnqueuedError,
+  WorkflowExecutionError,
+  WorkflowInterruptedError,
+  WorkflowTaskIdError,
+  WorkflowTaskStatusError,
+  WorkflowWsError,
+} from "./errors";
 
 export class InvokedWorkflow<T = unknown> extends Disposable {
-  protected task_id?: string;
+  protected _task_id?: string;
 
   protected _result: WorkflowOutput<T> = {
     images: [],
@@ -27,6 +37,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
       client: Client;
       resolver?: WorkflowOutputResolver<T>;
       progress?: (p: ComfyUiWsTypes.Messages.Progress) => void;
+      on_error?: (e: Error) => void;
     },
   ) {
     super();
@@ -36,37 +47,35 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     this.resolver = resolver || (RESOLVERS.image as any);
   }
 
+  public get is_disposed() {
+    return this._disposed;
+  }
+
+  public get task_id() {
+    return this._task_id;
+  }
+
   protected _enqueue_guard() {
-    if (this.enqueued) {
-      throw new Error("This workflow is already enqueued");
-    }
+    if (this.enqueued) throw new WorkflowEnqueuedError(this);
     this.enqueued = true;
   }
 
   protected _task_id_guard() {
-    if (!this.task_id) {
-      throw new Error(
-        "This workflow is not enqueued and the execution status cannot be interrupt",
-      );
-    }
-    return this.task_id;
+    if (!this._task_id) throw new WorkflowTaskIdError(this);
+    return this._task_id;
   }
 
   protected _done_guard() {
-    if (this._disposed || this.is_done) {
-      throw new Error("This workflow has been disposed");
-    }
+    if (this._disposed || this.is_done) throw new WorkflowDoneError(this);
   }
 
   protected _ws_guard() {
-    if (this.client.socket === null) {
-      throw new Error("WebSocket is not connected");
-    }
+    if (this.client.socket === null) throw new WorkflowWsError(this);
   }
 
   protected is_owner_event(...args: any[]) {
     const [data] = (args as any[]) || [];
-    const { task_id } = this;
+    const { _task_id: task_id } = this;
     if (!task_id) return false;
     if (typeof data !== "object" || data === null) return false;
     if (!("prompt_id" in data) || data.prompt_id !== task_id) return false;
@@ -124,7 +133,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     const { prompt_id } = await client._enqueue_prompt(prompt, {
       workflow: wf,
     });
-    this.task_id = prompt_id;
+    this._task_id = prompt_id;
 
     this.hook_progress();
     this.hook_image_data();
@@ -132,14 +141,15 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
 
   protected async hook_progress() {
     const { progress } = this.options;
-    const { task_id: _task_id } = this;
+    const { _task_id: _task_id } = this;
     if (!progress) return;
     if (typeof progress !== "function") {
-      throw new Error("progress hook must be a function");
+      throw new WorkflowArgumentError(
+        this,
+        "options.progress hook must be a function",
+      );
     }
-    if (typeof _task_id !== "string") {
-      throw new Error("this workflow is not enqueued");
-    }
+    if (typeof _task_id !== "string") throw new WorkflowTaskIdError(this);
     const off_progress = this.client.on_progress(progress, _task_id);
     this._connect(off_progress);
   }
@@ -202,7 +212,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     if (running) {
       return this.client.interrupt();
     }
-    throw new Error(`wrong task status, id: ${id}`);
+    throw new WorkflowTaskStatusError(this);
   }
 
   protected async collect_result() {
@@ -230,6 +240,19 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     );
   }
 
+  protected when_execution_error(
+    cb: (data: ComfyUiWsTypes.Messages.ExecutionError) => any,
+  ) {
+    const task_id = this._task_id_guard();
+    this._connect(
+      this.client.on("execution_error", (data) => {
+        if (data.prompt_id === task_id) {
+          cb(data);
+        }
+      }),
+    );
+  }
+
   /**
    * Waits for the workflow to complete and returns the result.
    *
@@ -249,8 +272,14 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
         this.is_done = true;
         this.dispose();
       };
+
+      // NOTE: 这里监听如果 client 没有开启 ws 是拿不到的，但是其实可以 client 开启 ws 同时这里仍然使用 polling 来同步状态，所以，这里也监听这个状态
       this.when_interrupted((data) => {
-        reject(new Error("Execution Interrupted"));
+        reject(new WorkflowInterruptedError(this));
+        done();
+      });
+      this.when_execution_error((data) => {
+        reject(new WorkflowExecutionError(data, task_id, this.workflow, this));
         done();
       });
 
@@ -263,6 +292,9 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
       } finally {
         done();
       }
+    }).catch((err) => {
+      this.options.on_error?.(err);
+      return Promise.reject(err);
     });
   }
 
@@ -296,28 +328,31 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
         }
       };
       this.when_interrupted((data) => {
-        reject(new Error("Execution Interrupted"));
+        reject(new WorkflowInterruptedError(this));
+        done();
+      });
+      this.when_execution_error((data) => {
+        reject(new WorkflowExecutionError(data, task_id, this.workflow, this));
         done();
       });
       // NOTE: 这里的意思是，如果其他地方导致 dispose ，那么也应该调用这个保证 promise resolve
       this._connect(maybe_done);
       this._connect(
         this.client.on("executed", async (data) => {
-          if (data.prompt_id !== task_id) {
-            return;
-          }
+          if (data.prompt_id !== task_id) return;
           this.resolve_to_result(data);
           maybe_done();
         }),
       );
       this._connect(
         this.client.on("execution_success", async (data) => {
-          if (data.prompt_id !== task_id) {
-            return;
-          }
+          if (data.prompt_id !== task_id) return;
           maybe_done();
         }),
       );
+    }).catch((err) => {
+      this.options.on_error?.(err);
+      return Promise.reject(err);
     });
   }
 }

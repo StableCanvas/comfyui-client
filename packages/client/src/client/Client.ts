@@ -9,6 +9,15 @@ import {
 } from "./types";
 import { ComfyUIClientResponseTypes } from "./response.types";
 import { WorkflowOutput } from "../workflow/types";
+import { WorkflowExecutionError } from "../workflow/errors";
+import {
+  ClientEnqueueError,
+  ClientRequestError,
+  PromptEnqueueError,
+  PromptExecutionFailedError,
+  PromptNotFoundError,
+  PromptTimeoutError,
+} from "./errors";
 
 /**
  * The Client class provides a high-level interface for interacting with the ComfyUI API.
@@ -361,7 +370,7 @@ export class Client extends WsClient {
     });
     if (resp.status !== 200) {
       const error = await resp.text();
-      throw new Error(
+      throw new ClientRequestError(
         `Error storing user data file '${file}': ${resp.status} ${error}`,
       );
     }
@@ -508,12 +517,12 @@ export class Client extends WsClient {
     const { History: history } = await this.getHistory();
     const item = history.find((item) => item.prompt[1] === prompt_id);
     if (!item) {
-      throw new Error(`Prompt [${prompt_id}] not found in history`);
+      throw new PromptNotFoundError(prompt_id);
     }
 
     const status = item.status.status_str;
     if (status !== "success") {
-      throw new Error(`Prompt [${prompt_id}] failed with status: ${status}`);
+      throw new PromptExecutionFailedError(prompt_id, status);
     }
 
     return item.outputs;
@@ -559,11 +568,23 @@ export class Client extends WsClient {
    *
    * @param {string} prompt_id - The ID of the prompt to wait for.
    * @param {number} [polling_ms=1000] - The number of milliseconds to wait between checks.
+   * @param {number} [timeout_ms=5 * 60 * 1000] - The maximum number of milliseconds to wait. defaults to 5 minutes. must be greater than 1000ms.
    * @return {void}
    */
-  async waitForPrompt(prompt_id: string, polling_ms = 1000) {
+  async waitForPrompt(
+    prompt_id: string,
+    polling_ms = 1000,
+    timeout_ms = 5 * 60 * 1000,
+  ) {
+    const start = Date.now();
     let prompt_status = await this.getPromptStatus(prompt_id);
     while (!prompt_status.done) {
+      if (timeout_ms >= 1000) {
+        if (Date.now() - start > timeout_ms) {
+          throw new PromptTimeoutError(prompt_id, timeout_ms);
+        }
+      }
+
       await new Promise((resolve) => setTimeout(resolve, polling_ms));
       prompt_status = await this.getPromptStatus(prompt_id);
     }
@@ -575,11 +596,13 @@ export class Client extends WsClient {
    *
    * @param {string} prompt_id - The ID of the prompt to wait for.
    * @param {WorkflowOutputResolver<T>} resolver - A function to resolve the output of the prompt.
+   * @param {number} [timeout_ms=5 * 60 * 1000] - The maximum number of milliseconds to wait. defaults to 5 minutes. must be greater than 1000ms.
    * @return {Promise<WorkflowOutput<T>>} A promise that resolves with the output of the prompt.
    */
   async waitForPromptWebSocket<T>(
     prompt_id: string,
     resolver: WorkflowOutputResolver<T>,
+    timeout_ms = 5 * 60 * 1000,
   ) {
     const output: WorkflowOutput<T> = {
       images: [],
@@ -587,28 +610,48 @@ export class Client extends WsClient {
       data: null as T,
     };
     return new Promise<WorkflowOutput<T>>((resolve, reject) => {
-      const offEvent2 = this.on("image_data", (data) => {
-        // TODO: should hook web-socket resolver ?
-        output.images.push({ type: "buff", data: data.image, mime: data.mime });
-      });
-      const offEvent = this.on("executed", (data) => {
-        const {
-          prompt_id: current_prompt_id,
-          output: executed_output,
-          node: node_id,
-        } = data;
-        if (current_prompt_id !== prompt_id) {
-          return;
-        }
-        const resolved = resolver(output, executed_output, {
-          client: this,
-          prompt_id,
-          node_id,
-        });
-        resolve(resolved);
-        offEvent();
-        offEvent2();
-      });
+      const cbs = [] as any[];
+      const gc = () => cbs.forEach((cb) => cb());
+      cbs.push(
+        this.on("image_data", (data) => {
+          // FIXME: should hook web-socket resolver ?
+          // NOTE: 这里不准备用 resolver 处理了，因为 resolver 的意思是处理那些不常见的特殊的数据结构，但是这里完完全全很明白是图片数据，所以不需要经过 resolver
+          output.images.push({
+            type: "buff",
+            data: data.image,
+            mime: data.mime,
+          });
+        }),
+      );
+      cbs.push(
+        this.on("executed", (data) => {
+          const {
+            prompt_id: current_prompt_id,
+            output: executed_output,
+            node: node_id,
+          } = data;
+          if (current_prompt_id !== prompt_id) {
+            return;
+          }
+          const resolved = resolver(output, executed_output, {
+            client: this,
+            prompt_id,
+            node_id,
+          });
+          resolve(resolved);
+          gc();
+        }),
+      );
+      cbs.push(
+        this.on("execution_error", (data) => {
+          reject(new WorkflowExecutionError(data, prompt_id));
+          gc();
+        }),
+      );
+      const timer = setTimeout(() => {
+        reject(new PromptTimeoutError(prompt_id, timeout_ms));
+      }, timeout_ms);
+      cbs.push(() => clearTimeout(timer));
     });
   }
 
@@ -631,10 +674,7 @@ export class Client extends WsClient {
       prompt,
       workflow: options?.workflow,
     });
-    if ("error" in resp) {
-      // TODO new Error class
-      throw new Error(resp.error);
-    }
+    if ("error" in resp) throw new PromptEnqueueError(resp.error);
     return resp;
   }
 
@@ -648,6 +688,7 @@ export class Client extends WsClient {
    * @param {Object} options - The options for running the prompt.
    * @param {Record<string, unknown>} options.workflow - The workflow for the prompt, It will be added to the png info of the generated image.
    * @param {number} [options.polling_ms=1000] - The number of milliseconds to polling query prompt result.
+   * @param {number} [options.timeout_ms=5 * 60 * 1000] - The number of milliseconds to wait for the prompt result. must be greater than 1000.
    * @return {Promise<WorkflowOutput>} A promise that resolves with the prompt result.
    *
    * @deprecated Use `enqueue_polling` instead
@@ -657,11 +698,16 @@ export class Client extends WsClient {
     options?: {
       workflow?: Record<string, unknown>;
       polling_ms?: number;
+      timeout_ms?: number;
     },
   ) {
     const resp = await this._enqueue_prompt(prompt, options);
     const prompt_id = resp.prompt_id;
-    await this.waitForPrompt(prompt_id, options?.polling_ms);
+    await this.waitForPrompt(
+      prompt_id,
+      options?.polling_ms,
+      options?.timeout_ms,
+    );
     return await this.getPromptResult(prompt_id, RESOLVERS.image);
   }
 
@@ -688,12 +734,18 @@ export class Client extends WsClient {
     options?: any,
   ): Promise<WorkflowOutput> {
     if (typeof options?.progress === "function") {
-      throw new Error("progress option is not supported in polling mode");
+      throw new ClientEnqueueError(
+        "progress option is not supported in polling mode",
+      );
     }
 
     const resp = await this._enqueue_prompt(prompt, options);
     const prompt_id = resp.prompt_id;
-    await this.waitForPrompt(prompt_id, options?.polling_ms);
+    await this.waitForPrompt(
+      prompt_id,
+      options?.polling_ms,
+      options?.timeout_ms,
+    );
     return await this.getPromptResult(
       prompt_id,
       options?.resolver ?? RESOLVERS.image,
@@ -704,9 +756,7 @@ export class Client extends WsClient {
    * Enqueues a prompt and waits for the corresponding prompt websocket.
    *
    * @param {Record<string, unknown>} prompt - The prompt to enqueue.
-   * @param {{ workflow?: Record<string, unknown>; disable_random_seed?: boolean; }} [options] - The options for enqueueing the prompt.
-   * @param {Record<string, unknown>} [options.workflow] - This data for PNG info.
-   * @param {boolean} [options.disable_random_seed] - Whether to disable random seed.
+   * @param {EnqueueOptions<T>} [options] - The options for enqueueing the prompt.
    * @return {Promise<WorkflowOutput>} A promise that resolves with the prompt result.
    */
   async enqueue<T>(
@@ -726,6 +776,7 @@ export class Client extends WsClient {
       return await this.waitForPromptWebSocket(
         prompt_id,
         options?.resolver ?? RESOLVERS.image,
+        options?.timeout_ms,
       );
     } finally {
       off_progress();
