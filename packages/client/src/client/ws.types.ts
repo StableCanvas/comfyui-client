@@ -126,7 +126,7 @@ export type ComfyUIClientEvents = {
   close: [];
 
   // network connection errors
-  connection_error: { type: string; message: string };
+  connection_error: [{ type: string; message: string }];
 
   /**
    * unhandled event message
