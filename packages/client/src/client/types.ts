@@ -71,3 +71,31 @@ export interface IComfyApiConfig {
 
   cache?: CachedFnOptions;
 }
+export type PromptMessage = [number, { prompt_id: number; timestamp: number }];
+export type PromptBody = [
+  index: number,
+  id: string,
+  workflow: object,
+  payload: {
+    client_id: string;
+    create_time: number;
+    extra_pnginfo: {
+      workflow: Record<string, unknown>;
+      [key: string]: any;
+    };
+  },
+  outputs: string[],
+];
+export interface PromptQueueItem {
+  prompt: PromptBody;
+  outputs: Record<string, any>;
+  status?: {
+    status_str: "success" | "error";
+    completed: boolean;
+    messages: PromptMessage[];
+  };
+  meta?: Record<string, any>;
+}
+export interface PromptQueueHistory {
+  [prompt_id: string]: PromptQueueItem;
+}

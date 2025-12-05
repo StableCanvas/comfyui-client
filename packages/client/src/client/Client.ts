@@ -6,6 +6,8 @@ import {
   WorkflowOutputResolver,
   EnqueueOptions,
   IComfyApiConfig,
+  PromptBody,
+  PromptQueueItem,
 } from "./types";
 import { ComfyUIClientResponseTypes } from "./response.types";
 import { WorkflowOutput } from "../workflow/types";
@@ -176,8 +178,8 @@ export class Client extends WsClient {
    * @returns The currently running and queued items
    */
   async getQueue(): Promise<{
-    Running: Array<Record<string, unknown>>;
-    Pending: Array<Record<string, unknown>>;
+    Running: Array<PromptBody>;
+    Pending: Array<PromptBody>;
   }> {
     try {
       const res = await this.fetchApi("/queue");
@@ -200,16 +202,7 @@ export class Client extends WsClient {
    * @returns Prompt history including node outputs
    */
   async getHistory(max_items = 200): Promise<{
-    History: Array<{
-      // [index, prompt_id, prompt, payload, outputs_node]
-      prompt: [number, string, any, any, any];
-      outputs: Record<string, unknown>;
-      status: {
-        status_str: string;
-        completed: boolean;
-        messages: any[];
-      };
-    }>;
+    History: Array<PromptQueueItem>;
   }> {
     try {
       const res = await this.fetchApi(`/history?max_items=${max_items}`);
@@ -510,7 +503,7 @@ export class Client extends WsClient {
    * Retrieves the outputs of a prompt with the given ID from the history.
    *
    * @param {string} prompt_id - The ID of the prompt to retrieve the outputs for.
-   * @return {Promise<any>} A promise that resolves to the outputs of the prompt.
+   * @return {Promise<Record<string, any>>} A promise that resolves to the outputs of the prompt.
    * @throws {Error} If the prompt with the given ID is not found in the history or if it failed with a non-"success" status.
    */
   async getPromptOutputs(prompt_id: string) {
@@ -520,9 +513,9 @@ export class Client extends WsClient {
       throw new PromptNotFoundError(prompt_id);
     }
 
-    const status = item.status.status_str;
-    if (status !== "success") {
-      throw new PromptExecutionFailedError(prompt_id, status);
+    const status = item.status?.status_str ?? "error";
+    if (status === "error") {
+      throw new PromptExecutionFailedError(prompt_id, status ?? "error");
     }
 
     return item.outputs;
