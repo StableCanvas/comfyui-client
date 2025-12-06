@@ -152,10 +152,9 @@ export class Client extends WsClient {
       const error_resp = await res.text();
       try {
         const error_data = JSON.parse(error_resp);
-        // TODO throw Error class
-        throw { response: error_data };
+        throw new PromptEnqueueError(error_data);
       } catch (error) {
-        throw { response: error_resp };
+        throw new PromptEnqueueError({ error: error_resp, node_errors: {} });
       }
     }
 
