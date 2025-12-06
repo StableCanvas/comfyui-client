@@ -185,11 +185,8 @@ export class Client extends WsClient {
       const res = await this.fetchApi("/queue");
       const data = await res.json();
       return {
-        Running: data.queue_running.map((prompt: any) => ({
-          prompt,
-          remove: { name: "Cancel", cb: () => this.interrupt() },
-        })),
-        Pending: data.queue_pending.map((prompt: any) => ({ prompt })),
+        Running: data.queue_running,
+        Pending: data.queue_pending,
       };
     } catch (error) {
       console.error(error);
