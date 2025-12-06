@@ -200,11 +200,27 @@ export class Client extends WsClient {
    * Gets the prompt execution history
    * @returns Prompt history including node outputs
    */
-  async getHistory(max_items = 200): Promise<{
+  async getHistory(
+    max_items = 200,
+    options?: {
+      offset?: number;
+    },
+  ): Promise<{
     History: Array<PromptQueueItem>;
   }> {
+    const { offset } = options || {};
+    // Validate offset parameter
+    if (offset !== undefined && (offset < 0 || !Number.isInteger(offset))) {
+      throw new Error(
+        `Invalid offset parameter: ${offset}. Must be a non-negative integer.`,
+      );
+    }
+    const params = new URLSearchParams({ max_items: max_items.toString() });
+    if (offset !== undefined) {
+      params.set("offset", offset.toString());
+    }
     try {
-      const res = await this.fetchApi(`/history?max_items=${max_items}`);
+      const res = await this.fetchApi(`/history?${params.toString()}`);
       return { History: Object.values(await res.json()) };
     } catch (error) {
       console.error(error);
