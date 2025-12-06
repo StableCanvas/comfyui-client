@@ -8,6 +8,16 @@ export namespace ComfyUIClientResponseTypes {
     os: string;
     python_version: string;
     embedded_python: boolean;
+    comfyui_version: string;
+    pytorch_version: string;
+    required_frontend_version?: string;
+    argv: string[];
+    ram_total: number;
+    ram_free: number;
+    // Cloud-specific fields
+    cloud_version?: string;
+    comfyui_frontend_version?: string;
+    workflow_templates_version?: string;
   }
 
   export interface Device {
@@ -45,26 +55,31 @@ export namespace ComfyUIClientResponseTypes {
     [k: string]: NodeConfig;
   }
 
-  export type QueuePrompt =
-    | {
-        prompt_id: string;
-        number: number;
-        node_errors: any;
-      }
-    | {
-        error: string;
-        node_errors: Record<
-          string,
-          {
-            class_type: string;
-            dependent_outputs: string[];
-            errors: Array<{
-              details: string;
-              extra_info: any;
-              message: string;
-              type: string;
-            }>;
-          }
-        >;
-      };
+  export type ApiError = {
+    type: string;
+    message: string;
+    details: string;
+    extra_info?: {
+      input_name?: string;
+    };
+  };
+
+  export type NodeError = {
+    errors: ApiError[];
+    class_type: string;
+    dependent_outputs: any[];
+  };
+
+  export type QueuePromptSuccess = {
+    prompt_id: string;
+    exec_info?: {
+      queue_remaining?: number;
+    };
+  };
+  export type QueuePromptError = {
+    error: string | NodeError;
+    node_errors: Record<string, NodeError>;
+  };
+
+  export type QueuePrompt = QueuePromptSuccess | QueuePromptError;
 }

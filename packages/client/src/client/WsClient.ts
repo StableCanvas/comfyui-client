@@ -194,6 +194,10 @@ export class WsClient {
     return url.toString();
   }
 
+  internalURL(route: string): string {
+    return this.apiURL(`/internal${route}`);
+  }
+
   /**
    * Generates a URL for viewing a specific file with the given filename, subfolder, and type.
    *

@@ -210,7 +210,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
       return;
     }
     if (running) {
-      return this.client.interrupt();
+      return this.client.interrupt(id);
     }
     throw new WorkflowTaskStatusError(this);
   }

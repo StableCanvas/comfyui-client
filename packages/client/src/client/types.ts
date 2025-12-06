@@ -99,3 +99,23 @@ export interface PromptQueueItem {
 export interface PromptQueueHistory {
   [prompt_id: string]: PromptQueueItem;
 }
+export interface ModelFolderInfo {
+  name: string;
+  folders: string[];
+}
+export interface ModelFile {
+  name: string;
+  pathIndex: number;
+}
+export interface TerminalSize {
+  cols: number;
+  row: number;
+}
+export interface LogEntry {
+  t: string;
+  m: string;
+}
+export interface LogsRawResponse {
+  size: TerminalSize;
+  entries: LogEntry[];
+}

@@ -8,6 +8,9 @@ import {
   IComfyApiConfig,
   PromptBody,
   PromptQueueItem,
+  ModelFolderInfo,
+  ModelFile,
+  LogsRawResponse,
 } from "./types";
 import { ComfyUIClientResponseTypes } from "./response.types";
 import { WorkflowOutput } from "../workflow/types";
@@ -253,10 +256,15 @@ export class Client extends WsClient {
   }
 
   /**
-   * Interrupts the execution of the running prompt
+   * Interrupts the execution of the running prompt. If runningPromptId is provided,
+   * it is included in the payload as a helpful hint to the backend.
+   * @param {string | null} [runningPromptId] Optional Running Prompt ID to interrupt
    */
-  async interrupt() {
-    await this.postApi("interrupt", null);
+  async interrupt(runningPromptId: string | null = null) {
+    await this.postApi(
+      "interrupt",
+      runningPromptId ? { prompt_id: runningPromptId } : undefined,
+    );
   }
 
   /**
@@ -364,6 +372,77 @@ export class Client extends WsClient {
         `Error storing user data file '${file}': ${resp.status} ${error}`,
       );
     }
+  }
+
+  // ----------------- experiment apis -----------------
+
+  /**
+   * Gets a list of model folder keys (eg ['checkpoints', 'loras', ...])
+   * @returns The list of model folder keys
+   */
+  async getModelFolders(): Promise<ModelFolderInfo[]> {
+    const res = await this.fetchApi(`/experiment/models`);
+    if (res.status === 404) {
+      return [];
+    }
+    const folderBlacklist = ["configs", "custom_nodes"];
+    return (await res.json()).filter(
+      (folder: ModelFolderInfo) => !folderBlacklist.includes(folder.name),
+    );
+  }
+
+  /**
+   * Gets a list of models in the specified folder
+   * @param {string} folder The folder to list models from, such as 'checkpoints'
+   * @returns The list of model filenames within the specified folder
+   */
+  async getModels(folder: string): Promise<ModelFile[]> {
+    const res = await this.fetchApi(`/experiment/models/${folder}`);
+    if (res.status === 404) {
+      return [];
+    }
+    return await res.json();
+  }
+
+  /**
+   * Gets the metadata for a model
+   * @param {string} folder The folder containing the model
+   * @param {string} model The model to get metadata for
+   * @returns The metadata for the model
+   */
+  async viewMetadata(folder: string, model: string) {
+    const res = await this.fetchApi(
+      `/view_metadata/${folder}?filename=${encodeURIComponent(model)}`,
+    );
+    const rawResponse = await res.text();
+    if (!rawResponse) {
+      return null;
+    }
+    try {
+      return JSON.parse(rawResponse);
+    } catch (error) {
+      console.error(
+        "Error viewing metadata",
+        res.status,
+        res.statusText,
+        rawResponse,
+        error,
+      );
+      return null;
+    }
+  }
+
+  // ----------------- get logs -----------------
+
+  async getLogs(): Promise<string> {
+    const resp = await this.fetchApi(this.internalURL("/logs"));
+    // NOTE: this api will return a JSON string
+    return await resp.json();
+  }
+
+  async getRawLogs(): Promise<LogsRawResponse> {
+    const resp = await this.fetchApi(this.internalURL("/logs/raw"));
+    return await resp.json();
   }
 
   // ----------------- get status ++ -----------------
@@ -569,7 +648,7 @@ export class Client extends WsClient {
     const start = Date.now();
     let prompt_status = await this.getPromptStatus(prompt_id);
     while (!prompt_status.done) {
-      if (timeout_ms >= 1000) {
+      if (timeout_ms >= 0) {
         if (Date.now() - start > timeout_ms) {
           throw new PromptTimeoutError(prompt_id, timeout_ms);
         }
@@ -651,7 +730,7 @@ export class Client extends WsClient {
    * @param {Record<string, unknown>} prompt - The prompt to enqueue.
    * @param {Object} [options] - The options for enqueueing the prompt.
    * @param {Record<string, unknown>} [options.workflow] - The workflow for the prompt.
-   * @return {Promise<{ prompt_id: string; number: number; node_errors: any; }>} A promise that resolves with the enqueued prompt response.
+   * @return {Promise<ComfyUIClientResponseTypes.QueuePromptSuccess>} A promise that resolves with the enqueued prompt response.
    * @throws {Error} If there is an error in the response.
    */
   async _enqueue_prompt(
@@ -664,7 +743,7 @@ export class Client extends WsClient {
       prompt,
       workflow: options?.workflow,
     });
-    if ("error" in resp) throw new PromptEnqueueError(resp.error);
+    if ("error" in resp) throw new PromptEnqueueError(resp);
     return resp;
   }
 

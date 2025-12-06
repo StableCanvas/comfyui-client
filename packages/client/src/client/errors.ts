@@ -1,3 +1,5 @@
+import { ComfyUIClientResponseTypes } from "./response.types";
+
 export class ClientError extends Error {
   constructor(message: string) {
     super(message);
@@ -13,8 +15,12 @@ export class PromptTimeoutError extends ClientError {
 
 // enqueue prompt 错误
 export class PromptEnqueueError extends ClientError {
-  constructor(err_msg: string) {
-    super(`Failed to enqueue prompt: ${err_msg}`);
+  constructor(resp: ComfyUIClientResponseTypes.QueuePromptError) {
+    const { error, node_errors } = resp;
+    const message =
+      typeof error === "string" ? error : error.errors?.[0].message;
+    const details_message = node_errors ? JSON.stringify(node_errors) : "";
+    super(`Failed to enqueue prompt: ${message}, details: ${details_message}`);
   }
 }
 
