@@ -5,6 +5,7 @@ export namespace ComfyUiWsTypes {
       display_node: string;
       output: Record<string, any>;
       prompt_id: string;
+      timestamp: number;
     }
     export interface ExecutionInterrupted {
       prompt_id: string;
@@ -16,12 +17,28 @@ export namespace ComfyUiWsTypes {
       node: string;
       display_node: string;
       prompt_id: string;
+      timestamp: number;
     }
     export interface Progress {
       value: number;
       max: number;
       prompt_id: string;
       node: string;
+    }
+    export interface ProgressState {
+      prompt_id: string;
+      nodes: Record<
+        string,
+        {
+          value: number;
+          max: number;
+          state: string;
+          node_id: string;
+          display_node_id: string;
+          parent_node_id: string | null;
+          real_node_id: string;
+        }
+      >;
     }
     export interface Status {
       status: {
@@ -74,6 +91,7 @@ export namespace ComfyUiWsTypes {
 export type ComfyUIClientEvents = {
   status: [ComfyUiWsTypes.Messages.Status["status"] | null];
   progress: [ComfyUiWsTypes.Messages.Progress];
+  progress_state: [ComfyUiWsTypes.Messages.ProgressState];
 
   executing: [ComfyUiWsTypes.Messages.Executing];
   executed: [ComfyUiWsTypes.Messages.Executed];

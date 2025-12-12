@@ -31,6 +31,18 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
   client: Client;
   resolver: WorkflowOutputResolver<T>;
 
+  /**
+   * 因为 comfyui 的 websocket events 顺序混乱，在 execution_success 立马结束也可能导致事件丢失
+   *
+   * Because the order of comfyui's websocket events is chaotic, the execution_success event may end immediately, causing events to be lost
+   */
+  delay_done_ms = 500;
+
+  /**
+   *  The current task is being executed via WebSocket; this flag is used to determine whether the current `image_data` originates from this task.
+   */
+  is_current_ws_executing = false;
+
   constructor(
     readonly options: {
       workflow: IWorkflow;
@@ -93,7 +105,9 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     this._done_guard();
     const { client } = this;
     const off = client.on(type, (...args) => {
-      if (!this.is_owner_event(...args)) return;
+      if (type === "image_data" || type === "b_preview") {
+        if (!this.is_current_ws_executing) return;
+      } else if (!this.is_owner_event(...args)) return;
       callback(...args);
     });
     this._connect(off);
@@ -111,7 +125,9 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     this._done_guard();
     const { client } = this;
     const off = client.on(type, (...args) => {
-      if (!this.is_owner_event(...args)) return;
+      if (type === "image_data" || type === "b_preview") {
+        if (!this.is_current_ws_executing) return;
+      } else if (!this.is_owner_event(...args)) return;
       callback(...args);
       off();
     });
@@ -137,6 +153,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
 
     this.hook_progress();
     this.hook_image_data();
+    this.hook_executing();
   }
 
   protected async hook_progress() {
@@ -154,23 +171,29 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
     this._connect(off_progress);
   }
 
+  protected async hook_executing() {
+    const { client } = this;
+    const task_id = this._task_id_guard();
+    this._connect(
+      client.on("executing", (data) => {
+        this.is_current_ws_executing = data?.prompt_id === task_id;
+      }),
+    );
+  }
+
   protected async hook_image_data() {
     const { client } = this;
+    this._connect(
+      client.on("image_data", (data) => {
+        if (this.is_current_ws_executing === false) return;
 
-    const off_event = client.on("image_data", (data) => {
-      // NOTE: Actually, it is impossible to determine whether it is the image of the current workflow, so the internal value is_done is used to determine, because comfyui is non-concurrent by default
-      // TODO: Use message judgment, that is, use the last `executed` message to determine which workflow result it is
-      if (this.is_done) {
-        return;
-      }
-      this._result.images.push({
-        type: "buff",
-        data: data.image,
-        mime: data.mime,
-      });
-    });
-
-    this._connect(off_event);
+        this._result.images.push({
+          type: "buff",
+          data: data.image,
+          mime: data.mime,
+        });
+      }),
+    );
   }
 
   protected resolve_to_result(data: ComfyUiWsTypes.Messages.Executed) {
@@ -254,6 +277,20 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
   }
 
   /**
+   * Listen for the start event of the workflow.
+   * @param {Function} cb - The callback function that will be called when the workflow starts.
+   * @return {Function} A function that can be used to remove the listener.
+   */
+  public on_start(cb: () => void) {
+    const task_id = this._task_id_guard();
+    return this._connect(
+      this.client.on("execution_start", (data) => {
+        if (data.prompt_id === task_id) cb();
+      }),
+    );
+  }
+
+  /**
    * Waits for the workflow to complete and returns the result.
    *
    * *This function does not rely on WebSocket Events, so it will lose events output by WebSocket node
@@ -314,7 +351,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
         this.is_done = true;
         this.dispose();
       };
-      const maybe_done = async () => {
+      const _maybe_done = async () => {
         try {
           const status = await this.query();
           if (!status.done) {
@@ -327,6 +364,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
           done();
         }
       };
+      const maybe_done = () => setTimeout(_maybe_done, this.delay_done_ms);
       this.when_interrupted((data) => {
         reject(new WorkflowInterruptedError(this));
         done();

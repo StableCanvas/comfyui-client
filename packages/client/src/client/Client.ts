@@ -693,9 +693,9 @@ export class Client extends WsClient {
       prompt_id,
       data: null as T,
     };
+    const cbs = [] as any[];
+    const gc = () => cbs.forEach((cb) => cb());
     return new Promise<WorkflowOutput<T>>((resolve, reject) => {
-      const cbs = [] as any[];
-      const gc = () => cbs.forEach((cb) => cb());
       cbs.push(
         this.on("image_data", (data) => {
           // FIXME: should hook web-socket resolver ?
@@ -723,19 +723,19 @@ export class Client extends WsClient {
             node_id,
           });
           resolve(resolved);
-          gc();
         }),
       );
       cbs.push(
         this.on("execution_error", (data) => {
           reject(new WorkflowExecutionError(data, prompt_id));
-          gc();
         }),
       );
       const timer = setTimeout(() => {
         reject(new PromptTimeoutError(prompt_id, timeout_ms));
       }, timeout_ms);
       cbs.push(() => clearTimeout(timer));
+    }).finally(() => {
+      gc();
     });
   }
 
