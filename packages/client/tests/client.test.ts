@@ -163,8 +163,14 @@ describe("Client", () => {
 
   // 应该在断开 ws 连接之后仍然可以请求 api，因为 api 是使用 http 请求，不需要 ws 连接
   it("should be able to request api after disconnecting ws", async () => {
-    client.disconnect();
-    // 调用这个不应该报错
+    client.close();
     await client.getQueue();
+  });
+
+  // 应该在请求结束之后可以立即断开连接并且不应该报错
+  it("should be able to disconnected immediately after invoked is done", async () => {
+    useSimple1(workflow);
+    await workflow.invoke(client);
+    client.close();
   });
 });

@@ -15,7 +15,8 @@ import {
   WorkflowTaskStatusError,
   WorkflowWsError,
 } from "./errors";
-import { ConnectError } from "../main";
+import { debounce } from "../utils/misc";
+import { ConnectError } from "../client/errors";
 
 export class InvokedWorkflow<T = unknown> extends Disposable {
   protected _task_id?: string;
@@ -356,7 +357,9 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
         this.is_done = true;
         this.dispose();
       };
-      const _maybe_done = async () => {
+      const maybe_done = debounce(async () => {
+        // NOTE: Because we are performing a delayed query for "done," it's possible that multiple checks will be initiated. Therefore, we need to determine here whether it has already been done. #23
+        if (this.is_done) return;
         try {
           const status = await this.query();
           if (!status.done) {
@@ -368,8 +371,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
           reject(error);
           done();
         }
-      };
-      const maybe_done = () => setTimeout(_maybe_done, this.delay_done_ms);
+      }, this.delay_done_ms);
       this.when_interrupted((data) => {
         reject(new WorkflowInterruptedError(this));
         done();
@@ -378,7 +380,7 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
         reject(new WorkflowExecutionError(data, task_id, this.workflow, this));
         done();
       });
-      // NOTE: 这里的意思是，如果其他地方导致 dispose ，那么也应该调用这个保证 promise resolve
+      // NOTE: The implication here is that if something else triggers the `dispose` method, then this should also guarantee that the promise is resolved.
       this._connect(maybe_done);
       this._connect(
         this.client.on("executed", async (data) => {
