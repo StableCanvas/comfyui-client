@@ -241,9 +241,6 @@ export class WsClient {
    * @return {Promise<Response>} A promise that resolves to the API response.
    */
   async fetchApi(route: string, options?: RequestInit): Promise<Response> {
-    if (this.closed) {
-      throw new ConnectError("Client is closed");
-    }
     const url = this.apiURL(route);
     const res = await this.fetch(url, {
       ...options,

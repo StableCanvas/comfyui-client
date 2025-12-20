@@ -8,7 +8,7 @@ describe("Client", () => {
   let workflow: Workflow;
   let client: Client;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     workflow = new Workflow();
     /**
      * NOTE: 需要启动本地 ComfyUI 服务才可测试
@@ -17,7 +17,7 @@ describe("Client", () => {
       clientId: client_id,
       WebSocket: WebSocket as any,
     });
-    client.connect();
+    await client.connect();
   });
 
   afterEach(() => {

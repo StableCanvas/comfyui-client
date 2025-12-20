@@ -576,12 +576,8 @@ export class Client extends WsClient {
    */
   async getPromptStatus(prompt_id: string) {
     const { Running, Pending } = await this.getQueue();
-    const running = Running.some(
-      (task: any) => task?.prompt?.[1] === prompt_id,
-    );
-    const pending = Pending.some(
-      (task: any) => task?.prompt?.[1] === prompt_id,
-    );
+    const running = Running.some(([_, id]) => id === prompt_id);
+    const pending = Pending.some(([_, id]) => id === prompt_id);
     const done = !running && !pending;
     return {
       running,
@@ -600,14 +596,11 @@ export class Client extends WsClient {
   async getPromptOutputs(prompt_id: string) {
     const { History: history } = await this.getHistory();
     const item = history.find((item) => item.prompt[1] === prompt_id);
-    if (!item) {
-      throw new PromptNotFoundError(prompt_id);
-    }
+    if (!item) throw new PromptNotFoundError(prompt_id);
 
     const status = item.status?.status_str ?? "error";
-    if (status === "error") {
+    if (status === "error")
       throw new PromptExecutionFailedError(prompt_id, status ?? "error");
-    }
 
     return item.outputs;
   }

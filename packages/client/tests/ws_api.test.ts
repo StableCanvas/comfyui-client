@@ -1,4 +1,4 @@
-import { Client, Workflow } from "../src/main";
+import { Client, Workflow, WorkflowInterruptedError } from "../src/main";
 import { ComfyUiWsTypes } from "../src/client/ws.types";
 
 import { create_s1_prompt } from "./test_utils";
@@ -28,7 +28,7 @@ describe("WS", () => {
   let workflow: Workflow;
   let client: Client;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     workflow = new Workflow();
     /**
      * 需要启动本地 ComfyUI 服务才可测试
@@ -37,7 +37,7 @@ describe("WS", () => {
       clientId: client_id,
       WebSocket: WebSocket as any,
     });
-    client.connect();
+    await client.connect();
   });
 
   afterEach(() => {
@@ -83,6 +83,7 @@ describe("WS", () => {
       "execution_cached",
       "executing",
       "execution_start",
+      "progress_state",
     ]);
     const prompt = create_s1_prompt();
     const resp = await client.enqueue(prompt);
@@ -132,8 +133,7 @@ describe("WS", () => {
       expect(true).toBe(false);
     } catch (_error) {
       let error: any = _error;
-      expect(error).toBeInstanceOf(Error);
-      expect(error.message).toBe("Execution Interrupted");
+      expect(error).toBeInstanceOf(WorkflowInterruptedError);
     }
   });
 });

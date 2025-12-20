@@ -1,4 +1,4 @@
-import { Client, Workflow } from "../src/main";
+import { Client, Workflow, WorkflowInterruptedError } from "../src/main";
 
 import { WebSocket } from "ws";
 import { create_s1_prompt } from "./test_utils";
@@ -10,7 +10,7 @@ describe("Client", () => {
   let workflow: Workflow;
   let client: Client;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     workflow = new Workflow();
     /**
      * NOTE: 需要启动本地 ComfyUI 服务才可测试
@@ -19,7 +19,7 @@ describe("Client", () => {
       clientId: client_id,
       WebSocket: WebSocket as any,
     });
-    client.connect();
+    await client.connect();
   });
 
   afterEach(() => {
@@ -157,8 +157,14 @@ describe("Client", () => {
       expect(true).toBe(false);
     } catch (_error) {
       let error: any = _error;
-      expect(error).toBeInstanceOf(Error);
-      expect(error.message).toBe("Execution Interrupted");
+      expect(error).toBeInstanceOf(WorkflowInterruptedError);
     }
+  });
+
+  // 应该在断开 ws 连接之后仍然可以请求 api，因为 api 是使用 http 请求，不需要 ws 连接
+  it("should be able to request api after disconnecting ws", async () => {
+    client.disconnect();
+    // 调用这个不应该报错
+    await client.getQueue();
   });
 });

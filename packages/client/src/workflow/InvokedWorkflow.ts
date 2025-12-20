@@ -15,6 +15,7 @@ import {
   WorkflowTaskStatusError,
   WorkflowWsError,
 } from "./errors";
+import { ConnectError } from "../main";
 
 export class InvokedWorkflow<T = unknown> extends Disposable {
   protected _task_id?: string;
@@ -82,6 +83,10 @@ export class InvokedWorkflow<T = unknown> extends Disposable {
   }
 
   protected _ws_guard() {
+    if (this.client.closed)
+      throw new ConnectError(
+        "The WebSocket connection has been closed. Please ensure that the client is connected.",
+      );
     if (this.client.socket === null) throw new WorkflowWsError(this);
   }
 

@@ -16,7 +16,7 @@ export const simple_payload1 = {
       class_type: "KSampler",
     },
     "4": {
-      inputs: { ckpt_name: "LOFI_V5.fp16.safetensors" },
+      inputs: { ckpt_name: "base\\sd-v1-5.ckpt" },
       class_type: "CheckpointLoaderSimple",
     },
     "5": {

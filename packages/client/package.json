@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/comfyui-client",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "api Client for ComfyUI that supports both NodeJS and Browser environments. It provides full support for all RESTful / WebSocket APIs.",
   "source": "src/main.ts",
   "main": "dist/main.umd.js",
@@ -42,8 +42,8 @@
     "dev": "pnpm watch",
     "start": "pnpm build",
     "prepack": "rm -rf dist && pnpm run build",
-    "test": "jest",
-    "test:sync": "jest --runInBand",
+    "test": "jest --runInBand",
+    "test:parallel": "jest",
     "build:docs": "typedoc --skipErrorChecking"
   },
   "license": "MIT",

@@ -20,7 +20,7 @@ export const useSimple1 = (
 ) => {
   const cls = workflow.classes;
   const [model, clip, vae] = cls.CheckpointLoaderSimple({
-    ckpt_name: "LOFI_V5.fp16.safetensors",
+    ckpt_name: "base\\sd-v1-5.ckpt",
   });
   const enc = (text: string) => cls.CLIPTextEncode({ text, clip })[0];
   const [samples] = cls.KSampler({
