@@ -22,6 +22,7 @@ import {
   PromptExecutionFailedError,
   PromptNotFoundError,
   PromptTimeoutError,
+  TaskDataTypeError,
 } from "./errors";
 
 /**
@@ -576,8 +577,16 @@ export class Client extends WsClient {
    */
   async getPromptStatus(prompt_id: string) {
     const { Running, Pending } = await this.getQueue();
-    const running = Running.some(([_, id]) => id === prompt_id);
-    const pending = Pending.some(([_, id]) => id === prompt_id);
+    const getId = (task: any) => {
+      if (!task) return null;
+      // old version
+      if ("prompt" in task) return task.prompt?.[1];
+      // v4 v5
+      if (Array.isArray(task)) return task[1];
+      throw new TaskDataTypeError(task);
+    };
+    const running = Running.some((task) => getId(task) === prompt_id);
+    const pending = Pending.some((task) => getId(task) === prompt_id);
     const done = !running && !pending;
     return {
       running,

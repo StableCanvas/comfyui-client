@@ -38,6 +38,15 @@ export class PromptNotFoundError extends ClientError {
   }
 }
 
+// task 数据类型错误，可能是 comfyui api 版本变动
+export class TaskDataTypeError extends ClientError {
+  constructor(task_data: any) {
+    // 此数据类型与预期不符，请尝试更新 comfyui version
+    super(
+      `Task data type error, please try updating comfyui version: ${JSON.stringify(task_data)}`,
+    );
+  }
+}
 // prompt 执行失败，状态不是 success
 export class PromptExecutionFailedError extends ClientError {
   constructor(prompt_id: string, status: string) {
