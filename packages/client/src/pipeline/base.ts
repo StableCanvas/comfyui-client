@@ -18,10 +18,10 @@ export class BasePipe<
   /**
    * Generates a random seed value.
    *
-   * @return {number} A random integer seed value between 0 and 2^32 - 1.
+   * @return {number} A random integer seed value between 0 and MAX_SAFE_INTEGER.
    */
   static nextSeed() {
-    return Math.floor(Math.random() * 2 ** 32);
+    return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
   }
   static defaultContext: PipeContext = {
     seed: BasePipe.nextSeed(),
