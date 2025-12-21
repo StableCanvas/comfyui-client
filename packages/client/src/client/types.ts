@@ -71,7 +71,10 @@ export interface IComfyApiConfig {
 
   cache?: CachedFnOptions;
 }
-export type PromptMessage = [number, { prompt_id: number; timestamp: number }];
+export type PromptMessage = [
+  event_name: string,
+  body: { prompt_id: number; timestamp: number },
+];
 export type PromptBody = [
   index: number,
   id: string,
