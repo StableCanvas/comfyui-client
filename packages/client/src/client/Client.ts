@@ -24,6 +24,7 @@ import {
   PromptTimeoutError,
   TaskDataTypeError,
 } from "./errors";
+import { Disposable } from "../utils/Disposable";
 
 /**
  * The Client class provides a high-level interface for interacting with the ComfyUI API.
@@ -695,13 +696,17 @@ export class Client extends WsClient {
       prompt_id,
       data: null as T,
     };
-    const cbs = [] as any[];
-    const gc = () => cbs.forEach((cb) => cb());
+    const disposable = new Disposable();
     return new Promise<WorkflowOutput<T>>((resolve, reject) => {
-      cbs.push(
+      let is_current_ws_executing = false;
+      disposable._connect(
+        this.on("executing", (data) => {
+          is_current_ws_executing = data?.prompt_id === prompt_id;
+        }),
+      );
+      disposable._connect(
         this.on("image_data", (data) => {
-          // FIXME: should hook web-socket resolver ?
-          // NOTE: 这里不准备用 resolver 处理了，因为 resolver 的意思是处理那些不常见的特殊的数据结构，但是这里完完全全很明白是图片数据，所以不需要经过 resolver
+          if (!is_current_ws_executing) return;
           output.images.push({
             type: "buff",
             data: data.image,
@@ -709,7 +714,7 @@ export class Client extends WsClient {
           });
         }),
       );
-      cbs.push(
+      disposable._connect(
         this.on("executed", (data) => {
           const {
             prompt_id: current_prompt_id,
@@ -727,7 +732,7 @@ export class Client extends WsClient {
           resolve(resolved);
         }),
       );
-      cbs.push(
+      disposable._connect(
         this.on("execution_error", (data) => {
           reject(new WorkflowExecutionError(data, prompt_id));
         }),
@@ -735,9 +740,9 @@ export class Client extends WsClient {
       const timer = setTimeout(() => {
         reject(new PromptTimeoutError(prompt_id, timeout_ms));
       }, timeout_ms);
-      cbs.push(() => clearTimeout(timer));
+      disposable._connect(() => clearTimeout(timer));
     }).finally(() => {
-      gc();
+      disposable.dispose();
     });
   }
 
