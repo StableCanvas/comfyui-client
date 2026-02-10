@@ -1,4 +1,3 @@
-import { CachedFn } from "../utils/CachedFn";
 import type { Plugin } from "../plugins/Plugin";
 import { WsClient } from "./WsClient";
 import { RESOLVERS } from "../builtins";
@@ -43,8 +42,6 @@ import { Disposable } from "../utils/Disposable";
  * ```
  */
 export class Client extends WsClient {
-  private _cached_fn: CachedFn;
-
   // NOTE: useless ... just for debug
   private _plugins = [] as Plugin[];
 
@@ -56,9 +53,6 @@ export class Client extends WsClient {
     },
   ) {
     super(config);
-
-    const cache_ns = `${config.api_host}`;
-    this._cached_fn = new CachedFn(cache_ns, config.cache);
   }
 
   /**
@@ -80,8 +74,7 @@ export class Client extends WsClient {
       const resp = await this.fetchApi("/extensions", { cache: "no-store" });
       return await resp.json();
     };
-    const cached = this._cached_fn.warp("extensions", invoke);
-    return cached();
+    return invoke();
   }
 
   /**
@@ -93,8 +86,7 @@ export class Client extends WsClient {
       const resp = await this.fetchApi("/embeddings", { cache: "no-store" });
       return await resp.json();
     };
-    const cached = this._cached_fn.warp("embeddings", invoke);
-    return cached();
+    return invoke();
   }
 
   /**
@@ -107,15 +99,7 @@ export class Client extends WsClient {
       const node_defs = await resp.json();
       return node_defs;
     };
-    const cached = this._cached_fn.warp("object_info", invoke);
-    return cached();
-  }
-
-  /**
-   * Clears the node object definitions cache
-   */
-  resetCache() {
-    this._cached_fn.reset();
+    return invoke();
   }
 
   /**

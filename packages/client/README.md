@@ -68,6 +68,56 @@ If you plan to use the `pipeline` feature in a browser environment, you'll need 
 - [Buffer](https://github.com/feross/buffer): buffer polyfill for browser
 - [blob-to-buffer](https://github.com/feross/blob-to-buffer): convert blob to buffer
 
+## Quick Start
+
+using pipeline
+
+```ts
+import { BasePipe, outToB64Urls } from "@stable-canvas/comfyui-client";
+const client = new Client(); // default localhost comfyui server
+Promise.all([
+  client.getSystemStats(), // HTTP client ping
+  client.connect(),
+])
+  .then(
+    async ([stats, is_connected]) =>
+      new BasePipe()
+        .with(client)
+        .model("sdxl.safetensors")
+        .prompt("A beautiful sunset over the mountains")
+        .negative("Low quality, blurry")
+        .save()
+        .wait(), // call wait() to start the promise chain
+  )
+  .then((output) => outToB64Urls(output))
+  .then((base64urls) => {
+    // ["data:image/png...", "data:image/png..."]
+  })
+  .finally(() => client.close());
+```
+
+using workflow
+
+```ts
+import { Client, Workflow, outToB64Urls } from "@stable-canvas/comfyui-client";
+const client = new Client(); // default localhost comfyui server
+Promise.all([
+  client.getSystemStats(), // HTTP client ping
+  client.connect(),
+])
+  .then(([stats, is_connected]) => {
+    const wk = new Workflow();
+    // ... define your workflow ...
+    return wk;
+  })
+  .then((wk) => wk.invoke(client))
+  .then((out) => outToB64Urls(out))
+  .then((base64urls) => {
+    // ["data:image/png...", "data:image/png..."]
+  })
+  .finally(() => client.close());
+```
+
 ## Client Usage
 
 First, import the `Client` class from the package.

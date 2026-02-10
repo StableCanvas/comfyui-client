@@ -6,6 +6,8 @@ export * as plugins from "./plugins";
 export * as builtins from "./builtins";
 export * from "./pipeline";
 
+export * from "./utils/tools";
+
 export * from "./client/types";
 export * from "./client/ws.types";
 export * from "./client/response.types";

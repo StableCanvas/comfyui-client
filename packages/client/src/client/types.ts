@@ -2,7 +2,6 @@ import { Client } from "./Client";
 
 import { WorkflowOutput } from "../workflow/types";
 import { ComfyUiWsTypes } from "./ws.types";
-import type { CachedFnOptions } from "../utils/CachedFn";
 
 export type WorkflowOutputResolver<T = unknown> = (
   acc: WorkflowOutput<T>,
@@ -68,8 +67,6 @@ export interface IComfyApiConfig {
    * @type {typeof fetch} [fetch] - The fetch function to use.
    */
   fetch?: typeof fetch;
-
-  cache?: CachedFnOptions;
 }
 export type PromptMessage = [
   event_name: string,
