@@ -80,7 +80,7 @@ Promise.all([
   client.connect(),
 ])
   .then(
-    async ([stats, is_connected]) =>
+    ([stats, is_connected]) =>
       new BasePipe()
         .with(client)
         .model("sdxl.safetensors")
