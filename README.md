@@ -27,6 +27,12 @@ This client provides comprehensive support for all available RESTful and WebSock
 
 - ⭐ [Online Transpiler](https://stablecanvas.github.io/tool-w2c/): Online convert workflow to code.
 
+### Blogs
+
+- [Comfyui Monitor #24](https://github.com/StableCanvas/comfyui-client/discussions/24): A Real-Time Dashboard for Your ComfyUI Workflow
+- [ComfyUI_Base64_IO #21](https://github.com/StableCanvas/comfyui-client/discussions/21): A companion node pack for Distributed Inference & Caching
+- [Online Transpiler #20](https://github.com/StableCanvas/comfyui-client/discussions/20): Convert Workflows to Code Instantly
+
 ## Features
 
 - **Environment Compatibility**: Seamlessly functions in both NodeJS and Browser environments.
