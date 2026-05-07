@@ -13,7 +13,7 @@ export type WorkflowNodeDefine = {
   _meta?: Record<string, any>;
 };
 export type WorkflowNode = {
-  index: number;
+  index: string;
 
   data: {
     class_type: string;

@@ -24,7 +24,7 @@ export class JsonReader {
     readonly inputObject:
       | WorkflowJsonObject
       | WorkflowJsonPrompt
-      | ComfyUIExportImage.Root,
+      | ComfyUIExportImage.Root
   ) {}
 
   getWorkflow(): CWorkflow {
@@ -47,7 +47,13 @@ export class JsonReader {
       // 也支持传入 workflow.prompt 作为参数
       obj &&
       typeof obj === "object" &&
-      Object.keys(obj).every((x) => Number.isFinite(Number(x)))
+      Object.keys(obj).every((x) =>
+        // 子图
+        x.includes(":")
+          ? x.split(":").every((y) => Number.isFinite(Number(y)))
+          : // 无子图
+            Number.isFinite(Number(x))
+      )
     ) {
       return "api_json";
     }
@@ -64,7 +70,7 @@ export class JsonReader {
 
     for (const [index, node] of Object.entries(prompt)) {
       nodes.push({
-        index: Number(index),
+        index: index,
         class_type: node.class_type,
         inputs: node.inputs,
         _meta: node._meta ?? {},
@@ -93,22 +99,19 @@ export class JsonReader {
             node.widgets_values?.map((value, index) => {
               const widget_name = widgets_name[index] || `unknown_${index}`;
               return [widget_name, value];
-            }) || [],
+            }) || []
           ),
           // find link inputs
-          ...(node.inputs?.reduce(
-            (acc, cur) => {
-              const link = links.find((x) => x[0] === cur.link);
-              if (!link) {
-                // console.warn("No link found for input", cur);
-                return acc;
-              }
-              // [input_node_id, input_slot_id]
-              acc[cur.name] = [link[1], link[2]];
+          ...(node.inputs?.reduce((acc, cur) => {
+            const link = links.find((x) => x[0] === cur.link);
+            if (!link) {
+              // console.warn("No link found for input", cur);
               return acc;
-            },
-            {} as Record<string, any>,
-          ) || {}),
+            }
+            // [input_node_id, input_slot_id]
+            acc[cur.name] = [link[1], link[2]];
+            return acc;
+          }, {} as Record<string, any>) || {}),
         },
       };
     });

@@ -5,6 +5,7 @@ import fs from "fs";
 // ## From Workflow API Format
 (async () => {
   const file1 = await fs.promises.readFile("./tests/workflow-min.json");
+  // const file1 = await fs.promises.readFile("./tests/subgraph_api_banana.json");
   const reader = new JsonReader(JSON.parse(file1.toString("utf-8")));
   const workflow = await reader.getWorkflow();
   const transpiler = new Transpiler(workflow);

@@ -13,7 +13,7 @@ export class CWorkflow {
 
   private append(node: WorkflowNodeDefine) {
     const ful_node: WorkflowNode = {
-      index: Number(node.index),
+      index: String(node.index),
       data: {
         class_type: node.class_type,
         inputs: node.inputs,
