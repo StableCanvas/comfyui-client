@@ -21,6 +21,8 @@ on:
 jobs:
   build-docs:
     runs-on: ubuntu-latest
+    env:
+      PNPM_DANGEROUSLY_ALLOW_ALL_BUILDS: "true"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,7 +36,7 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --dangerously-allow-all-builds
 
       - name: Build docs
         run: pnpm build:docs
