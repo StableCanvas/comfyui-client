@@ -22,7 +22,8 @@
     "test": "jest",
     "build:cli": "microbundle src/main-cli.ts -o dist/main-cli.js",
     "build": "pnpm run build:cli",
-    "prepack": "pnpm run build"
+    "prepack": "pnpm run build",
+    "npm:login": "npm login --registry=https://registry.npmjs.org/"
   },
   "license": "MIT",
   "publishConfig": {

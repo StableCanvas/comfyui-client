@@ -27,7 +27,8 @@
     "build": "tsup --minify",
     "test": "jest",
     "dev": "tsx watch",
-    "prepublish": "pnpm build"
+    "prepublish": "pnpm build",
+    "npm:login": "npm login --registry=https://registry.npmjs.org/"
   },
   "author": "lenml",
   "publishConfig": {
