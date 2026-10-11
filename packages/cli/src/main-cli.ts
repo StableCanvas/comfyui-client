@@ -3,7 +3,10 @@ import * as path from "path";
 import { Command } from "commander";
 import * as prettier from "prettier";
 import { ImageReader, JsonReader } from "@stable-canvas/cw-reader";
-import { Transpiler } from "@stable-canvas/comfyui-client-transpiler";
+import {
+  Transpiler,
+  type TranspilerOptions,
+} from "@stable-canvas/comfyui-client-transpiler";
 
 const program = new Command();
 const default_tpl = {
@@ -39,9 +42,12 @@ const workflowFromFile = async (file: string) => {
   }
 };
 
-const generateCodeFromFile = async (file: string) => {
+const generateCodeFromFile = async (
+  file: string,
+  options?: TranspilerOptions,
+) => {
   const workflow = await workflowFromFile(file);
-  const transpiler = new Transpiler(workflow);
+  const transpiler = new Transpiler(workflow, options);
   return transpiler.toCode();
 };
 
@@ -51,7 +57,7 @@ async function main() {
     .description(
       "Use this tool to generate the corresponding calling code using workflow",
     )
-    .version("0.8.0");
+    .version("1.7.0");
 
   program
     .option(
@@ -66,6 +72,10 @@ async function main() {
     .option(
       "-i, --in <input>",
       "Specify the input file, support .json/.png file",
+    )
+    .option(
+      "--unicode-escape",
+      "Escape non-ASCII characters as Unicode escape sequences",
     );
 
   program.parse();
@@ -74,6 +84,7 @@ async function main() {
     template: template_file,
     out: output_file,
     in: input_file,
+    unicodeEscape,
   } = program.opts();
 
   if (!input_file) {
@@ -89,7 +100,9 @@ async function main() {
     process.exit(1);
   }
 
-  let generatedCode = await generateCodeFromFile(input_file);
+  let generatedCode = await generateCodeFromFile(input_file, {
+    unicodeEscape,
+  });
 
   if (template_file && template_file !== "none") {
     const templatePath =

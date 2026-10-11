@@ -1,5 +1,5 @@
 import * as types from "@babel/types";
-import { generate } from "@babel/generator";
+import { generate, type GeneratorOptions } from "@babel/generator";
 
 import {
   type WorkflowNode,
@@ -10,6 +10,14 @@ import {
 interface WkNodeGraphNode {
   node: WorkflowNode;
   children: WkNodeGraphNode[];
+}
+
+export interface TranspilerOptions {
+  /**
+   * Escape non-ASCII characters as Unicode escape sequences.
+   * @default false
+   */
+  unicodeEscape?: boolean;
 }
 
 interface SubgraphInfo {
@@ -59,7 +67,22 @@ function parseNodeId(id: string): { groupId: string | null; localId: string } {
 }
 
 export class Transpiler {
-  constructor(readonly workflow: CWorkflow) {}
+  private readonly generatorOptions: GeneratorOptions;
+
+  constructor(
+    readonly workflow: CWorkflow,
+    readonly options: TranspilerOptions = {}
+  ) {
+    this.generatorOptions = {
+      jsescOption: {
+        minimal: !options.unicodeEscape,
+      },
+    };
+  }
+
+  private generateCode(node: types.Node): string {
+    return generate(node, this.generatorOptions).code;
+  }
 
   // ---------- 依赖分析（不区分组） ----------
   private collectionDependencies() {
@@ -372,7 +395,7 @@ export class Transpiler {
       types.blockStatement(bodyStatements)
     );
 
-    return generate(func).code;
+    return this.generateCode(func);
   }
 
   // ---------- 生成主图代码 ----------
@@ -572,7 +595,7 @@ export class Transpiler {
       }
     }
 
-    return statements.map((stmt) => generate(stmt).code).join("\n");
+    return statements.map((stmt) => this.generateCode(stmt)).join("\n");
   }
 
   // ---------- 公共入口 ----------

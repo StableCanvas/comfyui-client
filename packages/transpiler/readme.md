@@ -31,6 +31,13 @@ await fs.promises.writeFile("./demo_output.ts", code, {
 });
 ```
 
+Non-ASCII characters are preserved by default. To use Unicode escape
+sequences instead, pass `unicodeEscape: true`:
+
+```ts
+const transpiler = new Transpiler(workflow, { unicodeEscape: true });
+```
+
 ### Expected Output
 
 <details>

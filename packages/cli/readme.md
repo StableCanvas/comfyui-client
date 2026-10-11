@@ -25,6 +25,7 @@ Options:
                              (default: "esm")
   -o, --out [output]         Specify the output file for the generated code. default to stdout
   -i, --in <input>           Specify the input file, support .json/.png file
+  --unicode-escape           Escape non-ASCII characters as Unicode escape sequences
   -h, --help                 display help for command
 ```
 
