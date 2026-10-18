@@ -50,6 +50,12 @@ await fs.promises.writeFile(
 </script>
 ```
 
+# Workflow Support
+
+`JsonReader` supports ComfyUI workflow JSON versions `0.4` and `1`. Version 1 object links and object-form `widgets_values` are normalized to the internal API prompt format.
+
+For UI-exported workflows, muted or bypassed nodes are rejected instead of being executed silently. Unknown widget mappings are also rejected. Export the workflow in API format when a UI workflow contains unsupported nodes.
+
 # What is `./data/\*.json`
 
 ## `comfyui.node.types.json`
