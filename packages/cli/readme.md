@@ -15,30 +15,48 @@ npm install -g @stable-canvas/comfyui-client-cli
 ```
 
 ```bash
-Usage: nodejs-comfy-ui-client-code-gen [options]
+Usage: cuc-w2c [options]
 
 Use this tool to generate the corresponding calling code using workflow
 
 Options:
   -V, --version              output the version number
-  -t, --template [template]  Specify the template for generating code, builtin tpl: [esm,cjs,web,none]
-                             (default: "esm")
-  -o, --out [output]         Specify the output file for the generated code. default to stdout
   -i, --in <input>           Specify the input file, support .json/.png file
+  -t, --template <template>  Specify the template for generating code, builtin
+                             tpl: [esm,ts,cjs,web,none] (default: "esm")
+  -o, --out <output>         Specify the output file for the generated code.
+                             default to stdout
   --unicode-escape           Escape non-ASCII characters as Unicode escape sequences
+  --debug                    Print the full error stack when code generation fails
   -h, --help                 display help for command
 ```
+
+Node.js 18 or newer is required. The generated `esm`, `ts`, and `cjs` templates use the `ws` package for Node.js WebSocket support:
+
+```bash
+npm install @stable-canvas/comfyui-client ws
+```
+
+Supported templates:
+
+- `esm`: Node.js ES module JavaScript.
+- `ts`: Node.js TypeScript with typed environment access.
+- `cjs`: Node.js CommonJS JavaScript.
+- `web`: browser ES module.
+- `none`: generated workflow fragment without a wrapper.
 
 ## Example
 
 ```
-cuc-w2c -i ./tests/test-inputs/workflow_api.json
+
+cuc-w2c -i ./tests/test-inputs/workflow_api.json -t ts -o workflow.ts
 ```
 
 ### Expected Output
 
 ```ts
 import { Client, Workflow } from "@stable-canvas/comfyui-client";
+import WebSocket from "ws";
 
 const createWorkflow = () => {
   const workflow = new Workflow();
@@ -84,13 +102,14 @@ const createWorkflow = () => {
   return workflow;
 };
 
-async function main(envs = {}) {
+async function main(envs: Record<string, string | undefined> = process.env) {
   const env = (k) => envs[k];
 
   const client = new Client({
     api_host: env("COMFYUI_CLIENT_API_HOST"),
     api_base: env("COMFYUI_CLIENT_API_BASE"),
     clientId: env("COMFYUI_CLIENT_CLIENT_ID"),
+    WebSocket: WebSocket as any,
   });
 
   await client.connect();
