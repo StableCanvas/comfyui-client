@@ -57,7 +57,7 @@ async function main() {
     .description(
       "Use this tool to generate the corresponding calling code using workflow",
     )
-    .version("1.7.0");
+    .version("1.7.1");
 
   program
     .option(
@@ -133,4 +133,5 @@ async function main() {
 
 main().catch((err) => {
   console.error(err);
+  process.exitCode = 1;
 });
