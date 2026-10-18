@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/comfyui-client-transpiler",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "The transpiler can translate ComfyUI's workflows to `@stable-canvas/comfyui-client` format.",
   "main": "dist/main.js",
   "module": "dist/main.mjs",
@@ -25,7 +25,7 @@
   ],
   "scripts": {
     "build": "tsup --minify",
-    "test": "jest",
+    "test": "pnpm build && node --test tests/transpiler.node.test.mjs",
     "dev": "tsx watch",
     "prepublish": "pnpm build",
     "npm:login": "npm login --registry=https://registry.npmjs.org/"
