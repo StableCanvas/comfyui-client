@@ -1,7 +1,5 @@
-import {
-  Client,
-  Workflow,
-} from "https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@latest/+esm";
+import { Client, Workflow } from "@stable-canvas/comfyui-client";
+import WebSocket from "ws";
 
 const createWorkflow = () => {
   const workflow = new Workflow();
@@ -12,13 +10,14 @@ const createWorkflow = () => {
   return workflow;
 };
 
-async function main(envs = {}) {
-  const env = (k) => envs[k];
+async function main(envs: Record<string, string | undefined> = process.env) {
+  const env = (k: string) => envs[k];
 
   const client = new Client({
     api_host: env("COMFYUI_CLIENT_API_HOST"),
     api_base: env("COMFYUI_CLIENT_API_BASE"),
     clientId: env("COMFYUI_CLIENT_CLIENT_ID"),
+    WebSocket: WebSocket as any,
   });
 
   await client.connect();

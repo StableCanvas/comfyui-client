@@ -1,4 +1,7 @@
-import { Client, Workflow } from "@stable-canvas/comfyui-client";
+import {
+  Client,
+  Workflow,
+} from "https://cdn.jsdelivr.net/npm/@stable-canvas/comfyui-client@1/+esm";
 
 const createWorkflow = () => {
   const workflow = new Workflow();
