@@ -1,6 +1,6 @@
 {
   "name": "@stable-canvas/cw-reader",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "read workflow(comfyui) info from image/json",
   "main": "dist/main.js",
   "module": "dist/main.mjs",
@@ -25,7 +25,7 @@
   ],
   "scripts": {
     "build": "tsup --minify",
-    "test": "jest",
+    "test": "pnpm build && node --test tests/reader.node.test.mjs",
     "dev": "tsx watch",
     "prepublish": "pnpm build"
   },
