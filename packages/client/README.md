@@ -748,16 +748,18 @@ npm install @stable-canvas/comfyui-client-cli
 This tool converts the input workflow into executable code that uses this library.
 
 ```
-Usage: nodejs-comfy-ui-client-code-gen [options]
+Usage: cuc-w2c [options]
 
 Use this tool to generate the corresponding calling code using workflow
 
 Options:
-  -V, --version              output the version number
-  -t, --template [template]  Specify the template for generating code, builtin tpl: [esm,cjs,web,none]
-                             (default: "esm")
-  -o, --out [output]         Specify the output file for the generated code. default to stdout
   -i, --in <input>           Specify the input file, support .json/.png file
+  -t, --template <template>  Specify the template for generating code, builtin
+                             tpl: [esm,ts,cjs,web,none] (default: "esm")
+  -o, --out <output>         Specify the output file for the generated code.
+                             default to stdout
+  --unicode-escape           Escape non-ASCII characters as Unicode escape sequences
+  --debug                    Print the full error stack when code generation fails
   -h, --help                 display help for command
 ```
 
