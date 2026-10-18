@@ -29,9 +29,19 @@ interface SubgraphInfo {
   exposedOutputs: { nodeId: string; outputIdx: number; varName: string }[];
 }
 
-const INVALID_VARIABLE_NAME = /^a-zA-Z|[\|\. \-*/+~]/;
-const IS_INVALID_VAR = (name: string) => INVALID_VARIABLE_NAME.test(name);
-const VAR = (name: string) => (IS_INVALID_VAR(name) ? `["${name}"]` : name);
+const sanitizeComment = (value: string) =>
+  value.replace(/\*\//g, "* /").replace(/\r?\n/g, " ");
+
+const toSafeIdentifier = (name: string, index: number): string => {
+  if (types.isValidIdentifier(name)) return name;
+
+  const normalized = name.replace(/[^A-Za-z0-9_$]/g, "_");
+  const hasAsciiIdentifierChars = /[A-Za-z0-9$]/.test(name);
+
+  return hasAsciiIdentifierChars && types.isValidIdentifier(normalized)
+    ? normalized
+    : `OUT_${index}`;
+};
 
 const toAst = (value: any): types.Expression => {
   if (value === null) {
@@ -52,7 +62,7 @@ const toAst = (value: any): types.Expression => {
         return types.arrayExpression(value.map(toAst));
       }
       const properties = Object.entries(value).map(([key, val]) =>
-        types.objectProperty(types.stringLiteral(key), toAst(val))
+        types.objectProperty(types.stringLiteral(key), toAst(val)),
       );
       return types.objectExpression(properties);
     default:
@@ -71,7 +81,7 @@ export class Transpiler {
 
   constructor(
     readonly workflow: CWorkflow,
-    readonly options: TranspilerOptions = {}
+    readonly options: TranspilerOptions = {},
   ) {
     this.generatorOptions = {
       jsescOption: {
@@ -88,16 +98,21 @@ export class Transpiler {
   private collectionDependencies() {
     const { workflow: wk } = this;
     const all_refs = wk.nodes.map((x) =>
-      Object.values(x.data.inputs).filter((x) => Array.isArray(x))
+      Object.values(x.data.inputs).filter((x) => Array.isArray(x)),
     ) as WorkflowNodeInputRef[][];
 
-    return all_refs.reduce((acc, x) => {
-      x.forEach(([key, output_index]) => {
-        acc[key] ||= [];
-        acc[key].push(output_index);
-      });
-      return acc;
-    }, {} as Record<string, number[]>);
+    return all_refs.reduce(
+      (acc, x) => {
+        x.forEach(([key, output_index]) => {
+          acc[key] ||= [];
+          if (!acc[key].includes(output_index)) {
+            acc[key].push(output_index);
+          }
+        });
+        return acc;
+      },
+      {} as Record<string, number[]>,
+    );
   }
 
   // ---------- 分组 ----------
@@ -123,7 +138,7 @@ export class Transpiler {
   // ---------- 为某一组节点构建依赖图并拓扑排序 ----------
   private buildGraphForNodes(
     nodes: WorkflowNode[],
-    nodeIds?: Set<string>
+    nodeIds?: Set<string>,
   ): WkNodeGraphNode[] {
     const nodeMap = new Map<string, WkNodeGraphNode>();
     const roots: WkNodeGraphNode[] = [];
@@ -131,10 +146,14 @@ export class Transpiler {
 
     for (const node of nodes) {
       // 只考虑指向当前节点集合内部的引用
-      const deps = Object.values(node.data.inputs)
-        .filter((x) => Array.isArray(x))
-        .map(([refIndex]: any) => String(refIndex))
-        .filter((refId) => effectiveIds.has(refId));
+      const deps = Array.from(
+        new Set(
+          Object.values(node.data.inputs)
+            .filter((x) => Array.isArray(x))
+            .map(([refIndex]: any) => String(refIndex))
+            .filter((refId) => effectiveIds.has(refId)),
+        ),
+      );
       const isRoot = deps.length === 0;
       const graphNode: WkNodeGraphNode = { node, children: [] };
       if (isRoot) roots.push(graphNode);
@@ -175,7 +194,8 @@ export class Transpiler {
   // ---------- 为某一组节点分配输出变量名 ----------
   private buildOutputMap(
     nodes: WorkflowNode[],
-    deps: Record<string, number[]>
+    deps: Record<string, number[]>,
+    reservedNames = new Set<string>(),
   ): Map<string, string> {
     // 计算每个节点被引用的最大输出索引
     const maxOutputs: Record<string, number> = {};
@@ -188,8 +208,12 @@ export class Transpiler {
 
     const uniqueName = (name: string): string => {
       counter[name] ||= 0;
-      counter[name] += 1;
-      return `${name}_${counter[name]}`;
+      let varName = "";
+      do {
+        counter[name] += 1;
+        varName = `${name}_${counter[name]}`;
+      } while (reservedNames.has(varName));
+      return varName;
     };
 
     for (const node of nodes) {
@@ -200,7 +224,7 @@ export class Transpiler {
       }
 
       outputs.forEach((rawName, idx) => {
-        const varName = uniqueName(rawName);
+        const varName = uniqueName(toSafeIdentifier(rawName, idx));
         outputMap.set(`${node.index}_${idx}`, varName);
         // 回写便于后续使用
         outputs[idx] = varName;
@@ -217,7 +241,7 @@ export class Transpiler {
   private analyzeSubgraph(
     subId: string,
     nodes: WorkflowNode[],
-    mainOutputMap: Map<string, string>
+    mainOutputMap: Map<string, string>,
   ): SubgraphInfo {
     const extInputsMap = new Map<
       string,
@@ -292,9 +316,13 @@ export class Transpiler {
     }
 
     const sorted = this.topologicalSort(
-      this.buildGraphForNodes(nodes, new Set(nodes.map((n) => n.index)))
+      this.buildGraphForNodes(nodes, new Set(nodes.map((n) => n.index))),
     );
-    const outputMap = this.buildOutputMap(nodes, internalDeps);
+    const outputMap = this.buildOutputMap(
+      nodes,
+      internalDeps,
+      new Set(paramNames),
+    );
 
     // 填充 exposedOutputs 的 varName
     for (const graphNode of sorted) {
@@ -322,27 +350,27 @@ export class Transpiler {
                 outputMap.get(`${refNodeId}_${refOutIdx}`) ?? "UNKNOWN_LINK";
               return types.objectProperty(
                 types.stringLiteral(inputKey),
-                types.identifier(varName)
+                types.identifier(varName),
               );
             } else {
               const param = params.find(
                 (p) =>
                   p.refNodeId === String(refNodeId) &&
-                  p.refOutputIdx === Number(refOutIdx)
+                  p.refOutputIdx === Number(refOutIdx),
               );
               const varName = param?.paramName ?? "UNKNOWN_PARAM";
               return types.objectProperty(
                 types.stringLiteral(inputKey),
-                types.identifier(varName)
+                types.identifier(varName),
               );
             }
           } else {
             return types.objectProperty(
               types.stringLiteral(inputKey),
-              toAst(inputValue)
+              toAst(inputValue),
             );
           }
-        }
+        },
       );
 
       const inputObjectExpression = types.objectExpression(inputExpressions);
@@ -351,30 +379,34 @@ export class Transpiler {
       const leftArrayPattern = types.arrayPattern(outputIdentifiers);
 
       const callExpression = types.callExpression(
-        IS_INVALID_VAR(nodeData.class_type)
+        types.isValidIdentifier(nodeData.class_type)
           ? types.memberExpression(
               types.identifier("cls"),
-              types.identifier(`"${nodeData.class_type}"`),
-              true
+              types.identifier(nodeData.class_type),
+              false,
             )
           : types.memberExpression(
               types.identifier("cls"),
-              types.identifier(nodeData.class_type),
-              false
+              types.stringLiteral(nodeData.class_type),
+              true,
             ),
-        [inputObjectExpression]
+        [inputObjectExpression],
       );
 
       const variableDeclarator = types.variableDeclarator(
         leftArrayPattern,
-        callExpression
+        callExpression,
       );
       const variableDeclaration = types.variableDeclaration("const", [
         variableDeclarator,
       ]);
 
       if (nodeData._meta?.title) {
-        types.addComment(variableDeclaration, "leading", nodeData._meta.title);
+        types.addComment(
+          variableDeclaration,
+          "leading",
+          sanitizeComment(nodeData._meta.title),
+        );
       }
       bodyStatements.push(variableDeclaration);
     }
@@ -385,14 +417,14 @@ export class Transpiler {
       return types.identifier(varName);
     });
     const returnStatement = types.returnStatement(
-      types.arrayExpression(returnElements)
+      types.arrayExpression(returnElements),
     );
     bodyStatements.push(returnStatement);
 
     const func = types.functionDeclaration(
       types.identifier(`sub${info.id}`),
       paramNames.map((p) => types.identifier(p)),
-      types.blockStatement(bodyStatements)
+      types.blockStatement(bodyStatements),
     );
 
     return this.generateCode(func);
@@ -401,7 +433,7 @@ export class Transpiler {
   // ---------- 生成主图代码 ----------
   private generateMainCode(
     mainNodes: WorkflowNode[],
-    subInfos: Map<string, SubgraphInfo>
+    subInfos: Map<string, SubgraphInfo>,
   ): string {
     const depsAll = this.collectionDependencies();
     const mainDeps: Record<string, number[]> = {};
@@ -441,13 +473,13 @@ export class Transpiler {
         id: node.index,
         type: "main",
         mainNode: node,
-        deps,
+        deps: Array.from(new Set(deps)),
       });
     }
 
     // 添加子图虚拟节点
     for (const [subId, subInfo] of subInfos) {
-      const deps: string[] = subInfo.params.map((p) => p.refNodeId);
+      const deps = Array.from(new Set(subInfo.params.map((p) => p.refNodeId)));
       // 避免重复添加（可能没有参数）
       graph.set(`sub_${subId}`, {
         id: `sub_${subId}`,
@@ -479,6 +511,10 @@ export class Transpiler {
           if (newDeg === 0) queue.push(otherId);
         }
       }
+    }
+
+    if (sortedIds.length !== graph.size) {
+      throw new Error("workflow contains cyclic or missing dependencies");
     }
 
     // 生成语句，同时建立子图调用返回变量名映射
@@ -514,15 +550,15 @@ export class Transpiler {
             inputExpressions.push(
               types.objectProperty(
                 types.stringLiteral(inputKey),
-                types.identifier(varName)
-              )
+                types.identifier(varName),
+              ),
             );
           } else {
             inputExpressions.push(
               types.objectProperty(
                 types.stringLiteral(inputKey),
-                toAst(inputValue)
-              )
+                toAst(inputValue),
+              ),
             );
           }
         }
@@ -533,23 +569,23 @@ export class Transpiler {
         const leftArrayPattern = types.arrayPattern(outputIdentifiers);
 
         const callExpression = types.callExpression(
-          IS_INVALID_VAR(nodeData.class_type)
+          types.isValidIdentifier(nodeData.class_type)
             ? types.memberExpression(
                 types.identifier("cls"),
-                types.identifier(`"${nodeData.class_type}"`),
-                true
+                types.identifier(nodeData.class_type),
+                false,
               )
             : types.memberExpression(
                 types.identifier("cls"),
-                types.identifier(nodeData.class_type),
-                false
+                types.stringLiteral(nodeData.class_type),
+                true,
               ),
-          [inputObjectExpression]
+          [inputObjectExpression],
         );
 
         const variableDeclarator = types.variableDeclarator(
           leftArrayPattern,
-          callExpression
+          callExpression,
         );
         const variableDeclaration = types.variableDeclaration("const", [
           variableDeclarator,
@@ -559,7 +595,7 @@ export class Transpiler {
           types.addComment(
             variableDeclaration,
             "leading",
-            nodeData._meta.title
+            sanitizeComment(nodeData._meta.title),
           );
         }
         statements.push(variableDeclaration);
@@ -567,7 +603,7 @@ export class Transpiler {
         // 子图调用
         const subInfo = gnode.subInfo!;
         const paramNames = subInfo.params.map((p) =>
-          types.identifier(p.paramName)
+          types.identifier(p.paramName),
         );
         const retVars = subInfo.exposedOutputs.map((exp, idx) => {
           const name = exp.varName || `sub${subInfo.id}_${idx}`;
@@ -576,7 +612,7 @@ export class Transpiler {
         const leftArray = types.arrayPattern(retVars);
         const callExpr = types.callExpression(
           types.identifier(`sub${subInfo.id}`),
-          paramNames
+          paramNames,
         );
         const decl = types.variableDeclaration("const", [
           types.variableDeclarator(leftArray, callExpr),
@@ -588,7 +624,7 @@ export class Transpiler {
         subInfo.exposedOutputs.forEach((exp, idx) => {
           varMap.set(
             `${exp.nodeId}:${exp.outputIdx}`,
-            (retVars[idx] as types.Identifier).name
+            (retVars[idx] as types.Identifier).name,
           );
         });
         subCallVarMap.set(`sub_${subInfo.id}`, varMap);
@@ -620,7 +656,7 @@ export class Transpiler {
 
     // 生成子图函数代码
     const subFunctions = Array.from(subInfos.values()).map((info) =>
-      this.generateSubgraphCode(info)
+      this.generateSubgraphCode(info),
     );
 
     // 生成主图代码
