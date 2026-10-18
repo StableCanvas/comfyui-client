@@ -546,6 +546,55 @@ export class LoggingPlugin extends Plugin {
 }
 ```
 
+### RunningHub
+
+RunningHub exposes a native ComfyUI API through an API-key-scoped URL:
+
+```text
+https://www.runninghub.ai/proxy/YOUR_API_KEY
+```
+
+Use `https://www.runninghub.ai/proxy-plus/YOUR_API_KEY` for 48GB VRAM instances. The API key is part of the path, so set it with `api_base`.
+
+RunningHub's WebSocket endpoint is also scoped by the API key, but this client's `wsURL()` currently only appends `/ws`. Add this small plugin when using WebSocket APIs such as `connect()`, `enqueue()`, or `Workflow.invoke()`:
+
+```ts
+import WebSocket from "ws";
+import { Client, Plugin } from "@stable-canvas/comfyui-client";
+
+class RunningHubWsPlugin extends Plugin {
+  constructor(private readonly base: string) {
+    super();
+
+    this.addHook({
+      type: "function",
+      name: "wsURL",
+      fn: (original, ...args) => {
+        const url = new URL(original(...args));
+        url.pathname = `${this.base}/ws`.replace(/\/+/g, "/");
+        return url.toString();
+      },
+    });
+  }
+}
+
+const apiBase = "/proxy/YOUR_API_KEY";
+const client = new Client({
+  api_host: "www.runninghub.ai",
+  api_base: apiBase,
+  ssl: true,
+  WebSocket: WebSocket as any,
+});
+
+client.use(new RunningHubWsPlugin(apiBase));
+```
+
+This plugin is intentionally not included in the library. Copy it into applications that need WebSocket support. For REST-only usage such as `enqueue_polling()` or `Workflow.invoke_polling()`, the plugin is not required.
+
+> RunningHub does not currently allow direct cross-origin browser REST requests. In browser environments, route requests through your backend or a same-origin proxy.
+
+See the [RunningHub Native ComfyUI API Integration Guide](https://www.runninghub.ai/runninghub-api-doc-en/doc-8287466.md) for details.
+
 ### ComfyUI Login Auth
 
 For example, sometimes you may need to provide node authentication capabilities, and you may have many solutions to implement your ComfyUI permission management
