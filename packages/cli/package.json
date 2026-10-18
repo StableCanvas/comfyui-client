@@ -1,17 +1,14 @@
 {
   "name": "@stable-canvas/comfyui-client-cli",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "cli tools for @stable-canvas/comfyui-client",
   "bin": {
     "cuc-w2c": "index.js"
   },
-  "source": "src/main.ts",
-  "main": "dist/main.js",
-  "exports": {
-    "require": "./dist/main.js",
-    "import": "./src/main.ts"
-  },
   "keywords": [],
+  "engines": {
+    "node": ">=18"
+  },
   "files": [
     "dist/**/*",
     "data/**/*",
@@ -19,7 +16,7 @@
     "index.js"
   ],
   "scripts": {
-    "test": "jest",
+    "test": "pnpm build && node --test tests/cli.node.test.mjs",
     "build:cli": "microbundle src/main-cli.ts -o dist/main-cli.js",
     "build": "pnpm run build:cli",
     "prepack": "pnpm run build",
