@@ -80,39 +80,85 @@ export class JsonReader {
     return new CWorkflow(nodes);
   }
 
+  private getWidgetInputs(
+    node: ComfyUIExportImage.Node
+  ): Record<string, unknown> {
+    const widgets = node.widgets_values;
+    if (!widgets) return {};
+    if (!Array.isArray(widgets)) return widgets;
+
+    const widgetNames: string[] =
+      (ComfyUINodeWidgetsMap as any)[node.type] || [];
+
+    return Object.fromEntries(
+      widgets.map((value, index) => {
+        const widgetName = widgetNames[index];
+        if (!widgetName) {
+          throw new Error(
+            `Missing widget mapping for ${node.type}#${node.id} at index ${index}; export the workflow in API format instead`
+          );
+        }
+        return [widgetName, value];
+      })
+    );
+  }
+
   private fromExportGraph(json_object: ComfyUIExportImage.Root): CWorkflow {
     const { nodes, links, version } = json_object;
 
-    // TODO: convert version 1.0
-    // 目前只在 0.4 版本的 json 上测试，还不太清楚 1.0 有没有问题
-    // ref: https://docs.comfy.org/specs/workflow_json
+    if (version !== 0.4 && version !== 1) {
+      throw new Error(
+        `Unsupported workflow JSON version: ${version}; supported versions are 0.4 and 1`
+      );
+    }
+
+    const linksById = new Map<
+      string,
+      { originId: string; originSlot: number }
+    >();
+
+    for (const link of links) {
+      if (Array.isArray(link)) {
+        linksById.set(String(link[0]), {
+          originId: String(link[1]),
+          originSlot: Number(link[2]),
+        });
+      } else {
+        linksById.set(String(link.id), {
+          originId: String(link.origin_id),
+          originSlot: Number(link.origin_slot),
+        });
+      }
+    }
 
     const nodes_define = nodes.map((node) => {
-      const widgets_name: string[] =
-        (ComfyUINodeWidgetsMap as any)[node.type] || [];
+      if ((node.mode ?? 0) !== 0) {
+        throw new Error(
+          `Node mode ${node.mode} is not supported for ${node.type}#${node.id}; export the workflow in API format instead`
+        );
+      }
+
+      const inputs: Record<string, any> = {
+        ...this.getWidgetInputs(node),
+      };
+
+      for (const input of node.inputs || []) {
+        if (input.link === null || input.link === undefined) continue;
+
+        const link = linksById.get(String(input.link));
+        if (!link) {
+          throw new Error(
+            `Missing link ${input.link} for ${node.type}#${node.id}.${input.name}`
+          );
+        }
+
+        inputs[input.name] = [link.originId, link.originSlot];
+      }
+
       return {
         index: node.id,
         class_type: node.type,
-        inputs: {
-          // find widget inputs
-          ...Object.fromEntries(
-            node.widgets_values?.map((value, index) => {
-              const widget_name = widgets_name[index] || `unknown_${index}`;
-              return [widget_name, value];
-            }) || []
-          ),
-          // find link inputs
-          ...(node.inputs?.reduce((acc, cur) => {
-            const link = links.find((x) => x[0] === cur.link);
-            if (!link) {
-              // console.warn("No link found for input", cur);
-              return acc;
-            }
-            // [input_node_id, input_slot_id]
-            acc[cur.name] = [link[1], link[2]];
-            return acc;
-          }, {} as Record<string, any>) || {}),
-        },
+        inputs,
       };
     });
 
