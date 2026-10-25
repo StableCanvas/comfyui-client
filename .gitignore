@@ -138,3 +138,5 @@ outputs
 .vscode
 
 comfyui.node.types.ts
+
+.temp/
