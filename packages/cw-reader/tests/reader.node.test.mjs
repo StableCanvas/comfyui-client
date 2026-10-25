@@ -74,6 +74,9 @@ test("resolves current widgets from schema and explicit overrides", () => {
         ],
         widgets_values: [832, 480, 81, 1],
       }),
+      node("5", "ResolutionSelector", {
+        widgets_values: ["2:3 (Portrait Photo)", 0.2, 32],
+      }),
     ],
     links: [],
     groups: [],
@@ -99,6 +102,11 @@ test("resolves current widgets from schema and explicit overrides", () => {
     height: 480,
     length: 81,
     batch_size: 1,
+  });
+  assert.deepEqual(workflow.nodes[4].data.inputs, {
+    aspect_ratio: "2:3 (Portrait Photo)",
+    megapixels: 0.2,
+    multiple: 32,
   });
 });
 
@@ -218,6 +226,52 @@ test("covers discovered widget mapping regressions", () => {
         aspect_ratio: "1:1 (Square)",
         megapixels: 1,
         multiple: 16,
+      },
+    },
+    {
+      type: "MiniMaxH3ImageToVideo",
+      widgets: ["", 1344, 768, 73],
+      expected: { prompt: "", width: 1344, height: 768, length: 73 },
+    },
+    {
+      type: "ComfyMathExpression",
+      widgets: ["round(a / 32) * 32"],
+      expected: { expression: "round(a / 32) * 32" },
+    },
+    {
+      type: "PathchSageAttentionKJ",
+      widgets: ["auto", false],
+      expected: { sage_attention: "auto", allow_compile: false },
+    },
+    {
+      type: "ReservedVRAMSetter",
+      widgets: [2, "auto", 0, "fixed", 0, false],
+      expected: {
+        reserved: 2,
+        mode: "auto",
+        seed: 0,
+        auto_max_reserved: 0,
+        clean_gpu_before: false,
+      },
+    },
+    {
+      type: "MiniMaxH3SigmaShift",
+      widgets: [12, 3],
+      expected: { shift_video: 12, shift_audio: 3 },
+    },
+    {
+      type: "Power Lora Loader (rgthree)",
+      widgets: [
+        {},
+        { type: "PowerLoraLoaderHeaderWidget" },
+        { on: true, lora: "first.safetensors", strength: 0.7 },
+        { on: false, lora: "second.safetensors", strength: 1 },
+        {},
+        "",
+      ],
+      expected: {
+        lora_1: { on: true, lora: "first.safetensors", strength: 0.7 },
+        lora_2: { on: false, lora: "second.safetensors", strength: 1 },
       },
     },
   ];
@@ -351,6 +405,65 @@ test("rewires bypassed node outputs to compatible inputs", () => {
     ["CheckpointLoaderSimple", "KSampler"],
   );
   assert.deepEqual(workflow.nodes[1].data.inputs.model, ["1", 0]);
+});
+
+test("omits optional inputs when a bypassed source has no pass-through value", () => {
+  const raw = {
+    version: 1,
+    state: {},
+    nodes: [
+      node("1", "LoadImage", {
+        mode: 4,
+        outputs: [{ name: "IMAGE", type: "IMAGE", links: [1] }],
+        widgets_values: ["portrait.png", "image"],
+      }),
+      node("2", "OptionalImageConsumer", {
+        inputs: [{ name: "image", type: "IMAGE", shape: 7, link: 1 }],
+      }),
+    ],
+    links: [[1, 1, 0, 2, 0, "IMAGE"]],
+    groups: [],
+    config: {},
+    extra: {},
+  };
+
+  const workflow = new JsonReader(raw).getWorkflow();
+  assert.deepEqual(
+    workflow.nodes.map((item) => [item.index, item.data.class_type]),
+    [["2", "OptionalImageConsumer"]],
+  );
+  assert.deepEqual(workflow.nodes[0].data.inputs, {});
+
+  raw.nodes[1].inputs[0].shape = undefined;
+  assert.throws(
+    () => new JsonReader(raw).getWorkflow(),
+    /Cannot bypass LoadImage#1 output 0/,
+  );
+});
+
+test("drops frontend-only helper nodes", () => {
+  const raw = {
+    version: 1,
+    state: {},
+    nodes: [
+      node("1", "CheckpointLoaderSimple", {
+        widgets_values: ["model.safetensors"],
+      }),
+      node("2", "Bookmark (rgthree)"),
+      node("3", "LCNote"),
+      node("4", "Node Collector (rgthree)"),
+    ],
+    links: [],
+    groups: [],
+    config: {},
+    extra: {},
+  };
+
+  const workflow = new JsonReader(raw).getWorkflow();
+  assert.deepEqual(
+    workflow.nodes.map((item) => item.data.class_type),
+    ["CheckpointLoaderSimple"],
+  );
 });
 
 test("expands group nodes and preserves external links and widgets", () => {

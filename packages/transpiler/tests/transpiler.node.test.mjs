@@ -86,6 +86,34 @@ test("generates valid identifiers for invalid output names", () => {
   assert.doesNotThrow(() => new Function(code));
 });
 
+test("does not treat array widget values as node references", () => {
+  const workflow = {
+    nodes: [
+      node(
+        "1",
+        "Lora Loader (LoraManager)",
+        {
+          text: "",
+          loras: [],
+          nested: { options: [1, 2, 3] },
+        },
+        ["MODEL", "CLIP"],
+      ),
+      node("2", "SaveImage", { images: ["1", 0] }, ["IMAGE"]),
+    ],
+  };
+
+  const code = new Transpiler(workflow).toCode();
+
+  assert.match(code, /"loras": \[\]/);
+  assert.match(code, /"options": \[1, 2, 3\]/);
+  assert.doesNotThrow(() =>
+    new Function("cls", code)(
+      new Proxy({}, { get: () => () => Array(2).fill(undefined) }),
+    ),
+  );
+});
+
 test("converts workflows with widgets_values_named", async () => {
   const raw = JSON.parse(
     readFileSync(new URL("./demo-wk.json", import.meta.url), "utf8"),

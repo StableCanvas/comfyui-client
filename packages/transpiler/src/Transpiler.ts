@@ -32,6 +32,13 @@ interface SubgraphInfo {
 const sanitizeComment = (value: string) =>
   value.replace(/\*\//g, "* /").replace(/\r?\n/g, " ");
 
+const isNodeInputRef = (value: unknown): value is WorkflowNodeInputRef =>
+  Array.isArray(value) &&
+  value.length === 2 &&
+  (typeof value[0] === "string" || typeof value[0] === "number") &&
+  Number.isInteger(value[1]) &&
+  value[1] >= 0;
+
 const toSafeIdentifier = (name: string, index: number): string => {
   if (types.isValidIdentifier(name)) return name;
 
@@ -98,7 +105,7 @@ export class Transpiler {
   private collectionDependencies() {
     const { workflow: wk } = this;
     const all_refs = wk.nodes.map((x) =>
-      Object.values(x.data.inputs).filter((x) => Array.isArray(x)),
+      Object.values(x.data.inputs).filter(isNodeInputRef),
     ) as WorkflowNodeInputRef[][];
 
     return all_refs.reduce(
@@ -149,7 +156,7 @@ export class Transpiler {
       const deps = Array.from(
         new Set(
           Object.values(node.data.inputs)
-            .filter((x) => Array.isArray(x))
+            .filter(isNodeInputRef)
             .map(([refIndex]: any) => String(refIndex))
             .filter((refId) => effectiveIds.has(refId)),
         ),
@@ -163,7 +170,7 @@ export class Transpiler {
     for (const node of nodes) {
       const graphNode = nodeMap.get(node.index)!;
       const deps = Object.values(node.data.inputs)
-        .filter((x) => Array.isArray(x))
+        .filter(isNodeInputRef)
         .map(([refIndex]: any) => String(refIndex))
         .filter((refId) => effectiveIds.has(refId));
 
@@ -251,8 +258,8 @@ export class Transpiler {
 
     for (const node of nodes) {
       for (const val of Object.values(node.data.inputs)) {
-        if (!Array.isArray(val)) continue;
-        const [refNodeId, refOutIdx] = val as WorkflowNodeInputRef;
+        if (!isNodeInputRef(val)) continue;
+        const [refNodeId, refOutIdx] = val;
         const { groupId } = parseNodeId(String(refNodeId));
         if (groupId !== subId) {
           const key = `${refNodeId}_${refOutIdx}`;
@@ -280,8 +287,8 @@ export class Transpiler {
     for (const node of this.workflow.nodes) {
       if (parseNodeId(node.index).groupId === subId) continue;
       for (const val of Object.values(node.data.inputs)) {
-        if (!Array.isArray(val)) continue;
-        const [refNodeId, refOutIdx] = val as WorkflowNodeInputRef;
+        if (!isNodeInputRef(val)) continue;
+        const [refNodeId, refOutIdx] = val;
         if (parseNodeId(String(refNodeId)).groupId === subId) {
           const key = `${refNodeId}_${refOutIdx}`;
           if (!exposedSet.has(key)) {
@@ -342,8 +349,8 @@ export class Transpiler {
       const inputs = nodeData.inputs;
       const inputExpressions = Object.entries(inputs).map(
         ([inputKey, inputValue]) => {
-          if (Array.isArray(inputValue)) {
-            const [refNodeId, refOutIdx] = inputValue as WorkflowNodeInputRef;
+          if (isNodeInputRef(inputValue)) {
+            const [refNodeId, refOutIdx] = inputValue;
             const { groupId } = parseNodeId(String(refNodeId));
             if (groupId === info.id) {
               const varName =
@@ -459,8 +466,8 @@ export class Transpiler {
     for (const node of mainNodes) {
       const deps: string[] = [];
       for (const val of Object.values(node.data.inputs)) {
-        if (!Array.isArray(val)) continue;
-        const [refNodeId, _refOutIdx] = val as WorkflowNodeInputRef;
+        if (!isNodeInputRef(val)) continue;
+        const [refNodeId, _refOutIdx] = val;
         const { groupId: refGroup } = parseNodeId(String(refNodeId));
         if (refGroup === null) {
           deps.push(String(refNodeId));
@@ -530,8 +537,8 @@ export class Transpiler {
         const inputExpressions: types.ObjectProperty[] = [];
 
         for (const [inputKey, inputValue] of Object.entries(inputs)) {
-          if (Array.isArray(inputValue)) {
-            const [refNodeId, refOutIdx] = inputValue as WorkflowNodeInputRef;
+          if (isNodeInputRef(inputValue)) {
+            const [refNodeId, refOutIdx] = inputValue;
             const { groupId: refGroup } = parseNodeId(String(refNodeId));
 
             let varName: string;

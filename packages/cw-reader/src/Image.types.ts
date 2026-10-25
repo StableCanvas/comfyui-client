@@ -44,6 +44,7 @@ export namespace ComfyUIExportImage {
         name: string;
         type: string;
         link?: number | string | null;
+        shape?: number;
     }
     
     export type Output = {

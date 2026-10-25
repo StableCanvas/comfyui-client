@@ -24,9 +24,26 @@ type ExportLink = ComfyUIExportImage.Link | Array<number | string>;
 
 type ResolvedOrigin =
   | { kind: "reference"; originId: string; originSlot: number }
-  | { kind: "value"; value: unknown };
+  | { kind: "value"; value: unknown }
+  | { kind: "unavailable"; message: string };
 
-const UI_ONLY_NODE_TYPES = new Set(["Note", "MarkdownNote", "Reroute"]);
+const UI_ONLY_NODE_TYPES = new Set([
+  "Note",
+  "MarkdownNote",
+  "Reroute",
+  "Bookmark (rgthree)",
+  "Fast Bypasser (rgthree)",
+  "Fast Groups Bypasser (rgthree)",
+  "Fast Groups Muter (rgthree)",
+  "Mute / Bypass Repeater (rgthree)",
+  "Mute / Bypass Relay (rgthree)",
+  "Node Collector (rgthree)",
+  "LC Bypasser",
+  "LC Bypasser Panel",
+  "LCImageLabel",
+  "LCLabel",
+  "LCNote",
+]);
 const PRIMITIVE_NODE_TYPE = "PrimitiveNode";
 const PRIMITIVE_SCHEMA_TYPES = new Set([
   "string",
@@ -68,16 +85,29 @@ interface GroupNodeDefinition {
 }
 
 // Schema data can lag ComfyUI releases; keep current core-node corrections here.
-const WIDGET_NAME_OVERRIDES: Record<string, string[]> = {
+const WIDGET_NAME_OVERRIDES: Record<string, Array<string | null>> = {
   CLIPLoader: ["clip_name", "type", "device"],
   UNETLoader: ["unet_name", "weight_dtype"],
+  ComfyMathExpression: ["expression"],
   DualCLIPLoader: ["clip_name1", "clip_name2", "type", "device"],
   EmptySD3LatentImage: ["width", "height", "batch_size"],
   EmptyHunyuanImageLatent: ["width", "height", "batch_size"],
   EmptyFlux2LatentImage: ["width", "height", "batch_size"],
   Flux2Scheduler: ["steps", "width", "height"],
   ImageFromBatch: ["batch_index", "length"],
+  MiniMaxH3ImageToVideo: ["prompt", "width", "height", "length"],
+  MiniMaxH3SigmaShift: ["shift_video", "shift_audio"],
+  PathchSageAttentionKJ: ["sage_attention", "allow_compile"],
   RandomNoise: ["noise_seed", "control_after_generate"],
+  ReservedVRAMSetter: [
+    "reserved",
+    "mode",
+    "seed",
+    null,
+    "auto_max_reserved",
+    "clean_gpu_before",
+  ],
+  ResolutionSelector: ["aspect_ratio", "megapixels", "multiple"],
   SaveImage: ["filename_prefix"],
   SaveAnimatedWEBP: ["filename_prefix", "fps", "lossless", "quality", "method"],
   TextEncodeQwenImageEditPlus: ["prompt"],
@@ -156,11 +186,11 @@ export class JsonReader {
     return new CWorkflow(nodes);
   }
 
-  private getWidgetNames(node: ExportNode): string[] {
+  private getWidgetNames(node: ExportNode): Array<string | null> {
     const override = WIDGET_NAME_OVERRIDES[node.type];
     if (override) return override;
 
-    const widgetNames = [
+    const widgetNames: Array<string | null> = [
       ...(((ComfyUINodeWidgetsMap as any)[node.type] as string[] | undefined) ??
         []),
     ];
@@ -200,12 +230,18 @@ export class JsonReader {
       !Array.isArray(namedWidgets) &&
       Object.keys(namedWidgets).length > 0
     ) {
-      return namedWidgets;
+      return this.normalizeWidgetInputs(node, namedWidgets);
     }
 
     const widgets = node.widgets_values;
     if (!widgets) return {};
-    if (!Array.isArray(widgets)) return widgets;
+    if (!Array.isArray(widgets)) {
+      return this.normalizeWidgetInputs(node, widgets);
+    }
+
+    if (node.type === "Power Lora Loader (rgthree)") {
+      return this.getPowerLoraInputs(widgets);
+    }
 
     const widgetNames = this.getWidgetNames(node);
     const inputs: Record<string, unknown> = {};
@@ -214,7 +250,7 @@ export class JsonReader {
       const widgetName = widgetNames[index];
       if (widgetName) {
         inputs[widgetName] = value;
-      } else if (value !== "" && value !== null) {
+      } else if (widgetName !== null && value !== "" && value !== null) {
         throw new Error(
           `Missing widget mapping for ${node.type}#${node.id} at index ${index}; export the workflow in API format instead`,
         );
@@ -222,6 +258,40 @@ export class JsonReader {
     });
 
     return inputs;
+  }
+
+  private normalizeWidgetInputs(
+    node: ExportNode,
+    widgets: Record<string, unknown>,
+  ): Record<string, unknown> {
+    if (node.type !== "Power Lora Loader (rgthree)") return widgets;
+
+    return Object.fromEntries(
+      Object.entries(widgets).filter(
+        ([name, value]) =>
+          name.startsWith("lora_") &&
+          value !== null &&
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          typeof (value as Record<string, unknown>).lora === "string",
+      ),
+    );
+  }
+
+  private getPowerLoraInputs(
+    widgets: unknown[],
+  ): Record<string, Record<string, unknown>> {
+    const loras = widgets.filter(
+      (value): value is Record<string, unknown> =>
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        typeof (value as Record<string, unknown>).lora === "string",
+    );
+
+    return Object.fromEntries(
+      loras.map((value, index) => [`lora_${index + 1}`, value]),
+    );
   }
 
   private getLinkParts(link: ExportLink) {
@@ -496,9 +566,10 @@ export class JsonReader {
           bypassInput.link === null ||
           bypassInput.link === undefined
         ) {
-          throw new Error(
-            `Cannot bypass ${originNode.type}#${originNode.id} output ${originSlot}`,
-          );
+          return {
+            kind: "unavailable",
+            message: `Cannot bypass ${originNode.type}#${originNode.id} output ${originSlot}`,
+          };
         }
         return resolveLink(bypassInput.link, nextResolving);
       }
@@ -540,6 +611,10 @@ export class JsonReader {
         if (input.link === null || input.link === undefined) continue;
 
         const origin = resolveLink(input.link);
+        if (origin.kind === "unavailable") {
+          if (input.shape === 7) continue;
+          throw new Error(origin.message);
+        }
         inputs[input.name] =
           origin.kind === "value"
             ? origin.value

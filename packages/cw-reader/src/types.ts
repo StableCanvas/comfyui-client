@@ -1,4 +1,7 @@
-export type WorkflowNodeInputRef = [ref_index: number, ref_outputs: number];
+export type WorkflowNodeInputRef = [
+  ref_index: string | number,
+  ref_outputs: number,
+];
 export type WorkflowNodeInputValue =
   | string
   | number

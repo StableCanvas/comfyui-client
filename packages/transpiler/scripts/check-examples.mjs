@@ -82,6 +82,16 @@ function sameJsonValue(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function isNodeInputRef(value) {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    (typeof value[0] === "string" || typeof value[0] === "number") &&
+    Number.isInteger(value[1]) &&
+    value[1] >= 0
+  );
+}
+
 function getExpectedNodeTypes(root) {
   if (!Array.isArray(root?.nodes) || !Array.isArray(root?.links)) return null;
 
@@ -91,6 +101,18 @@ function getExpectedNodeTypes(root) {
     "MarkdownNote",
     "Reroute",
     "PrimitiveNode",
+    "Bookmark (rgthree)",
+    "Fast Bypasser (rgthree)",
+    "Fast Groups Bypasser (rgthree)",
+    "Fast Groups Muter (rgthree)",
+    "Mute / Bypass Repeater (rgthree)",
+    "Mute / Bypass Relay (rgthree)",
+    "Node Collector (rgthree)",
+    "LC Bypasser",
+    "LC Bypasser Panel",
+    "LCImageLabel",
+    "LCLabel",
+    "LCNote",
   ]);
 
   function getGroupDefinition(node) {
@@ -165,7 +187,7 @@ function validateGraph(workflow, calls) {
       const expectedValue = expected[key];
       const actualValue = actual[key];
 
-      if (Array.isArray(expectedValue)) {
+      if (isNodeInputRef(expectedValue)) {
         if (!actualValue?.__transpilerToken) return false;
         if (actualValue.output !== Number(expectedValue[1])) return false;
 
