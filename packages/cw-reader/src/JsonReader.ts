@@ -27,6 +27,25 @@ type ResolvedOrigin =
   | { kind: "value"; value: unknown }
   | { kind: "unavailable"; message: string };
 
+type LinkParts = {
+  id: string;
+  originId: string;
+  originSlot: number;
+  targetId?: string;
+  targetSlot?: number;
+};
+
+type ExpandedLinks = {
+  nodes: ExportNode[];
+  links: Array<{
+    id: string;
+    originId: string;
+    originSlot: number;
+  }>;
+  linkValues: Map<string, ResolvedOrigin>;
+  originAliases: Map<string, ResolvedOrigin>;
+};
+
 const UI_ONLY_NODE_TYPES = new Set([
   "Note",
   "MarkdownNote",
@@ -145,7 +164,10 @@ export class JsonReader {
 
   private guessJsonType() {
     const obj: any = this.inputObject;
-    if (["nodes", "links"].every((x) => Array.isArray(obj?.[x]))) {
+    if (
+      Array.isArray(obj?.nodes) &&
+      (Array.isArray(obj?.links) || obj?.version === 1)
+    ) {
       return "export_graph";
     } else if (obj?.["prompt"] && typeof obj?.["prompt"] === "object") {
       return "api_json";
@@ -207,8 +229,8 @@ export class JsonReader {
       const inputType = inputTypes.get(name);
       const isComplexInput =
         inputType !== undefined &&
-        inputType !== "*" &&
-        !WIDGET_INPUT_TYPES.has(inputType);
+        (typeof inputType !== "string" ||
+          (inputType !== "*" && !WIDGET_INPUT_TYPES.has(inputType)));
       if (
         schema.type &&
         PRIMITIVE_SCHEMA_TYPES.has(schema.type) &&
@@ -300,13 +322,269 @@ export class JsonReader {
         id: String(link[0]),
         originId: String(link[1]),
         originSlot: Number(link[2]),
+        targetId: String(link[3]),
+        targetSlot: Number(link[4]),
       };
     }
     return {
       id: String(link.id),
       originId: String(link.origin_id),
       originSlot: Number(link.origin_slot),
+      targetId: String(link.target_id),
+      targetSlot: Number(link.target_slot),
     };
+  }
+
+  private qualifyId(scope: string, id: string | number) {
+    return `${scope}${String(id)}`;
+  }
+
+  private collectSubgraphDefinitions(
+    root: ComfyUIExportImage.Root,
+    definitions = new Map<string, ComfyUIExportImage.SubgraphDefinition>(),
+  ) {
+    for (const definition of root.definitions?.subgraphs ?? []) {
+      if (!definition?.id || definitions.has(definition.id)) continue;
+      definitions.set(definition.id, definition);
+      this.collectSubgraphDefinitions(definition, definitions);
+    }
+    return definitions;
+  }
+
+  private isWidgetInputType(input: ComfyUIExportImage.Input) {
+    return (
+      typeof input.type === "string" &&
+      (WIDGET_INPUT_TYPES.has(input.type) ||
+        PRIMITIVE_SCHEMA_TYPES.has(input.type))
+    );
+  }
+
+  private getSubgraphWidgetValues(
+    host: ExportNode,
+    definition: ComfyUIExportImage.SubgraphDefinition,
+  ) {
+    const values = new Map<string, unknown>();
+    const namedWidgets = host.widgets_values_named;
+    if (
+      namedWidgets &&
+      typeof namedWidgets === "object" &&
+      !Array.isArray(namedWidgets)
+    ) {
+      for (const [name, value] of Object.entries(namedWidgets)) {
+        values.set(name, value);
+      }
+      return values;
+    }
+
+    const widgets = host.widgets_values;
+    if (widgets && typeof widgets === "object" && !Array.isArray(widgets)) {
+      for (const [name, value] of Object.entries(widgets)) {
+        values.set(name, value);
+      }
+      return values;
+    }
+
+    if (Array.isArray(widgets)) {
+      let widgetIndex = 0;
+      for (const input of definition.inputs ?? []) {
+        if (!this.isWidgetInputType(input) || widgetIndex >= widgets.length)
+          continue;
+        values.set(input.name, widgets[widgetIndex]);
+        widgetIndex += 1;
+      }
+    }
+
+    return values;
+  }
+
+  private getSubgraphInputBindings(
+    host: ExportNode,
+    definition: ComfyUIExportImage.SubgraphDefinition,
+    linksById: Map<string, LinkParts>,
+    parentScope: string,
+  ) {
+    const bindings = new Map<number, ResolvedOrigin>();
+    const widgetValues = this.getSubgraphWidgetValues(host, definition);
+
+    for (const [index, definitionInput] of (
+      definition.inputs ?? []
+    ).entries()) {
+      const hostInput = (host.inputs ?? []).find(
+        (input) =>
+          input.name === definitionInput.name ||
+          (definitionInput.label !== undefined &&
+            input.label === definitionInput.label),
+      );
+
+      if (hostInput?.link !== null && hostInput?.link !== undefined) {
+        const outerLink = linksById.get(String(hostInput.link));
+        if (!outerLink) {
+          throw new Error(
+            `Subgraph ${definition.name}#${host.id} references missing outer link ${hostInput.link}`,
+          );
+        }
+        bindings.set(index, {
+          kind: "reference",
+          originId: this.qualifyId(parentScope, outerLink.originId),
+          originSlot: outerLink.originSlot,
+        });
+        continue;
+      }
+
+      if (widgetValues.has(definitionInput.name)) {
+        bindings.set(index, {
+          kind: "value",
+          value: widgetValues.get(definitionInput.name),
+        });
+      }
+    }
+
+    return bindings;
+  }
+
+  private expandNativeSubgraph(
+    host: ExportNode,
+    definition: ComfyUIExportImage.SubgraphDefinition,
+    definitions: Map<string, ComfyUIExportImage.SubgraphDefinition>,
+    parentLinksById: Map<string, LinkParts>,
+    parentScope: string,
+    visited: Set<string>,
+  ): ExpandedLinks {
+    if (visited.has(definition.id)) {
+      throw new Error(`Cyclic subgraph definition: ${definition.id}`);
+    }
+
+    const nextVisited = new Set(visited).add(definition.id);
+    const hostId = this.qualifyId(parentScope, host.id);
+    const innerScope = `${hostId}:`;
+    const linksById = new Map(
+      (definition.links ?? []).map((link) => {
+        const parts = this.getLinkParts(link);
+        return [parts.id, parts] as const;
+      }),
+    );
+    const inputBindings = this.getSubgraphInputBindings(
+      host,
+      definition,
+      parentLinksById,
+      parentScope,
+    );
+    const result: ExpandedLinks = {
+      nodes: [],
+      links: [],
+      linkValues: new Map(),
+      originAliases: new Map(),
+    };
+
+    for (const [index, binding] of inputBindings) {
+      result.originAliases.set(`${innerScope}-10:${index}`, binding);
+    }
+
+    const nodeByLocalId = new Map<string, ExportNode>();
+    for (const localNode of definition.nodes) {
+      const localId = String(localNode.id);
+      const fullId = this.qualifyId(innerScope, localId);
+      const nestedDefinition = definitions.get(localNode.type);
+
+      if (nestedDefinition && (localNode.mode ?? 0) === 0) {
+        const nested = this.expandNativeSubgraph(
+          localNode,
+          nestedDefinition,
+          definitions,
+          linksById,
+          innerScope,
+          nextVisited,
+        );
+        result.nodes.push(...nested.nodes);
+        result.links.push(...nested.links);
+        for (const [key, value] of nested.linkValues) {
+          result.linkValues.set(key, value);
+        }
+        for (const [key, value] of nested.originAliases) {
+          result.originAliases.set(key, value);
+        }
+        continue;
+      }
+
+      const expandedNode = {
+        ...localNode,
+        id: fullId,
+        inputs: (localNode.inputs ?? []).map((input) => ({ ...input })),
+        outputs: (localNode.outputs ?? []).map((output) => ({ ...output })),
+      } as ExportNode;
+      result.nodes.push(expandedNode);
+      nodeByLocalId.set(localId, expandedNode);
+    }
+
+    for (const link of definition.links ?? []) {
+      const parts = this.getLinkParts(link);
+      if (parts.targetId === undefined || parts.targetSlot === undefined) {
+        throw new Error(
+          `Subgraph ${definition.name}#${host.id} has an incomplete link ${parts.id}`,
+        );
+      }
+      const targetId = parts.targetId;
+      const targetSlot = parts.targetSlot;
+      const generatedId = this.qualifyId(innerScope, parts.id);
+
+      if (targetId === "-20") {
+        result.originAliases.set(`${hostId}:${targetSlot}`, {
+          kind: "reference",
+          originId: this.qualifyId(innerScope, parts.originId),
+          originSlot: parts.originSlot,
+        });
+        continue;
+      }
+
+      let binding: ResolvedOrigin | undefined;
+      let originId = this.qualifyId(innerScope, parts.originId);
+      let originSlot = parts.originSlot;
+
+      if (parts.originId === "-10") {
+        binding = inputBindings.get(parts.originSlot);
+        if (!binding) {
+          const targetNode = nodeByLocalId.get(targetId);
+          const targetInput = targetNode?.inputs?.[targetSlot];
+          if (targetInput) targetInput.link = null;
+          continue;
+        }
+        if (binding.kind === "reference") {
+          originId = binding.originId;
+          originSlot = binding.originSlot;
+        }
+      }
+
+      const targetNode = nodeByLocalId.get(targetId);
+      if (!targetNode) {
+        const targetDefinition = definitions.get(
+          definition.nodes.find((node) => String(node.id) === targetId)?.type ??
+            "",
+        );
+        if (targetDefinition) continue;
+        throw new Error(
+          `Subgraph ${definition.name}#${host.id} links to missing local node ${targetId}`,
+        );
+      }
+      const targetInput = targetNode.inputs?.[targetSlot];
+      if (!targetInput) {
+        throw new Error(
+          `Subgraph ${definition.name}#${host.id} links to missing local input ${targetId}:${targetSlot}`,
+        );
+      }
+
+      targetInput.link = generatedId;
+      if (binding?.kind === "value") {
+        result.linkValues.set(generatedId, binding);
+      } else {
+        result.links.push({
+          id: generatedId,
+          originId,
+          originSlot,
+        });
+      }
+    }
+
+    return result;
   }
 
   private getGroupDefinition(
@@ -456,7 +734,8 @@ export class JsonReader {
   }
 
   private fromExportGraph(json_object: ComfyUIExportImage.Root): CWorkflow {
-    const { nodes, links, version } = json_object;
+    const { nodes, version } = json_object;
+    const links = json_object.links ?? [];
 
     if (version !== 0.4 && version !== 1) {
       throw new Error(
@@ -466,21 +745,43 @@ export class JsonReader {
 
     const groupDefinitions = ((json_object.extra as any)?.groupNodes ??
       {}) as Record<string, GroupNodeDefinition>;
-    const linksById = new Map(
+    const subgraphDefinitions = this.collectSubgraphDefinitions(json_object);
+    const linksById = new Map<string, LinkParts>(
       links.map((link) => {
         const parts = this.getLinkParts(link);
         return [parts.id, parts] as const;
       }),
     );
     const expandedNodes: ExportNode[] = [];
-    const groupOutputOrigins = new Map<
-      string,
-      { originId: string; originSlot: number }
-    >();
+    const originAliases = new Map<string, ResolvedOrigin>();
+    const linkValues = new Map<string, ResolvedOrigin>();
 
     for (const node of nodes) {
       if ((node.mode ?? 0) !== 0) {
         expandedNodes.push(node);
+        continue;
+      }
+
+      const subgraphDefinition = subgraphDefinitions.get(node.type);
+      if (subgraphDefinition) {
+        const expanded = this.expandNativeSubgraph(
+          node,
+          subgraphDefinition,
+          subgraphDefinitions,
+          linksById,
+          "",
+          new Set(),
+        );
+        expandedNodes.push(...expanded.nodes);
+        for (const link of expanded.links) {
+          linksById.set(link.id, link);
+        }
+        for (const [key, value] of expanded.linkValues) {
+          linkValues.set(key, value);
+        }
+        for (const [key, value] of expanded.originAliases) {
+          originAliases.set(key, value);
+        }
         continue;
       }
 
@@ -495,7 +796,10 @@ export class JsonReader {
         linksById.set(link.id, link);
       }
       expanded.outputs.forEach((output, outputSlot) => {
-        groupOutputOrigins.set(`${node.id}:${outputSlot}`, output);
+        originAliases.set(`${node.id}:${outputSlot}`, {
+          kind: "reference",
+          ...output,
+        });
       });
     }
 
@@ -507,22 +811,26 @@ export class JsonReader {
       linkId: string | number,
       resolving = new Set<string>(),
     ): ResolvedOrigin => {
+      const directValue = linkValues.get(String(linkId));
+      if (directValue) return directValue;
+
       const link = linksById.get(String(linkId));
       if (!link) throw new Error(`Missing link ${linkId}`);
 
       let originId = link.originId;
       let originSlot = link.originSlot;
-      const visitedGroups = new Set<string>();
+      const visitedAliases = new Set<string>();
       while (true) {
-        const groupKey = `${originId}:${originSlot}`;
-        const groupOutput = groupOutputOrigins.get(groupKey);
-        if (!groupOutput) break;
-        if (visitedGroups.has(groupKey)) {
-          throw new Error(`Cyclic group-node link at ${groupKey}`);
+        const aliasKey = `${originId}:${originSlot}`;
+        const alias = originAliases.get(aliasKey);
+        if (!alias) break;
+        if (visitedAliases.has(aliasKey)) {
+          throw new Error(`Cyclic subgraph or group link at ${aliasKey}`);
         }
-        visitedGroups.add(groupKey);
-        originId = groupOutput.originId;
-        originSlot = groupOutput.originSlot;
+        visitedAliases.add(aliasKey);
+        if (alias.kind !== "reference") return alias;
+        originId = alias.originId;
+        originSlot = alias.originSlot;
       }
 
       const key = `${originId}:${originSlot}`;

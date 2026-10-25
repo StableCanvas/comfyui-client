@@ -15,6 +15,10 @@ import { fileURLToPath } from "node:url";
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const cliPath = join(packageRoot, "index.js");
 const fixture = join(packageRoot, "tests/test-inputs/workflow_api.json");
+const nativeSubgraphFixture = join(
+  packageRoot,
+  "../cw-reader/tests/native_subgraph_fixture.json",
+);
 const packageJson = JSON.parse(
   readFileSync(join(packageRoot, "package.json"), "utf8"),
 );
@@ -83,6 +87,21 @@ test("accepts JSON inputs with uppercase extensions", (t) => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.match(readFileSync(output, "utf8"), /CheckpointLoaderSimple/);
+});
+
+test("expands native subgraphs before generating CLI output", (t) => {
+  const dir = makeTempDir(t);
+  const output = join(dir, "workflow.js");
+  const result = run(["-i", nativeSubgraphFixture, "-t", "none", "-o", output]);
+
+  assert.equal(result.status, 0, result.stderr);
+  const code = readFileSync(output, "utf8");
+  assert.match(code, /cls\.TextWorker/);
+  assert.match(code, /cls\.PostProcess/);
+  assert.doesNotMatch(
+    code,
+    /cls\["[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"\]/i,
+  );
 });
 
 test("rejects templates without the injection marker", (t) => {

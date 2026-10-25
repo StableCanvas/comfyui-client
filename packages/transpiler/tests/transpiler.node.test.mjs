@@ -161,6 +161,35 @@ test("converts workflows with widgets_values_named", async () => {
   assert.doesNotThrow(() => new Function("cls", code)(cls));
 });
 
+test("flattens native subgraph instances before generating code", async () => {
+  const raw = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../cw-reader/tests/native_subgraph_fixture.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const workflow = await new JsonReader(raw).getWorkflow();
+  const code = new Transpiler(workflow).toCode();
+
+  assert.match(code, /cls\.TextWorker/);
+  assert.match(code, /cls\.PostProcess/);
+  assert.doesNotMatch(
+    code,
+    /cls\["[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"\]/i,
+  );
+
+  const cls = new Proxy(
+    {},
+    {
+      get: () => () => Array(128).fill(undefined),
+    },
+  );
+  assert.doesNotThrow(() => new Function("cls", code)(cls));
+});
+
 test("avoids subgraph parameter and output name collisions", async () => {
   const raw = JSON.parse(
     readFileSync(

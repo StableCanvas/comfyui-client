@@ -6,6 +6,8 @@ import { ImageReader, JsonReader } from "@stable-canvas/cw-reader";
 import { Transpiler } from "../dist/main.mjs";
 
 const WORKFLOW_EXTENSIONS = new Set([".json", ".png"]);
+const SUBGRAPH_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function printHelp() {
   console.log(`Usage: node scripts/check-examples.mjs [options] <file-or-directory...>
@@ -93,9 +95,22 @@ function isNodeInputRef(value) {
 }
 
 function getExpectedNodeTypes(root) {
-  if (!Array.isArray(root?.nodes) || !Array.isArray(root?.links)) return null;
+  if (
+    !Array.isArray(root?.nodes) ||
+    (!Array.isArray(root?.links) && root?.version !== 1)
+  )
+    return null;
 
   const groupDefinitions = root.extra?.groupNodes ?? {};
+  const subgraphDefinitions = new Map();
+  function collectSubgraphs(graph) {
+    for (const definition of graph?.definitions?.subgraphs ?? []) {
+      if (!definition?.id || subgraphDefinitions.has(definition.id)) continue;
+      subgraphDefinitions.set(definition.id, definition);
+      collectSubgraphs(definition);
+    }
+  }
+  collectSubgraphs(root);
   const helperTypes = new Set([
     "Note",
     "MarkdownNote",
@@ -125,6 +140,18 @@ function getExpectedNodeTypes(root) {
   function visit(node, stack) {
     const mode = node.mode ?? 0;
     if (mode === 2 || mode === 4 || helperTypes.has(node.type)) return [];
+
+    const subgraphDefinition = subgraphDefinitions.get(node.type);
+    if (subgraphDefinition) {
+      const key = `subgraph:${subgraphDefinition.id}`;
+      if (stack.has(key)) {
+        throw new Error(`Cyclic subgraph definition: ${subgraphDefinition.id}`);
+      }
+      const nextStack = new Set(stack).add(key);
+      return subgraphDefinition.nodes.flatMap((child) =>
+        visit(child, nextStack),
+      );
+    }
 
     const definition = getGroupDefinition(node);
     if (!definition) return [node.type];
@@ -254,6 +281,15 @@ async function validateFile(file, options) {
     const workflow = new JsonReader(root).getWorkflow();
     result.nodes = workflow.nodes.length;
 
+    const unexpandedSubgraphs = workflow.nodes
+      .filter((node) => SUBGRAPH_ID_PATTERN.test(node.data.class_type))
+      .map((node) => `${node.index}:${node.data.class_type}`);
+    if (unexpandedSubgraphs.length > 0) {
+      result.category = "unexpanded-subgraph";
+      result.unexpandedSubgraphs = unexpandedSubgraphs;
+      return result;
+    }
+
     const expectedNodeTypes = getExpectedNodeTypes(root);
     if (expectedNodeTypes) {
       const expectedCounts = countValues(expectedNodeTypes);
@@ -370,7 +406,9 @@ async function main() {
       } else {
         const detail =
           result.error ??
-          `missing=[${result.missingNodes?.join(",") ?? ""}] extra=[${result.extraNodes?.join(",") ?? ""}]`;
+          (result.unexpandedSubgraphs
+            ? `unexpanded=[${result.unexpandedSubgraphs.join(",")}]`
+            : `missing=[${result.missingNodes?.join(",") ?? ""}] extra=[${result.extraNodes?.join(",") ?? ""}]`);
         console.log(`[FAIL] ${location} (${result.category}) ${detail}`);
       }
     }

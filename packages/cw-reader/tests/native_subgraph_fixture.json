@@ -1,0 +1,243 @@
+{
+  "version": 0.4,
+  "state": { "lastNodeId": 555, "lastLinkId": 83 },
+  "nodes": [
+    {
+      "id": 8,
+      "type": "PrimitiveNode",
+      "pos": [0, 0],
+      "size": [100, 100],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "outputs": [{ "name": "STRING", "type": "STRING", "links": [80] }],
+      "properties": {},
+      "widgets_values": ["first prompt"]
+    },
+    {
+      "id": 459,
+      "type": "bc1c967a-7f6a-4be9-a372-dad16e4f28e3",
+      "pos": [200, 0],
+      "size": [200, 100],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "widget": { "name": "prompt" },
+          "link": 80
+        },
+        {
+          "name": "steps",
+          "type": "INT",
+          "widget": { "name": "steps" },
+          "link": null
+        }
+      ],
+      "outputs": [{ "name": "IMAGE", "type": "IMAGE", "links": [81] }],
+      "properties": {},
+      "widgets_values": [25],
+      "widgets_values_named": { "steps": 25 }
+    },
+    {
+      "id": 9,
+      "type": "PrimitiveNode",
+      "pos": [0, 200],
+      "size": [100, 100],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "outputs": [{ "name": "STRING", "type": "STRING", "links": [82] }],
+      "properties": {},
+      "widgets_values": ["second prompt"]
+    },
+    {
+      "id": 555,
+      "type": "bc1c967a-7f6a-4be9-a372-dad16e4f28e3",
+      "pos": [200, 200],
+      "size": [200, 100],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "widget": { "name": "prompt" },
+          "link": 82
+        },
+        {
+          "name": "steps",
+          "type": "INT",
+          "widget": { "name": "steps" },
+          "link": null
+        }
+      ],
+      "outputs": [{ "name": "IMAGE", "type": "IMAGE", "links": [83] }],
+      "properties": {},
+      "widgets_values": [40],
+      "widgets_values_named": { "steps": 40 }
+    },
+    {
+      "id": 2,
+      "type": "SaveImage",
+      "pos": [450, 0],
+      "size": [100, 100],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [{ "name": "images", "type": "IMAGE", "link": 81 }],
+      "properties": {},
+      "widgets_values_named": { "filename_prefix": "first" }
+    },
+    {
+      "id": 3,
+      "type": "SaveImage",
+      "pos": [450, 200],
+      "size": [100, 100],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [{ "name": "images", "type": "IMAGE", "link": 83 }],
+      "properties": {},
+      "widgets_values_named": { "filename_prefix": "second" }
+    }
+  ],
+  "links": [
+    {
+      "id": 80,
+      "origin_id": 8,
+      "origin_slot": 0,
+      "target_id": 459,
+      "target_slot": 0,
+      "type": "STRING"
+    },
+    {
+      "id": 81,
+      "origin_id": 459,
+      "origin_slot": 0,
+      "target_id": 2,
+      "target_slot": 0,
+      "type": "IMAGE"
+    },
+    {
+      "id": 82,
+      "origin_id": 9,
+      "origin_slot": 0,
+      "target_id": 555,
+      "target_slot": 0,
+      "type": "STRING"
+    },
+    {
+      "id": 83,
+      "origin_id": 555,
+      "origin_slot": 0,
+      "target_id": 3,
+      "target_slot": 0,
+      "type": "IMAGE"
+    }
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "definitions": {
+    "subgraphs": [
+      {
+        "id": "bc1c967a-7f6a-4be9-a372-dad16e4f28e3",
+        "version": 0.4,
+        "revision": 0,
+        "name": "Minimal Native Subgraph",
+        "inputNode": { "id": -10 },
+        "outputNode": { "id": -20 },
+        "inputs": [
+          {
+            "id": "prompt-id",
+            "name": "prompt",
+            "type": "STRING",
+            "linkIds": [101]
+          },
+          { "id": "steps-id", "name": "steps", "type": "INT", "linkIds": [102] }
+        ],
+        "outputs": [
+          {
+            "id": "image-id",
+            "name": "IMAGE",
+            "type": "IMAGE",
+            "linkIds": [104]
+          }
+        ],
+        "widgets": [],
+        "nodes": [
+          {
+            "id": 100,
+            "type": "TextWorker",
+            "pos": [0, 0],
+            "size": [100, 100],
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [
+              { "name": "prompt", "type": "STRING", "link": 101 },
+              { "name": "steps", "type": "INT", "link": 102 }
+            ],
+            "outputs": [{ "name": "IMAGE", "type": "IMAGE", "links": [103] }],
+            "properties": {},
+            "widgets_values": ["", 1],
+            "widgets_values_named": { "prompt": "", "steps": 1 }
+          },
+          {
+            "id": 101,
+            "type": "PostProcess",
+            "pos": [200, 0],
+            "size": [100, 100],
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [{ "name": "image", "type": "IMAGE", "link": 103 }],
+            "outputs": [{ "name": "IMAGE", "type": "IMAGE", "links": [104] }],
+            "properties": {}
+          }
+        ],
+        "links": [
+          {
+            "id": 101,
+            "origin_id": -10,
+            "origin_slot": 0,
+            "target_id": 100,
+            "target_slot": 0,
+            "type": "STRING"
+          },
+          {
+            "id": 102,
+            "origin_id": -10,
+            "origin_slot": 1,
+            "target_id": 100,
+            "target_slot": 1,
+            "type": "INT"
+          },
+          {
+            "id": 103,
+            "origin_id": 100,
+            "origin_slot": 0,
+            "target_id": 101,
+            "target_slot": 0,
+            "type": "IMAGE"
+          },
+          {
+            "id": 104,
+            "origin_id": 101,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 0,
+            "type": "IMAGE"
+          }
+        ],
+        "groups": [],
+        "config": {},
+        "extra": {}
+      }
+    ]
+  }
+}

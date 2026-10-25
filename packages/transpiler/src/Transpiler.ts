@@ -527,6 +527,18 @@ export class Transpiler {
     // 生成语句，同时建立子图调用返回变量名映射
     const subCallVarMap = new Map<string, Map<string, string>>(); // subId -> (nodeId:outIdx -> varName)
     const statements: types.Statement[] = [];
+    const usedMainNames = new Set(mainOutputMap.values());
+
+    const uniqueMainName = (preferred: string) => {
+      let name = preferred;
+      let suffix = 1;
+      while (usedMainNames.has(name)) {
+        suffix += 1;
+        name = `${preferred}_${suffix}`;
+      }
+      usedMainNames.add(name);
+      return name;
+    };
 
     for (const id of sortedIds) {
       const gnode = graph.get(id)!;
@@ -613,7 +625,8 @@ export class Transpiler {
           types.identifier(p.paramName),
         );
         const retVars = subInfo.exposedOutputs.map((exp, idx) => {
-          const name = exp.varName || `sub${subInfo.id}_${idx}`;
+          const preferred = exp.varName || `sub${subInfo.id}_${idx}`;
+          const name = uniqueMainName(preferred);
           return types.identifier(name);
         });
         const leftArray = types.arrayPattern(retVars);

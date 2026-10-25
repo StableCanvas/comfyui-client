@@ -544,6 +544,199 @@ test("expands group nodes and preserves external links and widgets", () => {
   ]);
 });
 
+test("expands native subgraphs with stable ids, widgets, and boundary links", () => {
+  const raw = JSON.parse(
+    readFileSync(
+      new URL("./native_subgraph_fixture.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const workflow = new JsonReader(raw).getWorkflow();
+
+  assert.deepEqual(
+    workflow.nodes.map((item) => [item.index, item.data.class_type]),
+    [
+      ["459:100", "TextWorker"],
+      ["459:101", "PostProcess"],
+      ["555:100", "TextWorker"],
+      ["555:101", "PostProcess"],
+      ["2", "SaveImage"],
+      ["3", "SaveImage"],
+    ],
+  );
+  assert.deepEqual(workflow.nodes[0].data.inputs, {
+    prompt: "first prompt",
+    steps: 25,
+  });
+  assert.deepEqual(workflow.nodes[2].data.inputs, {
+    prompt: "second prompt",
+    steps: 40,
+  });
+  assert.deepEqual(workflow.nodes[1].data.inputs.image, ["459:100", 0]);
+  assert.deepEqual(workflow.nodes[3].data.inputs.image, ["555:100", 0]);
+  assert.deepEqual(workflow.nodes[4].data.inputs.images, ["459:101", 0]);
+  assert.deepEqual(workflow.nodes[5].data.inputs.images, ["555:101", 0]);
+  assert.equal(
+    workflow.nodes.some((item) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        item.data.class_type,
+      ),
+    ),
+    false,
+  );
+});
+
+test("expands recursively nested native subgraphs", () => {
+  const innerId = "11111111-1111-4111-8111-111111111111";
+  const outerId = "22222222-2222-4222-8222-222222222222";
+  const raw = {
+    version: 0.4,
+    state: {},
+    nodes: [
+      node("1", "PrimitiveNode", {
+        outputs: [{ name: "STRING", type: "STRING", links: [300] }],
+        widgets_values: ["nested prompt"],
+      }),
+      node("700", outerId, {
+        inputs: [{ name: "prompt", type: "STRING", link: 300 }],
+        outputs: [{ name: "IMAGE", type: "IMAGE", links: [301] }],
+      }),
+      node("2", "SaveImage", {
+        inputs: [{ name: "images", type: "IMAGE", link: 301 }],
+        widgets_values_named: { filename_prefix: "nested" },
+      }),
+    ],
+    links: [
+      [300, 1, 0, 700, 0, "STRING"],
+      [301, 700, 0, 2, 0, "IMAGE"],
+    ],
+    groups: [],
+    config: {},
+    extra: {},
+    definitions: {
+      subgraphs: [
+        {
+          id: outerId,
+          version: 0.4,
+          revision: 0,
+          name: "Outer",
+          inputNode: { id: -10 },
+          outputNode: { id: -20 },
+          inputs: [
+            {
+              id: "outer-input",
+              name: "prompt",
+              type: "STRING",
+              linkIds: [401],
+            },
+          ],
+          outputs: [
+            {
+              id: "outer-output",
+              name: "IMAGE",
+              type: "IMAGE",
+              linkIds: [403],
+            },
+          ],
+          nodes: [
+            node("100", innerId, {
+              inputs: [{ name: "prompt", type: "STRING", link: 401 }],
+              outputs: [{ name: "IMAGE", type: "IMAGE", links: [402] }],
+            }),
+          ],
+          links: [
+            {
+              id: 401,
+              origin_id: -10,
+              origin_slot: 0,
+              target_id: 100,
+              target_slot: 0,
+              type: "STRING",
+            },
+            {
+              id: 402,
+              origin_id: 100,
+              origin_slot: 0,
+              target_id: -20,
+              target_slot: 0,
+              type: "IMAGE",
+            },
+          ],
+          groups: [],
+          config: {},
+          extra: {},
+        },
+        {
+          id: innerId,
+          version: 0.4,
+          revision: 0,
+          name: "Inner",
+          inputNode: { id: -10 },
+          outputNode: { id: -20 },
+          inputs: [
+            {
+              id: "inner-input",
+              name: "prompt",
+              type: "STRING",
+              linkIds: [201],
+            },
+          ],
+          outputs: [
+            {
+              id: "inner-output",
+              name: "IMAGE",
+              type: "IMAGE",
+              linkIds: [202],
+            },
+          ],
+          nodes: [
+            node("900", "NestedWorker", {
+              inputs: [{ name: "prompt", type: "STRING", link: 201 }],
+              outputs: [{ name: "IMAGE", type: "IMAGE", links: [202] }],
+              widgets_values_named: { prompt: "default" },
+            }),
+          ],
+          links: [
+            {
+              id: 201,
+              origin_id: -10,
+              origin_slot: 0,
+              target_id: 900,
+              target_slot: 0,
+              type: "STRING",
+            },
+            {
+              id: 202,
+              origin_id: 900,
+              origin_slot: 0,
+              target_id: -20,
+              target_slot: 0,
+              type: "IMAGE",
+            },
+          ],
+          groups: [],
+          config: {},
+          extra: {},
+        },
+      ],
+    },
+  };
+
+  const workflow = new JsonReader(raw).getWorkflow();
+
+  assert.deepEqual(
+    workflow.nodes.map((item) => [item.index, item.data.class_type]),
+    [
+      ["700:100:900", "NestedWorker"],
+      ["2", "SaveImage"],
+    ],
+  );
+  assert.deepEqual(workflow.nodes[0].data.inputs, {
+    prompt: "nested prompt",
+  });
+  assert.deepEqual(workflow.nodes[1].data.inputs.images, ["700:100:900", 0]);
+});
+
 test("rejects unknown widget mapping", () => {
   const raw = {
     version: 1,
