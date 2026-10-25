@@ -193,6 +193,16 @@ export class JsonReader {
   }
 
   private getWidgetInputs(node: ExportNode): Record<string, unknown> {
+    const namedWidgets = node.widgets_values_named;
+    if (
+      namedWidgets &&
+      typeof namedWidgets === "object" &&
+      !Array.isArray(namedWidgets) &&
+      Object.keys(namedWidgets).length > 0
+    ) {
+      return namedWidgets;
+    }
+
     const widgets = node.widgets_values;
     if (!widgets) return {};
     if (!Array.isArray(widgets)) return widgets;

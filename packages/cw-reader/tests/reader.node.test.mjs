@@ -206,6 +206,20 @@ test("covers discovered widget mapping regressions", () => {
         method: "default",
       },
     },
+    {
+      type: "ResolutionSelector",
+      widgets: ["1:1 (Square)", 1, 16],
+      namedWidgets: {
+        aspect_ratio: "1:1 (Square)",
+        megapixels: 1,
+        multiple: 16,
+      },
+      expected: {
+        aspect_ratio: "1:1 (Square)",
+        megapixels: 1,
+        multiple: 16,
+      },
+    },
   ];
   const raw = {
     version: 1,
@@ -213,6 +227,7 @@ test("covers discovered widget mapping regressions", () => {
     nodes: cases.map((item, index) =>
       node(String(index + 1), item.type, {
         widgets_values: item.widgets,
+        widgets_values_named: item.namedWidgets,
         inputs: item.inputs ?? [],
       }),
     ),

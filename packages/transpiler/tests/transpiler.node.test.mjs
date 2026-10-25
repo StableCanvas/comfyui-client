@@ -86,6 +86,53 @@ test("generates valid identifiers for invalid output names", () => {
   assert.doesNotThrow(() => new Function(code));
 });
 
+test("converts workflows with widgets_values_named", async () => {
+  const raw = JSON.parse(
+    readFileSync(new URL("./demo-wk.json", import.meta.url), "utf8"),
+  );
+  const workflow = await new JsonReader(raw).getWorkflow();
+  const code = new Transpiler(workflow).toCode();
+
+  assert.equal(workflow.nodes.length, 13);
+  assert.deepEqual(
+    workflow.nodes.find((item) => item.data.class_type === "ResolutionSelector")
+      ?.data.inputs,
+    {
+      aspect_ratio: "1:1 (Square)",
+      megapixels: 1,
+      multiple: 16,
+    },
+  );
+  assert.deepEqual(
+    workflow.nodes.find((item) => item.data.class_type === "SeedNode")?.data
+      .inputs,
+    {
+      seed: 210,
+      fixed: "increment",
+    },
+  );
+
+  for (const classType of [
+    "CLIPLoader",
+    "UNETLoader",
+    "LoraLoaderModelOnly",
+    "ResolutionSelector",
+    "ModelAttentionBackend",
+    "SeedNode",
+    "KSampler",
+  ]) {
+    assert.match(code, new RegExp(`cls\\.${classType}`));
+  }
+
+  const cls = new Proxy(
+    {},
+    {
+      get: () => () => Array(128).fill(undefined),
+    },
+  );
+  assert.doesNotThrow(() => new Function("cls", code)(cls));
+});
+
 test("avoids subgraph parameter and output name collisions", async () => {
   const raw = JSON.parse(
     readFileSync(

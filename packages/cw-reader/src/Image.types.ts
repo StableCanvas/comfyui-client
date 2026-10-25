@@ -27,6 +27,7 @@ export namespace ComfyUIExportImage {
         outputs?:        Output[];
         properties:      Properties;
         widgets_values?: Array<number | string> | Record<string, unknown>;
+        widgets_values_named?: Record<string, unknown>;
     }
 
     export type Link = {
