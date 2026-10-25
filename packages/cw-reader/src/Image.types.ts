@@ -42,7 +42,7 @@ export namespace ComfyUIExportImage {
     export type Input = {
         name: string;
         type: string;
-        link?: number | null;
+        link?: number | string | null;
     }
     
     export type Output = {
